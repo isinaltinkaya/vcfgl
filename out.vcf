@@ -1,0 +1,24 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##source=tskit 0.4.1
+##contig=<ID=chr22,length=51229805>
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Simulated read depth">
+##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihood in log10 likelihood ratio format">
+##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">
+##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes">
+##INFO=<ID=NS,Number=1,Type=Integer,Description="Number of samples with data">
+##INFO=<ID=AC_Hom,Number=A,Type=Integer,Description="Allele counts in homozygous genotypes">
+##INFO=<ID=AC_Het,Number=A,Type=Integer,Description="Allele counts in heterozygous genotypes">
+##INFO=<ID=AC_Hemi,Number=A,Type=Integer,Description="Allele counts in hemizygous genotypes">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele frequency">
+##INFO=<ID=MAF,Number=A,Type=Float,Description="Minor Allele frequency">
+##INFO=<ID=HWE,Number=A,Type=Float,Description="HWE test (PMID:15789306)">
+##INFO=<ID=ExcHet,Number=A,Type=Float,Description="Probability of excess heterozygosity">
+##bcftools_pluginVersion=1.9+htslib-1.9
+##bcftools_pluginCommand=plugin fill-tags -o out.vcf test1/t1_vcf.vcf; Date=Sun May 22 17:35:06 2022
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind
+chr22	282	.	A	C,G,T	.	PASS	NS=1;AN=2;AF=0,0,0;MAF=0,0,0;AC=0,0,0;AC_Het=0,0,0;AC_Hom=0,0,0;AC_Hemi=0,0,0;HWE=1,1,1;ExcHet=1,1,1	GT:DP:GL	0|0:85:0,-24.8643,-205.239,-22.6911,-203.066,-202.766,-22.6911,-203.066,-200.892,-202.766
+chr22	310	.	A	C,G,T	.	PASS	NS=1;AN=2;AF=0.5,0,0;MAF=0.5,0,0;AC=1,0,0;AC_Het=1,0,0;AC_Hom=0,0,0;AC_Hemi=0,0,0;HWE=1,1,1;ExcHet=1,1,1	GT:DP:GL	1|0:114:-102.15,0,-109.568,-117.352,-123.872,-243.097,-119.525,-126.045,-243.397,-245.57
+chr22	587	.	A	C,G,T	.	PASS	NS=1;AN=2;AF=0.5,0,0;MAF=0.5,0,0;AC=1,0,0;AC_Het=1,0,0;AC_Hom=0,0,0;AC_Hemi=0,0,0;HWE=1,1,1;ExcHet=1,1,1	GT:DP:GL	0|1:103:-73.2996,0,-117.809,-89.1006,-128.218,-219.192,-91.2738,-130.391,-219.492,-221.665
+chr22	773	.	A	C,G,T	.	PASS	NS=1;AN=2;AF=1,0,0;MAF=0,0,0;AC=2,0,0;AC_Het=0,0,0;AC_Hom=2,0,0;AC_Hemi=0,0,0;HWE=1,1,1;ExcHet=1,1,1	GT:DP:GL	1|1:103:-247.276,-28.0834,0,-247.575,-30.2566,-249.748,-245.402,-28.0834,-247.575,-247.276
