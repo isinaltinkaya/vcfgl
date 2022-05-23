@@ -41,8 +41,8 @@
  */
 
 #include <stdio.h>
-#include "htslib/vcf.h"
-#include "htslib/vcfutils.h"
+#include <htslib/vcf.h>
+#include <htslib/vcfutils.h>
 
 #include <inttypes.h>
 #include <math.h>
