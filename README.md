@@ -1,6 +1,14 @@
 # vcfgl
 ## Small program to simulate genotype likelihoods from VCF GT tags
 
+## Installation
+
+```
+git clone git@github.com:isinaltinkaya/vcf-gl.git; cd vcf-gl; make
+```
+
+## Usage
+
 
 ```
 ./vcfgl -in {INPUT_VCF} -out {OUTPUT_FILE_PREFIX} -err {ERROR_RATE} -depth {DEPTH} -seed {SEED}
@@ -9,7 +17,6 @@
 Arguments:
 
 * **INPUT_VCF**
-
  
 Input VCF file obtained from `tskit.write_vcf`.
 
@@ -65,10 +72,4 @@ The genotype likelihood simulation procedure is as follows:
 
 4. Normalize the log10 genotype likelihood by substracting the maximum genotype likelihood value
 observed at site.
-
-## Usage
-
-```
-git clone git@github.com:isinaltinkaya/vcf-gl.git; cd vcf-gl; make
-```
 
