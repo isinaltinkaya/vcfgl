@@ -45,7 +45,7 @@ all: .activate_module
 
 endif
 
-.PHONY: .activate_module
+.PHONY: .activate_module test
 
 .activate_module:
 	git submodule update --init --recursive
@@ -80,3 +80,6 @@ $(PROGRAM): $(OBJ)
 clean:
 	$(RM) *.o *.d $(PROGRAM)
 
+test: 
+	./vcfgl -in test/t1.vcf -out test/t1_testvcfgl -err 0.01 -seed 42 -depth 1 -isSim 1;
+	bash -c "diff test/t1_vcf_vcfgl.vcf test/t1_testvcfgl.vcf" ;
