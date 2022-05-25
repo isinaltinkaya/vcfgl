@@ -50,6 +50,9 @@ Random seed used to initialize the random number generator.
 
 ## Genotype likelihood calculation
 
+This program uses the same functions as in [ANGSD msToGlf](https://github.com/ANGSD/angsd/blob/master/misc/msToGlf.c) and is designed to produce equivalent results.
+
+ 
 Genotype likelihoods follow the GATK definition.  
 
 ![image](https://user-images.githubusercontent.com/33371500/170043998-dcff8c7d-b483-42e4-b312-38b280970fc8.png)
