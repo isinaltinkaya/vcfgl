@@ -1,4 +1,4 @@
-# vcfgl
+# vcfgl [![test](https://github.com/isinaltinkaya/vcf-gl/actions/workflows/test.yml/badge.svg)](https://github.com/isinaltinkaya/vcf-gl/actions/workflows/test.yml)
 ## Small program to simulate genotype likelihoods from VCF GT tags
 
 ## Installation
