@@ -85,6 +85,8 @@ observed at site.
 ./vcfgl -in test/t1.vcf -out test/t1_vcf_vcfgl -err 0.01 -seed 42 -depth 1 -isSim 1
 ```
 
+Input file: 
+
 ```
 $ cat test/t1.vcf
 ##fileformat=VCFv4.2
@@ -97,8 +99,10 @@ chr22   282     .       0       1       .       PASS    .       GT      0|0
 chr22   310     .       0       1       .       PASS    .       GT      1|0
 chr22   587     .       0       1       .       PASS    .       GT      0|1
 chr22   773     .       0       1       .       PASS    .       GT      1|1
-
 ```
+
+Output file: 
+
 ```
 $ cat test/t1_vcf_vcfgl.vcf
 ##fileformat=VCFv4.2
