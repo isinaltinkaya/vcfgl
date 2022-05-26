@@ -12,7 +12,7 @@ ifdef HTSSRC
 #if hts source is set to systemwide
 ifeq ($(HTSSRC),systemwide)
 $(info HTSSRC set to systemwide; assuming systemwide installation)
-LIBS += -lhts
+LIBHTS := -lhts
 
 else
 
@@ -20,8 +20,7 @@ else
 # Adjust $(HTSSRC) to point to your top-level htslib directory
 $(info HTSSRC defined: $(HTSSRC))
 CXXFLAGS += -I"$(realpath $(HTSSRC))"
-LIBHTS=$(realpath $(HTSSRC))/libhts.a
-LIBS += $(LIBHTS)
+LIBHTS := $(realpath $(HTSSRC))/libhts.a
 
 endif
 
@@ -33,10 +32,8 @@ $(info Use `make HTSSRC=/path/to/htslib` to build using a local htslib installat
 $(info Use `make HTSSRC=systemwide` to build using the systemwide htslib installation)
 
 
-HTSSRC := $(CURDIR)/htslib
-CXXFLAGS += -I$(HTSSRC)
+CXXFLAGS := -I"$(realpath $(CURDIR)/htslib)"
 LIBHTS := $(HTSSRC)/libhts.a
-LIBS += $(LIBHTS) 
 
 
 all: .activate_module
@@ -51,17 +48,11 @@ endif
 
 
 
-
-# CPPFLAGS += -I$(HTSSRC)
-
-
-
 PROGRAM = vcfgl
 all: $(PROGRAM)
 
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CXXSRC:.cpp=.o)
-
 
 -include $(OBJ:.o=.d)
 
@@ -72,7 +63,7 @@ OBJ = $(CXXSRC:.cpp=.o)
 
 
 $(PROGRAM): $(OBJ)
-	$(CXX) -o $(PROGRAM) *.o $(LIBS) $(CXXFLAGS)
+	$(CXX) -o $(PROGRAM) *.o $(LIBHTS) $(LIBS) 
 
 clean:
 	$(RM) *.o *.d $(PROGRAM)
