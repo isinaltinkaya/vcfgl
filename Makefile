@@ -23,7 +23,7 @@ else
 # Adjust $(HTSSRC) to point to your top-level htslib directory
 $(info HTSSRC defined: $(HTSSRC))
 CXXFLAGS += -I"$(realpath $(HTSSRC))"
-LIBHTS := $(HTSSRC)/libhts.a
+HTS_LIBDIR=$(realpath $(HTSSRC))/libhts.a
 LIBS += $(LIBHTS)
 
 endif
@@ -40,6 +40,7 @@ HTSSRC := $(CURDIR)/htslib
 CXXFLAGS += -I$(HTSSRC)
 LIBHTS := $(HTSSRC)/libhts.a
 LIBS += $(LIBHTS) 
+
 
 all: .activate_module
 
@@ -59,6 +60,7 @@ endif
 
 
 PROGRAM = vcfgl
+all: $(PROGRAM)
 
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CXXSRC:.cpp=.o)
@@ -67,15 +69,16 @@ OBJ = $(CXXSRC:.cpp=.o)
 -include $(OBJ:.o=.d)
 
 %.o: %.cpp
-	$(CXX) -c  $(CXXFLAGS) $*.cpp
-	$(CXX) -MM $(CXXFLAGS) $*.cpp >$*.d
+	$(CXX) -c $*.cpp
+	$(CXX) -MM $*.cpp >$*.d
+
+#	$(CXX) -c  $(CXXFLAGS) $*.cpp
+#	$(CXX) -MM $(CXXFLAGS) $*.cpp >$*.d
 
 
-
-all: $(PROGRAM) $(OBJ)
 
 $(PROGRAM): $(OBJ)
-	$(CXX) $(CPPFLAGS) -L$(LIBS) -o $(PROGRAM) *.o 
+	$(CXX) -o $(PROGRAM) *.o $(LIBS) $(CPPFLAGS)
 
 clean:
 	$(RM) *.o *.d $(PROGRAM)
