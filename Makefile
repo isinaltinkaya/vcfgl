@@ -24,7 +24,7 @@ else
 $(info HTSSRC defined: $(HTSSRC))
 CXXFLAGS += -I"$(realpath $(HTSSRC))"
 LIBHTS := $(HTSSRC)/libhts.a
-LIBS := $(LIBHTS) $(LIBS)
+LIBS += $(LIBHTS) $(LIBS)
 
 endif
 
@@ -39,7 +39,7 @@ $(info Use `make HTSSRC=systemwide` to build using the systemwide htslib install
 HTSSRC := $(CURDIR)/htslib
 CXXFLAGS += -I$(HTSSRC)
 LIBHTS := $(HTSSRC)/libhts.a
-LIBS := $(LIBHTS) $(LIBS)
+LIBS += $(LIBHTS) $(LIBS)
 
 all: .activate_module
 
