@@ -20,7 +20,7 @@ else
 # Adjust $(HTSSRC) to point to your top-level htslib directory
 $(info HTSSRC defined: $(HTSSRC))
 CXXFLAGS += -I"$(realpath $(HTSSRC))"
-HTS_LIBDIR=$(realpath $(HTSSRC))/libhts.a
+LIBHTS=$(realpath $(HTSSRC))/libhts.a
 LIBS += $(LIBHTS)
 
 endif
