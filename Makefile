@@ -5,9 +5,6 @@ CXX ?= g++
 CXXFLAGS  = -g -Wall
 LIBS = -lz -lhts
 
-# HTSSRC := $(CURDIR)/htslib
-# HTSSRC := /maps/projects/lundbeck/scratch/pfs488/AMOVA/vcfToGlf/htslib
-
 
 #if htslib source is defined
 ifdef HTSSRC
@@ -69,11 +66,8 @@ OBJ = $(CXXSRC:.cpp=.o)
 -include $(OBJ:.o=.d)
 
 %.o: %.cpp
-	$(CXX) -c $*.cpp
-	$(CXX) -MM $*.cpp >$*.d
-
-#	$(CXX) -c  $(CXXFLAGS) $*.cpp
-#	$(CXX) -MM $(CXXFLAGS) $*.cpp >$*.d
+	$(CXX) -c  $(CXXFLAGS) $*.cpp
+	$(CXX) -MM $(CXXFLAGS) $*.cpp >$*.d
 
 
 
