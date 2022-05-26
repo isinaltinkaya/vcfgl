@@ -78,7 +78,7 @@ OBJ = $(CXXSRC:.cpp=.o)
 
 
 $(PROGRAM): $(OBJ)
-	$(CXX) -o $(PROGRAM) *.o $(LIBS) $(CPPFLAGS)
+	$(CXX) -o $(PROGRAM) *.o $(LIBS) $(CXXFLAGS)
 
 clean:
 	$(RM) *.o *.d $(PROGRAM)
