@@ -31,8 +31,8 @@ $(info HTSSRC not defined; using htslib submodule)
 $(info Use `make HTSSRC=/path/to/htslib` to build using a local htslib installation)
 $(info Use `make HTSSRC=systemwide` to build using the systemwide htslib installation)
 
-
-CXXFLAGS := -I"$(realpath $(CURDIR)/htslib)"
+HTSSRC := $(realpath $(CURDIR)/htslib)
+CXXFLAGS := -I"$(HTSSRC)"
 LIBHTS := $(HTSSRC)/libhts.a
 
 
