@@ -132,3 +132,13 @@ positions: 0.0000 0.0000 0.0000 0.0000
 0101
 0011
 ```
+
+### Msprime - Mutation simulations
+
+`vcfgl` currently only works with simulated vcf files that have binary haplotypes set as REF and ALT. For obtaining this format from mutation simulations, you can use the binary model with `sim_mutations`:
+
+```
+mutts = msprime.sim_mutations(ts, rate=msp_u, model="binary")
+with open(vcf_file,"w") as vcf:
+                                mutts.write_vcf(vcf)
+```
