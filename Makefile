@@ -70,4 +70,4 @@ clean:
 
 test: 
 	./vcfgl -in test/t1.vcf -out test/t1_testvcfgl -err 0.01 -seed 42 -depth 1 -isSim 1;
-	bash -c "diff test/t1_vcf_vcfgl.vcf test/t1_testvcfgl.vcf" ;
+	bash -c "diff -I '^##fileDate' test/t1_vcf_vcfgl.vcf test/t1_testvcfgl.vcf" ;

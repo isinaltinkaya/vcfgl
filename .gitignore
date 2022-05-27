@@ -4,3 +4,4 @@ vcfgl
 test/*arg
 test/*testvcfgl*
 *.swp
+output.*

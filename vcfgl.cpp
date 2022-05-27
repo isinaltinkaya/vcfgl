@@ -46,7 +46,6 @@
 
 #include <inttypes.h>
 #include <math.h>
-
 #include <time.h>
 
 #include "random_generator.h"
@@ -55,8 +54,6 @@
 
 
 const int vcf_gl_order_idx[10]={0,1,4,2,5,7,3,6,8,9};
-
-//TODO depth=0 sites
 
 
 
@@ -92,6 +89,14 @@ int pick_base(double errate, int inbase){
 	else return inbase;
 }
 
+
+char *get_time(){
+	time_t current_time;
+	struct tm *local_time; 
+	current_time=time(NULL);
+	local_time=localtime(&current_time);
+	return(asctime(local_time));
+}
 
 int main(int argc, char **argv) {
 
@@ -139,9 +144,43 @@ int main(int argc, char **argv) {
 		bcf_hdr_merge(out_hdr,hdr);
 
 
-		// bcf_hdr_append(out_hdr, "##FORMAT=<ID=DP,Number=1,Type=Float,Description=\"Read Depth\">");
+		char *DATE_TAG;
+		char *DATETIME=get_time();
+		fprintf(stderr,"\n%s\n",DATETIME);
 
-		//TODO add source tag for this program
+		if(asprintf(&DATE_TAG, "##fileDate=%s", DATETIME)>0){
+
+			if(bcf_hdr_append(out_hdr, DATE_TAG)!=0){
+				fprintf(stderr,"failed to append header\n");
+				exit(1);
+			}
+			free(DATE_TAG);
+		}else{
+			exit(1);
+		}
+		// if(strftime(		>0);
+		//
+		// if(bcf_hdr_append(out_hdr, SOURCE_TAG)!=0){
+		// fprintf(stderr,"failed to append header\n");
+		// exit(1);
+		// }
+		// free(SOURCE_TAG);
+		// }else{
+		// exit(1);
+		// }
+		//
+		char *SOURCE_TAG;
+		if(asprintf(&SOURCE_TAG, "##source=vcfgl -in %s -out %s -err %f -depth %f -isSim %d -seed %d",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->isSim,args->seed)>0){
+
+			if(bcf_hdr_append(out_hdr, SOURCE_TAG)!=0){
+				fprintf(stderr,"failed to append header\n");
+				exit(1);
+			}
+			free(SOURCE_TAG);
+		}else{
+			exit(1);
+		}
+
 
 		if(bcf_hdr_append(out_hdr, "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Simulated read depth\">")!=0){
 			fprintf(stderr,"failed to append header\n");
@@ -174,25 +213,15 @@ int main(int argc, char **argv) {
 
 
 		fprintf(stderr, "\nReading file:\t\"%s\"\n", in_fn);
-		// fprintf(stderr, "Number of samples: %i\n", bcf_hdr_nsamples(hdr));
-		// fprintf(stderr,	"Number of chromosomes: %d\n",hdr->n[BCF_DT_CTG]);
-		//
-		// fprintf(stderr, "\n\n\n");
-		//
-
-		//TODO 3->10
-		//AA,AC,CC,AG,CG,GG,AT,CT,GT,TT
-		//
-
+		fprintf(stderr, "Number of samples: %i\n", bcf_hdr_nsamples(hdr));
+		fprintf(stderr,	"Number of contigs: %d\n",hdr->n[BCF_DT_CTG]);
 
 		float *gl_vals  =   (float*)malloc(10*nSamples*sizeof(float));
 		int32_t *dp_vals  =   (int32_t*)malloc(10*nSamples*sizeof(int32_t));
 
 		bcf1_t *out_bcf;
 
-		//TODO test the use of tsk_0 vs tsk0 err as explained in tskit doc,if it affects us
 
-		//todo >= use? was it binary
 		while (bcf_read(in_ff, hdr, bcf) == 0) {
 
 
@@ -279,8 +308,6 @@ int main(int argc, char **argv) {
 
 
 					for(int j=0;j<10;j++){
-						//TODO check blw
-						// gl_vals[sample_i+j]=like[vcf_gl_order_idx[j]];
 						gl_vals[sample_i*10+j]=like[vcf_gl_order_idx[j]];
 					}
 
@@ -304,7 +331,6 @@ int main(int argc, char **argv) {
 
 			bcf_update_format_float(out_hdr, out_bcf, "GL", gl_vals,10*nSamples);
 
-			// bcf_write(out_ff, hdr, out_bcf);
 			if(bcf_write(out_ff, out_hdr, out_bcf)!=0){
 				fprintf(stderr,"Error: Failed to write\n");
 				exit(1);
@@ -349,8 +375,8 @@ int main(int argc, char **argv) {
 
 
 
-	}
+}
 
-	return 0;
+return 0;
 
 }

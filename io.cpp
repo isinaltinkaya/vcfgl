@@ -11,7 +11,7 @@ argStruct *args_init(){
 
 	argStruct *args=(argStruct*)calloc(1,sizeof(argStruct));
 
-	args->out_fp=strdup("angsdput");
+	args->out_fp=strdup("output");
 
 
 	args->in_fn=NULL;
@@ -68,7 +68,7 @@ argStruct *args_get(int argc, char **argv){
 	}
 
 
-	fprintf(stderr,"-in %s -out %s -err %f -depth %f -isSim %d -seed %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->isSim,args->seed);
+	fprintf(stderr,"\n-in %s -out %s -err %f -depth %f -isSim %d -seed %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->isSim,args->seed);
 
 	return args;
 

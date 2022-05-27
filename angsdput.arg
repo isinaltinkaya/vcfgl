@@ -1,0 +1,1 @@
+-in test/t1.vcf -out angsdput -err 0.010000 -depth 4.000000 -isSim 0 -seed -1
