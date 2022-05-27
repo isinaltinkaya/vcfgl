@@ -205,7 +205,7 @@ int main(int argc, char **argv) {
 		// }
 		//
 		char *SOURCE_TAG;
-		if(asprintf(&SOURCE_TAG, "##source=vcfgl -in %s -out %s -err %f -depth %f -isSim %d -seed %d",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->isSim,args->seed)>0){
+		if(asprintf(&SOURCE_TAG, "##source=vcfgl -err %f -depth %f -isSim %d -seed %d",args->errate,args->mps_depth,args->isSim,args->seed)>0){
 
 			if(bcf_hdr_append(out_hdr, SOURCE_TAG)!=0){
 				fprintf(stderr,"failed to append header\n");
