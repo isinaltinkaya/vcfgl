@@ -69,5 +69,5 @@ clean:
 	$(RM) *.o *.d $(PROGRAM)
 
 test: 
-	./vcfgl -in test/t1.vcf -out test/t1_testvcfgl -err 0.01 -seed 42 -depth 1 -isSim 1;
+	./vcfgl -in test/t1.vcf -out test/t1_testvcfgl -err 0.01 -seed 42 -depth 1 -isSim 1 -mode v;
 	bash -c "diff -I '^##fileDate' test/t1_vcf_vcfgl.vcf test/t1_testvcfgl.vcf" ;

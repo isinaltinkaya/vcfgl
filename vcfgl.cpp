@@ -117,18 +117,53 @@ int main(int argc, char **argv) {
 
 		FILE *arg_ff=openFile(out_fp,".arg");
 
-		fprintf(arg_ff,"-in %s -out %s -err %f -depth %f -isSim %d -seed %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->isSim,args->seed);
+
+		fprintf(stderr,"\n-in %s -out %s -err %f -depth %f -isSim %d -seed %d -mode %s\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->isSim,args->seed,args->output_mode);
+		fprintf(arg_ff,"\n-in %s -out %s -err %f -depth %f -isSim %d -seed %d -mode %s\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->isSim,args->seed,args->output_mode);
 
 		int n_sim_reads;
 
 		vcfFile * in_ff = bcf_open(in_fn, "r");
 
+		vcfFile * out_ff;
 
-		char *out_fn = (char*)malloc(strlen(out_fp)+5);
-
-		strcpy(out_fn,out_fp);
-		strcat(out_fn,".vcf");
-		vcfFile * out_ff = bcf_open(out_fn, "w");
+		char *OUT_EXT;
+		// char *out_fn ;
+		char *out_fn = (char*)malloc(strlen(out_fp));
+		switch (*args->output_mode){
+			case 'v':
+				fprintf(stderr,"\nOutput is VCF file\n");
+				OUT_EXT=strdup(".vcf");
+				out_fn = (char*)malloc(strlen(out_fp)+strlen(OUT_EXT));
+				strcpy(out_fn,out_fp);
+				strcat(out_fn,OUT_EXT);
+				out_ff = bcf_open(out_fn, "w");
+				break;
+			case 'b':
+				fprintf(stderr,"\nOutput is BCF file\n");
+				OUT_EXT=strdup(".bcf");
+				out_fn = (char*)malloc(strlen(out_fp)+strlen(OUT_EXT));
+				strcpy(out_fn,out_fp);
+				strcat(out_fn,OUT_EXT);
+				out_ff = bcf_open(out_fn, "wb");
+				break;
+			case 'z':
+				fprintf(stderr,"\nOutput is compressed VCF file\n");
+				OUT_EXT=strdup(".vcf.gz");
+				out_fn = (char*)malloc(strlen(out_fp)+strlen(OUT_EXT));
+				strcpy(out_fn,out_fp);
+				strcat(out_fn,OUT_EXT);
+				out_ff = bcf_open(out_fn, "wz");
+				break;
+			case 'u':
+				fprintf(stderr,"\nOutput is uncompressed BCF file\n");
+				OUT_EXT=strdup(".bcf");
+				out_fn = (char*)malloc(strlen(out_fp)+strlen(OUT_EXT));
+				strcpy(out_fn,out_fp);
+				strcat(out_fn,OUT_EXT);
+				out_ff = bcf_open(out_fn, "wbu");
+				break;
+		}
 
 		if (in_ff == NULL) {
 			return 1;
@@ -221,7 +256,6 @@ int main(int argc, char **argv) {
 
 		bcf1_t *out_bcf;
 
-
 		while (bcf_read(in_ff, hdr, bcf) == 0) {
 
 
@@ -235,8 +269,6 @@ int main(int argc, char **argv) {
 			// bcf_unpack(bcf, BCF_UN_INFO);
 
 
-
-			// bcf_fmt_t *gt = bcf_get_fmt(hdr, bcf, "GT");
 			int32_t *gt_arr=NULL;
 			int32_t ngt_arr=0;
 			int ngt=bcf_get_genotypes(hdr, bcf, &gt_arr, &ngt_arr);

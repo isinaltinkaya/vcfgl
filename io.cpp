@@ -17,6 +17,8 @@ argStruct *args_init(){
 	args->in_fn=NULL;
 	args->isSim=0;
 
+	args->output_mode=strdup("b");
+
 	args->mps_depth=4;
 	args->errate=0.01;
 	args->seed=-1;
@@ -45,6 +47,8 @@ argStruct *args_get(int argc, char **argv){
 		else if(strcasecmp("-depth",arv)==0) args->mps_depth=atof(val); 
 		else if(strcasecmp("-isSim",arv)==0) args->isSim=atoi(val);
 		else if(strcasecmp("-seed",arv)==0) args->seed=atoi(val);
+		else if(strcasecmp("-mode",arv)==0) args->output_mode=strdup(val);
+		// else if(strcasecmp("-O",arv)==0) args->output_mode=strdup(val);
 
 		else{
 			fprintf(stderr,"Unknown arg:%s\n",arv);
@@ -68,7 +72,6 @@ argStruct *args_get(int argc, char **argv){
 	}
 
 
-	fprintf(stderr,"\n-in %s -out %s -err %f -depth %f -isSim %d -seed %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->isSim,args->seed);
 
 	return args;
 
