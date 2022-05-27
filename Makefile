@@ -3,7 +3,7 @@ CXX ?= g++
 #  -g     add debugging info to the executable 
 #  -Wall  turn on most compiler warnings
 CXXFLAGS  = -g -Wall
-LIBS = -lz
+LIBS = -lz -lm -lbz2 -llzma -lcurl -lpthread
 
 
 #if htslib source is defined
