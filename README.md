@@ -10,14 +10,14 @@ git clone git@github.com:isinaltinkaya/vcf-gl.git; cd vcf-gl; make
 ## Usage
 
 ```
-./vcfgl -in {INPUT_VCF} -out {OUTPUT_FILE_PREFIX} -err {ERROR_RATE} -depth {DEPTH} -seed {SEED} -isSim {0|1} -mode {OUTPUT_MODE}
+./vcfgl -in {INPUT} -mode {OUTPUT_MODE} -out {OUTPUT_FILE_PREFIX} -err {ERROR_RATE} -depth {DEPTH} -seed {SEED} -isSim {0|1} 
 ```
 
 Arguments:
 
-* **INPUT_VCF**
+* **INPUT**
  
-Input VCF file obtained from `tskit.write_vcf`.
+Input is a VCF/BCF file obtained by `tskit.write_vcf`.
 
 After simulating a Tree Sequence, save your tree sequence as a VCF file:
 ```
