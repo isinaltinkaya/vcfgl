@@ -98,6 +98,131 @@ char *get_time(){
 	return(asctime(local_time));
 }
 
+int setblank(bcf1_t *blk,bcf1_t *unmod,bcf_hdr_t *hdr){
+
+	int32_t *gt_arr=NULL;
+	int32_t ngt_arr=0;
+	int ngt=bcf_get_genotypes(hdr, blk, &gt_arr, &ngt_arr);
+	if ( ngt<=0 ){
+		fprintf(stderr,"\nGT not present\n");
+	}
+
+	int32_t *tmpia = gt_arr;
+	for(int i=0; i<bcf_hdr_nsamples(hdr);i++){
+		tmpia[2*i+0] = bcf_gt_phased(0);
+		tmpia[2*i+1] = bcf_gt_phased(0);
+	}
+	bcf_update_genotypes(hdr, blk, tmpia, bcf_hdr_nsamples(hdr)*2); 
+
+	return 0;
+}
+
+
+int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,int mps_depth){
+	//TODO unpack?
+	// bcf_unpack(bcf,BCF_UN_FMT);
+	// bcf_unpack(bcf, BCF_UN_ALL);
+	// bcf_unpack(bcf, BCF_UN_INFO);
+	float *gl_vals  =   (float*)malloc(10*nSamples*sizeof(float));
+	int32_t *dp_vals  =   (int32_t*)malloc(10*nSamples*sizeof(int32_t));
+	int n_sim_reads;  
+	int32_t *gt_arr=NULL;
+	int32_t ngt_arr=0;
+	int ngt=bcf_get_genotypes(out_hdr, out_bcf, &gt_arr, &ngt_arr);
+	if ( ngt<=0 ){
+		fprintf(stderr,"\nGT not present\n");
+	}
+
+	int gt_ploidy=ngt/nSamples;
+
+
+	int sample_i;
+
+
+	for (sample_i=0; sample_i<nSamples; sample_i++) {
+
+
+		n_sim_reads=Poisson(mps_depth);
+
+		if(n_sim_reads==0){
+
+			for(int j=0;j<10;j++){
+				//TODO check blw
+				bcf_float_set_missing(gl_vals[sample_i*10+j]);
+			}
+			dp_vals[sample_i]=0;
+
+		}else{
+
+			// fprintf(stderr,"\nn_sim_reads: %d\n",n_sim_reads);
+
+			int32_t *ptr = gt_arr + sample_i*gt_ploidy;
+
+			if (gt_ploidy!=2){
+				fprintf(stderr,"ERROR:\n\nploidy: %d not supported\n",gt_ploidy);
+				return 1;
+			}
+
+			int bin_gts[2] = {0,0};
+
+			double like[10]={-0.0,-0.0,-0.0,-0.0,-0.0,-0.0,-0.0,-0.0,-0.0,-0.0};
+
+			//binary input genotypes from simulated input
+			for (int i=0; i<gt_ploidy;i++){
+				bin_gts[i]= bcf_gt_allele(ptr[i]);
+			}
+
+			// fprintf(stderr,"%d (%d,%d)\n",n_sim_reads,bin_gts[0],bin_gts[1]);
+
+			for (int i=0; i<n_sim_reads; i++){
+				if(drand48()<0.5){
+					gl_log10(pick_base(errate,bin_gts[0]), errate, like);
+				}else{
+					gl_log10(pick_base(errate,bin_gts[1]), errate, like);
+				}
+			}
+
+
+#if 0
+			fprintf(stderr, "\n");
+			fprintf(stderr, "like(");
+			for(int i=0;i<10;i++){
+				if (i) {fprintf(stderr, ",");}
+				fprintf(stderr, "%f",like[i]);
+			}
+			fprintf(stderr, ")");
+			fprintf(stderr, "\n");
+#endif
+			rescale_likelihood_ratio(like);
+
+
+			for(int j=0;j<10;j++){
+				gl_vals[sample_i*10+j]=like[vcf_gl_order_idx[j]];
+			}
+
+			dp_vals[sample_i]=n_sim_reads;
+
+		}
+
+	} //end sample loop
+
+
+	bcf_update_format_int32(out_hdr, out_bcf, "DP", dp_vals,nSamples);
+
+	// update ref, alt
+	if(bcf_update_alleles_str(out_hdr,out_bcf,"A,C,G,T")!=0){
+		fprintf(stderr,"Error: Failed to update\n");
+		exit(1);
+	}
+
+
+	bcf_update_format_float(out_hdr, out_bcf, "GL", gl_vals,10*nSamples);
+	free(gt_arr);
+	free(gl_vals);
+	return 0;
+}
+
+
 int main(int argc, char **argv) {
 
 
@@ -113,15 +238,15 @@ int main(int argc, char **argv) {
 		char *out_fp=args->out_fp;
 		double errate=args->errate;
 		double mps_depth=args->mps_depth;
-		int isSim=args->isSim;
+		int pos0=args->pos0;
 
 		FILE *arg_ff=openFile(out_fp,".arg");
 
 
-		fprintf(stderr,"\n-in %s -out %s -err %f -depth %f -isSim %d -seed %d -mode %s\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->isSim,args->seed,args->output_mode);
-		fprintf(arg_ff,"\n-in %s -out %s -err %f -depth %f -isSim %d -seed %d -mode %s\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->isSim,args->seed,args->output_mode);
+		fprintf(stderr,"\n-in %s -out %s -err %f -depth %f -pos0 %d -seed %d -mode %s -in_fa %s -explode %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->pos0,args->seed,args->output_mode,args->in_fa,args->explode);
+		fprintf(arg_ff,"\n-in %s -out %s -err %f -depth %f -pos0 %d -seed %d -mode %s -in_fa %s -explode %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->pos0,args->seed,args->output_mode,args->in_fa,args->explode);
 
-		int n_sim_reads;
+
 
 		vcfFile * in_ff = bcf_open(in_fn, "r");
 
@@ -193,19 +318,8 @@ int main(int argc, char **argv) {
 		}else{
 			exit(1);
 		}
-		// if(strftime(		>0);
-		//
-		// if(bcf_hdr_append(out_hdr, SOURCE_TAG)!=0){
-		// fprintf(stderr,"failed to append header\n");
-		// exit(1);
-		// }
-		// free(SOURCE_TAG);
-		// }else{
-		// exit(1);
-		// }
-		//
 		char *SOURCE_TAG;
-		if(asprintf(&SOURCE_TAG, "##source=vcfgl -err %f -depth %f -isSim %d -seed %d",args->errate,args->mps_depth,args->isSim,args->seed)>0){
+		if(asprintf(&SOURCE_TAG, "##source=vcfgl -err %f -depth %f -pos0 %d -seed %d",args->errate,args->mps_depth,args->pos0,args->seed)>0){
 
 			if(bcf_hdr_append(out_hdr, SOURCE_TAG)!=0){
 				fprintf(stderr,"failed to append header\n");
@@ -236,12 +350,12 @@ int main(int argc, char **argv) {
 
 
 
-		int nSites=0; 
+		int nSites=0;
 
 
 
-		if(isSim){
-			fprintf(stderr, "\n -isSim=%d ; will shift coord sys+1\n", isSim);
+		if(pos0){
+			fprintf(stderr, "\n -pos0=%d ; This means input VCF's positions are 0 based, and will shift coordinate system with +1\n", pos0);
 		}
 
 		int nSamples=bcf_hdr_nsamples(hdr);
@@ -251,129 +365,89 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "Number of samples: %i\n", bcf_hdr_nsamples(hdr));
 		fprintf(stderr,	"Number of contigs: %d\n",hdr->n[BCF_DT_CTG]);
 
-		float *gl_vals  =   (float*)malloc(10*nSamples*sizeof(float));
-		int32_t *dp_vals  =   (int32_t*)malloc(10*nSamples*sizeof(int32_t));
 
 		bcf1_t *out_bcf;
+		bcf1_t *blank = NULL;
 
 		while (bcf_read(in_ff, hdr, bcf) == 0) {
-
-
+			//copy next record with data into out_bcf
 			out_bcf=bcf_dup(bcf);
-
-
-
-			//TODO unpack?
-			// bcf_unpack(bcf,BCF_UN_FMT);
-			// bcf_unpack(bcf, BCF_UN_ALL);
-			// bcf_unpack(bcf, BCF_UN_INFO);
-
-
-			int32_t *gt_arr=NULL;
-			int32_t ngt_arr=0;
-			int ngt=bcf_get_genotypes(hdr, bcf, &gt_arr, &ngt_arr);
-			if ( ngt<=0 ){
-				fprintf(stderr,"\nGT not present\n");
-			}
-
-			int gt_ploidy=ngt/nSamples;
-
-
-			int sample_i;
-
-
-			for (sample_i=0; sample_i<nSamples; sample_i++) {
-
-
-				n_sim_reads=Poisson(mps_depth);
-
-				if(n_sim_reads==0){
-
-					for(int j=0;j<10;j++){
-						//TODO check blw
-						bcf_float_set_missing(gl_vals[sample_i*10+j]);
+			if(args->explode==0){
+				setval(out_hdr,out_bcf,nSamples,errate,mps_depth);
+				if(out_bcf->pos==-1){
+					if(pos0==0){
+						fprintf(stderr,"\n[ERROR]: Input file coordinates start from 0; but -pos0 is not set to 1. Please run again with -pos0 1.\n\n");
+						exit(1);
 					}
-					dp_vals[sample_i]=0;
-
-				}else{
-
-					// fprintf(stderr,"\nn_sim_reads: %d\n",n_sim_reads);
-
-					int32_t *ptr = gt_arr + sample_i*gt_ploidy;
-
-					if (gt_ploidy!=2){
-						fprintf(stderr,"ERROR:\n\nploidy: %d not supported\n",gt_ploidy);
-						return 1;
-					}
-
-					int bin_gts[2] = {0,0};
-
-					double like[10]={-0.0,-0.0,-0.0,-0.0,-0.0,-0.0,-0.0,-0.0,-0.0,-0.0};
-
-					//binary input genotypes from simulated input
-					for (int i=0; i<gt_ploidy;i++){
-						bin_gts[i]= bcf_gt_allele(ptr[i]);
-					}
-
-					// fprintf(stderr,"%d (%d,%d)\n",n_sim_reads,bin_gts[0],bin_gts[1]);
-
-					for (int i=0; i<n_sim_reads; i++){
-						if(drand48()<0.5){
-							gl_log10(pick_base(errate,bin_gts[0]), errate, like);
-						}else{
-							gl_log10(pick_base(errate,bin_gts[1]), errate, like);
-						}
-					}
-
-
-#if 0
-					fprintf(stderr, "\n");
-					fprintf(stderr, "like(");
-					for(int i=0;i<10;i++){
-						if (i) {fprintf(stderr, ",");}
-						fprintf(stderr, "%f",like[i]);
-					}
-					fprintf(stderr, ")");
-					fprintf(stderr, "\n");
-#endif
-					rescale_likelihood_ratio(like);
-
-
-					for(int j=0;j<10;j++){
-						gl_vals[sample_i*10+j]=like[vcf_gl_order_idx[j]];
-					}
-
-					dp_vals[sample_i]=n_sim_reads;
-
+				}
+				out_bcf->pos += pos0;
+				if(bcf_write(out_ff, out_hdr, out_bcf)!=0){
+					fprintf(stderr,"Error: Failed to write\n");
+					exit(1);
+				}
+				nSites++;
+			}else{
+				//ensure that we have a empty blank record that we can modify
+				if(blank==NULL){
+					blank = bcf_dup(out_bcf);
 				}
 
-				out_bcf->pos=bcf->pos+isSim;
+				if(out_bcf->pos==-1){
+					if(pos0==0){
+						fprintf(stderr,"\n[ERROR]: Input file coordinates start from 0; but -pos0 is not set to 1. Please run again with -pos0 1.\n\n");
+						exit(1);
+					}
+				}
 
-			} //end sample loop
+				while(1){//this block should run for every site with missing/nodata
+					//  fprintf(stderr,"\t\t-> out_bcfpos: %d nSites: %d\n",out_bcf->pos,nSites);
+					// if(nSites==out_bcf->pos){
+					if(nSites==out_bcf->pos+pos0){
+						// fprintf(stderr,"now breaking\n");
+						break;
+					}
 
+					setblank(blank,out_bcf,hdr);
+					setval(out_hdr,blank,nSamples,errate,mps_depth);
+					blank->pos = nSites;
+					// fprintf(stderr,"blank->pos: %d\n",blank->pos+pos0);
+					if(bcf_write(out_ff, out_hdr, blank)!=0){
+						fprintf(stderr,"Error: Failed to write\n");
+						exit(1);
+					}
+					nSites++;
 
-			bcf_update_format_int32(out_hdr, out_bcf, "DP", dp_vals,nSamples);
-
-			// update ref, alt
-			if(bcf_update_alleles_str(out_hdr,out_bcf,"A,C,G,T")!=0){
-				fprintf(stderr,"Error: Failed to update\n");
-				exit(1);
+				}
+				// fprintf(stderr,"After loop that fills in missing data will print out: %d\n",out_bcf->pos+pos0+1);
+				setval(out_hdr,out_bcf,nSamples,errate,mps_depth);
+				out_bcf->pos += pos0;
+				if(bcf_write(out_ff, out_hdr, out_bcf)!=0){
+					fprintf(stderr,"Error: Failed to write\n");
+					exit(1);
+				}
+				nSites++;
 			}
-
-
-			bcf_update_format_float(out_hdr, out_bcf, "GL", gl_vals,10*nSamples);
-
-			if(bcf_write(out_ff, out_hdr, out_bcf)!=0){
-				fprintf(stderr,"Error: Failed to write\n");
-				exit(1);
-			}
-
-			nSites++;
-
-			free(gt_arr);
-
 		}
+		if(args->explode==1){
+			//		fprintf(stderr,	"Number of contigs: %d\n",hdr->n[BCF_DT_CTG]);
+			bcf_idpair_t *ctg = ctg = hdr->id[BCF_DT_CTG];
+			int contigsize = ctg[out_bcf->rid].val->info[0];
+			// fprintf(stderr,"contigsize: %d\n",contigsize);
 
+			// while(nSites<contigsize-1){
+			while(nSites<contigsize){
+				setblank(blank,out_bcf,hdr);
+				setval(out_hdr,blank,nSamples,errate,mps_depth);
+				// blank->pos = nSites+1;
+				// blank->pos = nSites+pos0;
+				blank->pos = nSites;
+				if(bcf_write(out_ff, out_hdr, blank)!=0){
+					fprintf(stderr,"Error: Failed to write\n");
+					exit(1);
+				}
+				nSites++;
+			}
+		}
 
 
 
@@ -403,12 +477,12 @@ int main(int argc, char **argv) {
 		free(args->out_fp);
 		free(args);
 
-		free(gl_vals);
 
 
 
-}
 
-return 0;
+	}
+
+	return 0;
 
 }

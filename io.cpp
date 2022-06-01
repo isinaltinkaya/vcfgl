@@ -15,14 +15,15 @@ argStruct *args_init(){
 
 
 	args->in_fn=NULL;
-	args->isSim=0;
+	args->pos0=0;
 
 	args->output_mode=strdup("b");
 
 	args->mps_depth=4;
 	args->errate=0.01;
 	args->seed=-1;
-
+	args->in_fa = NULL;
+	args->explode = 0;
 	return args;
 
 
@@ -45,10 +46,12 @@ argStruct *args_get(int argc, char **argv){
 		else if(strcasecmp("-out",arv)==0) args->out_fp=strdup(val); 
 		else if(strcasecmp("-err",arv)==0) args->errate=atof(val); 
 		else if(strcasecmp("-depth",arv)==0) args->mps_depth=atof(val); 
-		else if(strcasecmp("-isSim",arv)==0) args->isSim=atoi(val);
+		else if(strcasecmp("-pos0",arv)==0) args->pos0=atoi(val);
 		else if(strcasecmp("-seed",arv)==0) args->seed=atoi(val);
 		else if(strcasecmp("-mode",arv)==0) args->output_mode=strdup(val);
-		// else if(strcasecmp("-O",arv)==0) args->output_mode=strdup(val);
+		else if(strcasecmp("-O",arv)==0) args->output_mode=strdup(val);
+		else if(strcasecmp("-in_fa",arv)==0) args->in_fa=strdup(val);
+		else if(strcasecmp("-explode",arv)==0) args->explode=atoi(val);
 
 		else{
 			fprintf(stderr,"Unknown arg:%s\n",arv);

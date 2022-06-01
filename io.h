@@ -13,9 +13,9 @@
  * @field *out_fp	pointer to output file prefix [angsdput]
  * @field errate	error rate [0.01]
  * @field mps_depth	mean per site depth [4]
- * @field isSim		is input simulated data? [0]
- *		if input is simulated VCF from tskit.write_vcf
- *		positions are 0-based; shift coordinate system+1;
+ * @field pos0		is positions 0-based? [0]
+ *		if 1 is set; input VCF positions are 0-based;
+ *		shift coordinate system+1;
  * @field seed
  * @field output_mode	char defining the output file format
  *					
@@ -40,12 +40,15 @@ typedef struct{
 	double errate;
 	double mps_depth;
 
-	int isSim;
+	int pos0;
 	int seed;
 
 
 
 	char* output_mode;
+
+	char *in_fa;
+	int explode;
 	
 }argStruct;
 

@@ -1,7 +1,9 @@
 *d
 *o
 vcfgl
+*arg
+output*
 test/*arg
-test/*testvcfgl*
+test/*_god*
 *.swp
 output.*
