@@ -4,6 +4,6 @@ vcfgl
 *arg
 output*
 test/*arg
-test/*_god*
+test/*_test*
 *.swp
 output.*
