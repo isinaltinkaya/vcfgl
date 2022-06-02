@@ -98,9 +98,13 @@ char *get_time(){
 	return(asctime(local_time));
 }
 
+int32_t *gt_arr=NULL;
+int32_t *dp_vals=NULL;
+float *gl_vals=NULL;
+
+
 int setblank(bcf1_t *blk,bcf1_t *unmod,bcf_hdr_t *hdr){
 
-	int32_t *gt_arr=NULL;
 	int32_t ngt_arr=0;
 	int ngt=bcf_get_genotypes(hdr, blk, &gt_arr, &ngt_arr);
 	if ( ngt<=0 ){
@@ -119,14 +123,12 @@ int setblank(bcf1_t *blk,bcf1_t *unmod,bcf_hdr_t *hdr){
 
 
 int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,int mps_depth){
-	//TODO unpack?
-	// bcf_unpack(bcf,BCF_UN_FMT);
-	// bcf_unpack(bcf, BCF_UN_ALL);
-	// bcf_unpack(bcf, BCF_UN_INFO);
-	float *gl_vals  =   (float*)malloc(10*nSamples*sizeof(float));
-	int32_t *dp_vals  =   (int32_t*)malloc(10*nSamples*sizeof(int32_t));
+
+	if(gl_vals==NULL){
+		gl_vals  =   (float*)malloc(10*nSamples*sizeof(float));
+		dp_vals  =   (int32_t*)malloc(10*nSamples*sizeof(int32_t));
+	}
 	int n_sim_reads;  
-	int32_t *gt_arr=NULL;
 	int32_t ngt_arr=0;
 	int ngt=bcf_get_genotypes(out_hdr, out_bcf, &gt_arr, &ngt_arr);
 	if ( ngt<=0 ){
@@ -134,8 +136,6 @@ int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,int mps
 	}
 
 	int gt_ploidy=ngt/nSamples;
-
-
 	int sample_i;
 
 
@@ -143,11 +143,9 @@ int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,int mps
 
 
 		n_sim_reads=Poisson(mps_depth);
-
 		if(n_sim_reads==0){
 
 			for(int j=0;j<10;j++){
-				//TODO check blw
 				bcf_float_set_missing(gl_vals[sample_i*10+j]);
 			}
 			dp_vals[sample_i]=0;
@@ -155,7 +153,6 @@ int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,int mps
 		}else{
 
 			// fprintf(stderr,"\nn_sim_reads: %d\n",n_sim_reads);
-
 			int32_t *ptr = gt_arr + sample_i*gt_ploidy;
 
 			if (gt_ploidy!=2){
@@ -181,7 +178,6 @@ int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,int mps
 					gl_log10(pick_base(errate,bin_gts[1]), errate, like);
 				}
 			}
-
 
 #if 0
 			fprintf(stderr, "\n");
@@ -217,8 +213,6 @@ int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,int mps
 
 
 	bcf_update_format_float(out_hdr, out_bcf, "GL", gl_vals,10*nSamples);
-	free(gt_arr);
-	free(gl_vals);
 	return 0;
 }
 
@@ -227,7 +221,21 @@ int main(int argc, char **argv) {
 
 
 	if(argc==1){
-		fprintf(stderr,"\n\nhelp\n\n");
+		fprintf(stderr,"\n");
+		fprintf(stderr,"vcfgl\n\n");
+		fprintf(stderr,"\tUsage: ./vcfgl -in <input> [options]\n\n");
+		fprintf(stderr,"\t -in <input>\t\t\tinput\n");
+		fprintf(stderr,"\n");
+		fprintf(stderr,"Options:\n");
+		fprintf(stderr,"\t-out <prefix>\t\toutput prefix\n");
+		fprintf(stderr,"\t-O <mode>\t\toutput mode\n");
+		fprintf(stderr,"\t-mode <mode>\t\toutput mode\n");
+		fprintf(stderr,"\t-depth <depth>\t\tdepth\n");
+		fprintf(stderr,"\t-err <error_rate>\t\terror rate\n");
+		fprintf(stderr,"\t-seed <seed>\t\tseed\n");
+		fprintf(stderr,"\t-explode [0|1] <explode>\t\texplode\n");
+		fprintf(stderr,"\t-pos0 [0|1] <pos0>\t\tpos0\n");
+
 		return 0;
 	}
 	argStruct *args=args_get(--argc,++argv);
@@ -247,19 +255,16 @@ int main(int argc, char **argv) {
 		fprintf(arg_ff,"\n-in %s -out %s -err %f -depth %f -pos0 %d -seed %d -mode %s -in_fa %s -explode %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->pos0,args->seed,args->output_mode,args->in_fa,args->explode);
 
 
-
 		vcfFile * in_ff = bcf_open(in_fn, "r");
-
 		vcfFile * out_ff;
 
 		char *OUT_EXT;
-		// char *out_fn ;
-		char *out_fn = (char*)malloc(strlen(out_fp));
+		char *out_fn=NULL;
 		switch (*args->output_mode){
 			case 'v':
 				fprintf(stderr,"\nOutput is VCF file\n");
 				OUT_EXT=strdup(".vcf");
-				out_fn = (char*)malloc(strlen(out_fp)+strlen(OUT_EXT));
+				out_fn = (char*)malloc(strlen(out_fp)+strlen(OUT_EXT)+1);
 				strcpy(out_fn,out_fp);
 				strcat(out_fn,OUT_EXT);
 				out_ff = bcf_open(out_fn, "w");
@@ -267,7 +272,7 @@ int main(int argc, char **argv) {
 			case 'b':
 				fprintf(stderr,"\nOutput is BCF file\n");
 				OUT_EXT=strdup(".bcf");
-				out_fn = (char*)malloc(strlen(out_fp)+strlen(OUT_EXT));
+				out_fn = (char*)malloc(strlen(out_fp)+strlen(OUT_EXT)+1);
 				strcpy(out_fn,out_fp);
 				strcat(out_fn,OUT_EXT);
 				out_ff = bcf_open(out_fn, "wb");
@@ -275,7 +280,7 @@ int main(int argc, char **argv) {
 			case 'z':
 				fprintf(stderr,"\nOutput is compressed VCF file\n");
 				OUT_EXT=strdup(".vcf.gz");
-				out_fn = (char*)malloc(strlen(out_fp)+strlen(OUT_EXT));
+				out_fn = (char*)malloc(strlen(out_fp)+strlen(OUT_EXT)+1);
 				strcpy(out_fn,out_fp);
 				strcat(out_fn,OUT_EXT);
 				out_ff = bcf_open(out_fn, "wz");
@@ -283,12 +288,13 @@ int main(int argc, char **argv) {
 			case 'u':
 				fprintf(stderr,"\nOutput is uncompressed BCF file\n");
 				OUT_EXT=strdup(".bcf");
-				out_fn = (char*)malloc(strlen(out_fp)+strlen(OUT_EXT));
+				out_fn = (char*)malloc(strlen(out_fp)+strlen(OUT_EXT)+1);
 				strcpy(out_fn,out_fp);
 				strcat(out_fn,OUT_EXT);
 				out_ff = bcf_open(out_fn, "wbu");
 				break;
 		}
+		free(OUT_EXT);
 
 		if (in_ff == NULL) {
 			return 1;
@@ -347,9 +353,6 @@ int main(int argc, char **argv) {
 		}
 
 		bcf1_t *bcf = bcf_init();
-
-
-
 		int nSites=0;
 
 
@@ -366,12 +369,12 @@ int main(int argc, char **argv) {
 		fprintf(stderr,	"Number of contigs: %d\n",hdr->n[BCF_DT_CTG]);
 
 
-		bcf1_t *out_bcf;
-		bcf1_t *blank = NULL;
+		bcf1_t *out_bcf=bcf_init();
+		bcf1_t *blank = bcf_init();;
 
 		while (bcf_read(in_ff, hdr, bcf) == 0) {
 			//copy next record with data into out_bcf
-			out_bcf=bcf_dup(bcf);
+			out_bcf=bcf_copy(out_bcf,bcf);
 			if(args->explode==0){
 				setval(out_hdr,out_bcf,nSamples,errate,mps_depth);
 				if(out_bcf->pos==-1){
@@ -388,9 +391,10 @@ int main(int argc, char **argv) {
 				nSites++;
 			}else{
 				//ensure that we have a empty blank record that we can modify
-				if(blank==NULL){
-					blank = bcf_dup(out_bcf);
-				}
+				// if(blank==NULL){
+					// blank = bcf_dup(out_bcf);
+					blank = bcf_copy(blank,out_bcf);
+				// }
 
 				if(out_bcf->pos==-1){
 					if(pos0==0){
@@ -434,12 +438,9 @@ int main(int argc, char **argv) {
 			int contigsize = ctg[out_bcf->rid].val->info[0];
 			// fprintf(stderr,"contigsize: %d\n",contigsize);
 
-			// while(nSites<contigsize-1){
 			while(nSites<contigsize){
 				setblank(blank,out_bcf,hdr);
 				setval(out_hdr,blank,nSamples,errate,mps_depth);
-				// blank->pos = nSites+1;
-				// blank->pos = nSites+pos0;
 				blank->pos = nSites;
 				if(bcf_write(out_ff, out_hdr, blank)!=0){
 					fprintf(stderr,"Error: Failed to write\n");
@@ -457,6 +458,7 @@ int main(int argc, char **argv) {
 		bcf_destroy(bcf);
 		bcf_hdr_destroy(out_hdr);
 		bcf_destroy(out_bcf);
+		bcf_destroy(blank);
 
 		int BCF_CLOSE;
 		if ( (BCF_CLOSE=bcf_close(in_ff))){
@@ -469,17 +471,19 @@ int main(int argc, char **argv) {
 			exit(BCF_CLOSE);
 		}else{
 			fprintf(stderr,"\nDumping output to file: %s\n\n",out_fn);
-
 		}
 
 		free(out_fn);
 		free(args->in_fn);
 		free(args->out_fp);
+		free(args->output_mode);
 		free(args);
-
-
-
-
+		if(gl_vals!=NULL){
+			free(gl_vals);
+			free(dp_vals);
+		}
+		fclose(arg_ff);
+		free(gt_arr);
 
 	}
 
