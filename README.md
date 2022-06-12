@@ -4,7 +4,7 @@
 ## Installation
 
 ```
-git clone git@github.com:isinaltinkaya/vcf-gl.git; cd vcf-gl; make
+git clone git@github.com:isinaltinkaya/vcfgl.git; cd vcfgl; make
 ```
 
 ## Usage
