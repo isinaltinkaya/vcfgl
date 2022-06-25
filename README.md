@@ -158,3 +158,21 @@ mutts = msprime.sim_mutations(ts, rate=msp_u, model="binary")
 with open(vcf_file,"w") as vcf:
                                 mutts.write_vcf(vcf)
 ```
+
+### - Order of genotype likelihoods
+
+The order of genotype likelihoods in VCF file format is calculated as in the following pseudocode:
+
+```
+for P=ploidy and N=number of alternate alleles;
+for a_p in 0:N; for a_p-1 in 0:a_p; print(a1,a2);
+```
+
+For P=2 N=3
+
+```
+0,1,2,3
+A,C,G,T
+00,01,11,02,12,22,03,13,23,33
+AA,AC,CC,AG,CG,GG,AT,CT,GT,TT
+```
