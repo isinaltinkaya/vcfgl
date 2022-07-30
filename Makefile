@@ -47,6 +47,18 @@ endif
 	$(MAKE) -C $(HTSSRC)
 
 
+VERSION = 0.1
+
+
+ifneq "$(wildcard .git)" ""
+VERSION := $(shell git describe --always --dirty)
+version.h: $(if $(wildcard version.h),$(if $(findstring "$(VERSION)",$(shell cat version.h)),,force))
+endif
+
+version.h:
+	echo '#define VCFGL_VERSION "$(VERSION)"' > $@
+
+
 
 PROGRAM = vcfgl
 all: $(PROGRAM)
@@ -62,11 +74,11 @@ OBJ = $(CXXSRC:.cpp=.o)
 
 
 
-$(PROGRAM): $(OBJ)
+$(PROGRAM): $(OBJ) version.h
 	$(CXX) -o $(PROGRAM) *.o $(LIBHTS) $(LIBS) 
 
 clean:
-	$(RM) *.o *.d $(PROGRAM)
+	$(RM) *.o *.d $(PROGRAM) version.h
 
 test: 
 	./vcfgl -in test/t1.vcf -out test/t1_pos00_explode0_test -O v -seed 42 -depth 1 -err 0.01 -pos0 0 -explode 0;
