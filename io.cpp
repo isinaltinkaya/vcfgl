@@ -19,7 +19,7 @@ argStruct *args_init(){
 
 	args->output_mode=strdup("b");
 
-	args->mps_depth=4;
+	args->mps_depth=1.0;
 	args->errate=0.01;
 	args->seed=-1;
 	args->in_fa = NULL;

@@ -122,7 +122,7 @@ int setblank(bcf1_t *blk,bcf1_t *unmod,bcf_hdr_t *hdr){
 }
 
 
-int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,int mps_depth){
+int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,double mps_depth){
 
 	if(gl_vals==NULL){
 		gl_vals  =   (float*)malloc(10*nSamples*sizeof(float));
