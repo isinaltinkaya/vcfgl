@@ -228,13 +228,13 @@ int main(int argc, char **argv) {
 		fprintf(stderr,"\t -in <input>\t\t\tinput\n");
 		fprintf(stderr,"\n");
 		fprintf(stderr,"Options:\n");
-		fprintf(stderr,"\t-out <prefix>\t\toutput prefix\n");
-		fprintf(stderr,"\t-O <mode>\t\toutput mode\n");
-		fprintf(stderr,"\t-mode <mode>\t\toutput mode\n");
-		fprintf(stderr,"\t-depth <depth>\t\tdepth\n");
+		fprintf(stderr,"\t-out <prefix>\t\t\toutput prefix\n");
+		fprintf(stderr,"\t-O <mode>\t\t\toutput mode\n");
+		fprintf(stderr,"\t-mode <mode>\t\t\toutput mode\n");
+		fprintf(stderr,"\t-depth <depth>\t\t\tdepth\n");
 		fprintf(stderr,"\t-err <error_rate>\t\terror rate\n");
-		fprintf(stderr,"\t-seed <seed>\t\tseed\n");
-		fprintf(stderr,"\t-explode [0|1] <explode>\t\texplode\n");
+		fprintf(stderr,"\t-seed <seed>\t\t\tseed\n");
+		fprintf(stderr,"\t-explode [0|1] <explode>\texplode\n");
 		fprintf(stderr,"\t-pos0 [0|1] <pos0>\t\tpos0\n");
 
 		return 0;
