@@ -4,7 +4,7 @@
 ##contig=<ID=chr22,length=100>
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##fileDate=Wed Jun  1 15:43:41 2022
-##source=vcfgl -err 0.010000 -depth 1.000000 -pos0 1 -seed 42
+##source=vcfgl -err 0.010000 -depth 1.000000 -pos0 1 -seed 42 -explode 1
 ##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Simulated read depth">
 ##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihood in log10 likelihood ratio format">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind

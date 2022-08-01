@@ -47,11 +47,11 @@ endif
 	$(MAKE) -C $(HTSSRC)
 
 
-VERSION = 0.1
+VERSION = v0.1
 
 
 ifneq "$(wildcard .git)" ""
-VERSION := $(shell git describe --always --dirty)
+VERSION += $(shell git describe --always --dirty)
 endif
 
 
@@ -74,7 +74,7 @@ OBJ = $(CXXSRC:.cpp=.o)
 
 
 
-$(PROGRAM): $(OBJ) version.h
+$(PROGRAM): version.h $(OBJ) 
 	$(CXX) -o $(PROGRAM) *.o $(LIBHTS) $(LIBS) 
 
 clean:
@@ -82,15 +82,15 @@ clean:
 
 test: 
 	./vcfgl -in test/t1.vcf -out test/t1_pos00_explode0_test -O v -seed 42 -depth 1 -err 0.01 -pos0 0 -explode 0;
-	bash -c "diff -I '^##fileDate' test/t1_pos00_explode0_test.vcf test/t1_pos00_explode0_god.vcf";
+	bash -c "diff -I '^##fileDate' -I '^##source vcfgl version:' test/t1_pos00_explode0_test.vcf test/t1_pos00_explode0_god.vcf";
 	./vcfgl -in test/t1.vcf -out test/t1_pos00_explode1_test -O v -seed 42 -depth 1 -err 0.01 -pos0 0 -explode 1;
-	bash -c "diff -I '^##fileDate' test/t1_pos00_explode1_test.vcf test/t1_pos00_explode1_god.vcf";
+	bash -c "diff -I '^##fileDate' -I '^## source vcfgl version:' test/t1_pos00_explode1_test.vcf test/t1_pos00_explode1_god.vcf";
 	./vcfgl -in test/t1.vcf -out test/t1_pos01_explode0_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 0;
-	bash -c "diff -I '^##fileDate' test/t1_pos01_explode0_test.vcf test/t1_pos01_explode0_god.vcf";
+	bash -c "diff -I '^##fileDate' -I '^## source vcfgl version:' test/t1_pos01_explode0_test.vcf test/t1_pos01_explode0_god.vcf";
 	./vcfgl -in test/t1.vcf -out test/t1_pos01_explode1_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 1;
-	bash -c "diff -I '^##fileDate' test/t1_pos01_explode1_test.vcf test/t1_pos01_explode1_god.vcf";
+	bash -c "diff -I '^##fileDate' -I '^## source vcfgl version:' test/t1_pos01_explode1_test.vcf test/t1_pos01_explode1_god.vcf";
 	./vcfgl -in test/t2.vcf -out test/t2_pos01_explode0_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 0;
-	bash -c "diff -I '^##fileDate' test/t2_pos01_explode0_test.vcf test/t2_pos01_explode0_god.vcf";
+	bash -c "diff -I '^##fileDate' -I '^## source vcfgl version:' test/t2_pos01_explode0_test.vcf test/t2_pos01_explode0_god.vcf";
 	./vcfgl -in test/t2.vcf -out test/t2_pos01_explode1_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 1;
-	bash -c "diff -I '^##fileDate' test/t2_pos01_explode1_test.vcf test/t2_pos01_explode1_god.vcf";
+	bash -c "diff -I '^##fileDate' -I '^## source vcfgl version:' test/t2_pos01_explode1_test.vcf test/t2_pos01_explode1_god.vcf";
 

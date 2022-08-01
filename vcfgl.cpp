@@ -52,6 +52,7 @@
 #include "estimator.h"
 #include "io.h"
 
+#include "version.h"
 
 const int vcf_gl_order_idx[10]={0,1,4,2,5,7,3,6,8,9};
 
@@ -325,13 +326,24 @@ int main(int argc, char **argv) {
 			exit(1);
 		}
 		char *SOURCE_TAG;
-		if(asprintf(&SOURCE_TAG, "##source=vcfgl -err %f -depth %f -pos0 %d -seed %d",args->errate,args->mps_depth,args->pos0,args->seed)>0){
+		if(asprintf(&SOURCE_TAG, "##source=vcfgl -err %f -depth %f -pos0 %d -seed %d -explode %d",args->errate,args->mps_depth,args->pos0,args->seed, args->explode)>0){
 
 			if(bcf_hdr_append(out_hdr, SOURCE_TAG)!=0){
 				fprintf(stderr,"failed to append header\n");
 				exit(1);
 			}
 			free(SOURCE_TAG);
+		}else{
+			exit(1);
+		}
+
+		char *SOURCE_VERSION_TAG;
+		if(asprintf(&SOURCE_VERSION_TAG, "##source=vcfgl version: %s",VCFGL_VERSION)>0){
+			if(bcf_hdr_append(out_hdr, SOURCE_VERSION_TAG)!=0){
+				fprintf(stderr,"failed to append header\n");
+				exit(1);
+			}
+			free(SOURCE_VERSION_TAG);
 		}else{
 			exit(1);
 		}
