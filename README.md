@@ -176,3 +176,14 @@ A,C,G,T
 00,01,11,02,12,22,03,13,23,33
 AA,AC,CC,AG,CG,GG,AT,CT,GT,TT
 ```
+
+
+### - Ancestral and derived alleles
+
+By default, `vcfgl` treats the allelic state `0` in input file as `A`, and `1` as `C`. Therefore a genotype of `00` corresponds to `AA`, `01` to `AC`, `10` to `CA`, and `11` to `CC`.
+
+Binary representation | Allele
+-- | --
+0 | A
+1 | C
+
