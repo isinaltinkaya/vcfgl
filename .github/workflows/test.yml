@@ -5,6 +5,12 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git SHA-1 commit hash (optional)
+        required: false
+
 
 jobs:
   build:
