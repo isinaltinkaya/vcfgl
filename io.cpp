@@ -3,6 +3,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <sys/stat.h>
+
 
 #include <stdio.h>
 
@@ -20,6 +22,7 @@ argStruct *args_init(){
 	args->output_mode=strdup("b");
 
 	args->mps_depth=1.0;
+	args->in_mps_depths=NULL;
 	args->errate=0.01;
 	args->seed=-1;
 	args->in_fa = NULL;
@@ -46,6 +49,7 @@ argStruct *args_get(int argc, char **argv){
 		else if(strcasecmp("-out",arv)==0) args->out_fp=strdup(val); 
 		else if(strcasecmp("-err",arv)==0) args->errate=atof(val); 
 		else if(strcasecmp("-depth",arv)==0) args->mps_depth=atof(val); 
+		else if(strcasecmp("-df",arv)==0) args->in_mps_depths=strdup(val); 
 		else if(strcasecmp("-pos0",arv)==0) args->pos0=atoi(val);
 		else if(strcasecmp("-seed",arv)==0) args->seed=atoi(val);
 		else if(strcasecmp("-mode",arv)==0) args->output_mode=strdup(val);
@@ -81,5 +85,38 @@ argStruct *args_get(int argc, char **argv){
 }
 
 
+size_t fsize(const char* fname){
+	struct stat st ;
+	stat(fname,&st);
+	return st.st_size;
+}
 
+
+
+
+//modified from msToGlf.c
+double *read_depthsFile(const char* fname,int len){
+	fprintf(stderr, "Reading depths file: %s for %d samples\n",fname, len);
+
+	FILE *fp = NULL;
+	if((fp=fopen(fname,"r"))==NULL){
+		fprintf(stderr,"Problem opening file: %s\n",fname);
+		exit(0);
+	}
+
+	char *buf = (char*) malloc(sizeof(char) * fsize(fname));
+	double *ret = (double*) malloc(len*sizeof(double));
+	if(fsize(fname)!=fread(buf,sizeof(char),fsize(fname),fp)){
+		fprintf(stderr,"Problem reading file=%s\n",fname);
+		exit(0);
+	}
+	int posi=0;
+
+	ret[posi++] = atof(strtok(buf,"\n\t "));
+	char *tok;
+	while((tok=strtok(NULL,"\n\t "))) 
+		ret[posi++] = atof(tok);
+
+	return ret;
+}
 

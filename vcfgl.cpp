@@ -123,7 +123,7 @@ int setblank(bcf1_t *blk,bcf1_t *unmod,bcf_hdr_t *hdr){
 }
 
 
-int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,double mps_depth){
+int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,double mps_depth, double* mps_depths){
 
 	if(gl_vals==NULL){
 		gl_vals  =   (float*)malloc(10*nSamples*sizeof(float));
@@ -137,13 +137,18 @@ int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,double 
 	}
 
 	int gt_ploidy=ngt/nSamples;
-	int sample_i;
 
 
-	for (sample_i=0; sample_i<nSamples; sample_i++) {
+	for (int sample_i=0; sample_i<nSamples; sample_i++) {
 
 
-		n_sim_reads=Poisson(mps_depth);
+		if(mps_depths!=NULL){
+			n_sim_reads=Poisson(mps_depths[sample_i]);
+			fprintf(stderr, "\nIndividual %d mean per-site depth is set to %f\n", sample_i,mps_depths[sample_i]);
+		}else{
+			n_sim_reads=Poisson(mps_depth);
+		}
+
 		if(n_sim_reads==0){
 
 			for(int j=0;j<10;j++){
@@ -232,6 +237,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr,"\t-O <mode>\t\t\toutput mode\n");
 		fprintf(stderr,"\t-mode <mode>\t\t\toutput mode\n");
 		fprintf(stderr,"\t-depth <depth>\t\t\tdepth\n");
+		fprintf(stderr,"\t-df <depths_file>\t\t\tdepths file\n");
 		fprintf(stderr,"\t-err <error_rate>\t\terror rate\n");
 		fprintf(stderr,"\t-seed <seed>\t\t\tseed\n");
 		fprintf(stderr,"\t-explode [0|1] <explode>\texplode\n");
@@ -245,6 +251,8 @@ int main(int argc, char **argv) {
 
 		char *in_fn=args->in_fn;
 		char *out_fp=args->out_fp;
+		char* in_mps_depths=args->in_mps_depths;
+		double *mps_depths=NULL;
 		double errate=args->errate;
 		double mps_depth=args->mps_depth;
 		int pos0=args->pos0;
@@ -252,8 +260,8 @@ int main(int argc, char **argv) {
 		FILE *arg_ff=openFile(out_fp,".arg");
 
 
-		fprintf(stderr,"\n-in %s -out %s -err %f -depth %f -pos0 %d -seed %d -mode %s -in_fa %s -explode %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->pos0,args->seed,args->output_mode,args->in_fa,args->explode);
-		fprintf(arg_ff,"\n-in %s -out %s -err %f -depth %f -pos0 %d -seed %d -mode %s -in_fa %s -explode %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->pos0,args->seed,args->output_mode,args->in_fa,args->explode);
+		fprintf(stderr,"\n-in %s -out %s -err %f -depth %f -depths_file %s -pos0 %d -seed %d -mode %s -in_fa %s -explode %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->in_mps_depths,args->pos0,args->seed,args->output_mode,args->in_fa,args->explode);
+		fprintf(arg_ff,"\n-in %s -out %s -err %f -depth %f -depths_file %s -pos0 %d -seed %d -mode %s -in_fa %s -explode %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->in_mps_depths,args->pos0,args->seed,args->output_mode,args->in_fa,args->explode);
 
 
 		vcfFile * in_ff = bcf_open(in_fn, "r");
@@ -305,6 +313,8 @@ int main(int argc, char **argv) {
 			return 1; 
 		}
 
+
+
 		bcf_hdr_t *hdr = bcf_hdr_read(in_ff);
 
 		bcf_hdr_t *out_hdr = bcf_hdr_dup(hdr);
@@ -326,7 +336,7 @@ int main(int argc, char **argv) {
 			exit(1);
 		}
 		char *SOURCE_TAG;
-		if(asprintf(&SOURCE_TAG, "##source=vcfgl -err %f -depth %f -pos0 %d -seed %d -explode %d",args->errate,args->mps_depth,args->pos0,args->seed, args->explode)>0){
+		if(asprintf(&SOURCE_TAG, "##source=vcfgl -err %f -depth %f -df %s -pos0 %d -seed %d -explode %d",args->errate,args->mps_depth,args->in_mps_depths, args->pos0,args->seed, args->explode)>0){
 
 			if(bcf_hdr_append(out_hdr, SOURCE_TAG)!=0){
 				fprintf(stderr,"failed to append header\n");
@@ -376,6 +386,11 @@ int main(int argc, char **argv) {
 		int nSamples=bcf_hdr_nsamples(hdr);
 
 
+		if(in_mps_depths!=NULL){
+			mps_depths=read_depthsFile(in_mps_depths, nSamples);
+		}
+
+
 		fprintf(stderr, "\nReading file:\t\"%s\"\n", in_fn);
 		fprintf(stderr, "Number of samples: %i\n", bcf_hdr_nsamples(hdr));
 		fprintf(stderr,	"Number of contigs: %d\n",hdr->n[BCF_DT_CTG]);
@@ -388,7 +403,7 @@ int main(int argc, char **argv) {
 			//copy next record with data into out_bcf
 			out_bcf=bcf_copy(out_bcf,bcf);
 			if(args->explode==0){
-				setval(out_hdr,out_bcf,nSamples,errate,mps_depth);
+				setval(out_hdr,out_bcf,nSamples,errate,mps_depth,mps_depths);
 				if(out_bcf->pos==-1){
 					if(pos0==0){
 						fprintf(stderr,"\n[ERROR]: Input file coordinates start from 0; but -pos0 is not set to 1. Please run again with -pos0 1.\n\n");
@@ -424,7 +439,7 @@ int main(int argc, char **argv) {
 					}
 
 					setblank(blank,out_bcf,hdr);
-					setval(out_hdr,blank,nSamples,errate,mps_depth);
+					setval(out_hdr,blank,nSamples,errate,mps_depth,mps_depths);
 					blank->pos = nSites;
 					// fprintf(stderr,"blank->pos: %d\n",blank->pos+pos0);
 					if(bcf_write(out_ff, out_hdr, blank)!=0){
@@ -435,7 +450,7 @@ int main(int argc, char **argv) {
 
 				}
 				// fprintf(stderr,"After loop that fills in missing data will print out: %d\n",out_bcf->pos+pos0+1);
-				setval(out_hdr,out_bcf,nSamples,errate,mps_depth);
+				setval(out_hdr,out_bcf,nSamples,errate,mps_depth,mps_depths);
 				out_bcf->pos += pos0;
 				if(bcf_write(out_ff, out_hdr, out_bcf)!=0){
 					fprintf(stderr,"Error: Failed to write\n");
@@ -452,7 +467,7 @@ int main(int argc, char **argv) {
 
 			while(nSites<contigsize){
 				setblank(blank,out_bcf,hdr);
-				setval(out_hdr,blank,nSamples,errate,mps_depth);
+				setval(out_hdr,blank,nSamples,errate,mps_depth,mps_depths);
 				blank->pos = nSites;
 				if(bcf_write(out_ff, out_hdr, blank)!=0){
 					fprintf(stderr,"Error: Failed to write\n");
