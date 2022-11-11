@@ -144,7 +144,6 @@ int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,double 
 
 		if(mps_depths!=NULL){
 			n_sim_reads=Poisson(mps_depths[sample_i]);
-			fprintf(stderr, "\nIndividual %d mean per-site depth is set to %f\n", sample_i,mps_depths[sample_i]);
 		}else{
 			n_sim_reads=Poisson(mps_depth);
 		}
@@ -388,6 +387,11 @@ int main(int argc, char **argv) {
 
 		if(in_mps_depths!=NULL){
 			mps_depths=read_depthsFile(in_mps_depths, nSamples);
+
+			fprintf(stderr, "\n");
+			for (int sample_i=0; sample_i<nSamples; sample_i++) {
+				fprintf(stderr, "Individual %d mean per-site depth is set to %f\n", sample_i,mps_depths[sample_i]);
+			}
 		}
 
 
