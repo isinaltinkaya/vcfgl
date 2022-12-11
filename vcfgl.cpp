@@ -172,8 +172,13 @@ int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,double 
 			//binary input genotypes from simulated input
 			for (int i=0; i<gt_ploidy;i++){
 				bin_gts[i]= bcf_gt_allele(ptr[i]);
+				// use bit shifting to check if bin_gt[n] is 0 or 1
+				if( (bin_gts[i] >> 1) != 0){
+					fprintf(stderr,"ERROR:\n\nbin_gts[%d]: Genotype %d not supported.\n",i,bin_gts[i]);
+					exit(1);
+				}
 			}
-
+		
 			// fprintf(stderr,"%d (%d,%d)\n",n_sim_reads,bin_gts[0],bin_gts[1]);
 
 			for (int i=0; i<n_sim_reads; i++){
