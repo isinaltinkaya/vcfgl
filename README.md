@@ -1,6 +1,8 @@
 # vcfgl [![test](https://github.com/isinaltinkaya/vcf-gl/actions/workflows/test.yml/badge.svg)](https://github.com/isinaltinkaya/vcf-gl/actions/workflows/test.yml)
 
-## Small program to simulate genotype likelihoods from VCF GT tags
+
+vcfgl is a lightweight utility tool for simulating genotype likelihoods from GT fields in VCF/BCF files. With a given read depth, the program calculates the genotype likelihoods and writes them to the GL field in the output file.
+
 
 ## Installation
 
