@@ -1,8 +1,13 @@
 CXX ?= g++
 
-#  -g     add debugging info to the executable 
-#  -Wall  turn on most compiler warnings
-CXXFLAGS  = -g -Wall
+
+ifeq (dev,$(filter dev,$(MAKECMDGOALS)))
+CXXFLAGS  = -g -Wall -O0
+else
+$(info Compiling with optimizaton (-O3))
+CXXFLAGS  = -O3
+endif
+
 LIBS = -lz -lm -lbz2 -llzma -lcurl -lpthread
 
 
