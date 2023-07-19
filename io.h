@@ -34,6 +34,8 @@
  *						v	uncompressed  VCF
  *						z	compressed VCF (bgzf compressed)
  *
+ * @field explode
+ * @field printBaseCounts	should the program print base counts
  */
 typedef struct{
 
@@ -54,8 +56,8 @@ typedef struct{
 
 	char* output_mode;
 
-	char *in_fa;
 	int explode;
+	int printBaseCounts;
 	
 }argStruct;
 

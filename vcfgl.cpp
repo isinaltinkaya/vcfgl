@@ -123,7 +123,7 @@ int setblank(bcf1_t *blk,bcf1_t *unmod,bcf_hdr_t *hdr){
 }
 
 
-int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,double mps_depth, double* mps_depths){
+int simulate_record(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double* mps_depths, argStruct* args, const int site_i, FILE* out_baseCounts_ff){
 
 	if(gl_vals==NULL){
 		gl_vals  =   (float*)malloc(10*nSamples*sizeof(float));
@@ -137,16 +137,24 @@ int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,double 
 	}
 
 	int gt_ploidy=ngt/nSamples;
+	
 
+
+	int acgt_counts[4]={0};
 
 	for (int sample_i=0; sample_i<nSamples; sample_i++) {
+		
+		if(args->printBaseCounts==1){
+			acgt_counts[4]={0};
+		}
 
 
 		if(mps_depths!=NULL){
 			n_sim_reads=Poisson(mps_depths[sample_i]);
 		}else{
-			n_sim_reads=Poisson(mps_depth);
+			n_sim_reads=Poisson(args->mps_depth);
 		}
+
 
 		if(n_sim_reads==0){
 
@@ -157,7 +165,6 @@ int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,double 
 
 		}else{
 
-			// fprintf(stderr,"\nn_sim_reads: %d\n",n_sim_reads);
 			int32_t *ptr = gt_arr + sample_i*gt_ploidy;
 
 			if (gt_ploidy!=2){
@@ -178,14 +185,18 @@ int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,double 
 					exit(1);
 				}
 			}
-		
-			// fprintf(stderr,"%d (%d,%d)\n",n_sim_reads,bin_gts[0],bin_gts[1]);
 
+
+			int base=0;
 			for (int i=0; i<n_sim_reads; i++){
 				if(drand48()<0.5){
-					gl_log10(pick_base(errate,bin_gts[0]), errate, like);
+					base=pick_base(args->errate,bin_gts[0]), args->errate, like;
+					acgt_counts[base]++;
+					gl_log10(base,args->errate,like);
 				}else{
-					gl_log10(pick_base(errate,bin_gts[1]), errate, like);
+					base=pick_base(args->errate,bin_gts[1]);
+					gl_log10(base,args->errate,like);
+					acgt_counts[base]++;
 				}
 			}
 
@@ -209,6 +220,12 @@ int setval(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double errate,double 
 			dp_vals[sample_i]=n_sim_reads;
 
 		}
+
+		
+		if(args->printBaseCounts==1){
+			fprintf(out_baseCounts_ff,"%d\t%d\t%d\t%d\t%d\t%d\n",site_i,sample_i,acgt_counts[0],acgt_counts[1],acgt_counts[2],acgt_counts[3]);
+		}
+
 
 	} //end sample loop
 
@@ -257,15 +274,19 @@ int main(int argc, char **argv) {
 		char *out_fp=args->out_fp;
 		char* in_mps_depths=args->in_mps_depths;
 		double *mps_depths=NULL;
-		double errate=args->errate;
 		double mps_depth=args->mps_depth;
 		int pos0=args->pos0;
 
 		FILE *arg_ff=openFile(out_fp,".arg");
 
+		FILE *out_baseCounts_ff=NULL;
+		if(args->printBaseCounts==1){
+			out_baseCounts_ff=openFile(out_fp,".baseCounts.tsv");
+			fprintf(out_baseCounts_ff,"site\tind\tA\tC\tG\tT\n");
+		}
 
-		fprintf(stderr,"\n-in %s -out %s -err %f -depth %f -depths_file %s -pos0 %d -seed %d -mode %s -in_fa %s -explode %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->in_mps_depths,args->pos0,args->seed,args->output_mode,args->in_fa,args->explode);
-		fprintf(arg_ff,"\n-in %s -out %s -err %f -depth %f -depths_file %s -pos0 %d -seed %d -mode %s -in_fa %s -explode %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->in_mps_depths,args->pos0,args->seed,args->output_mode,args->in_fa,args->explode);
+		fprintf(stderr,"\n-in %s -out %s -err %f -depth %f -depths_file %s -pos0 %d -seed %d -mode %s -explode %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->in_mps_depths,args->pos0,args->seed,args->output_mode,args->explode);
+		fprintf(arg_ff,"\n-in %s -out %s -err %f -depth %f -depths_file %s -pos0 %d -seed %d -mode %s -explode %d\n",args->in_fn,args->out_fp,args->errate,args->mps_depth,args->in_mps_depths,args->pos0,args->seed,args->output_mode,args->explode);
 
 
 		vcfFile * in_ff = bcf_open(in_fn, "r");
@@ -412,7 +433,7 @@ int main(int argc, char **argv) {
 			//copy next record with data into out_bcf
 			out_bcf=bcf_copy(out_bcf,bcf);
 			if(args->explode==0){
-				setval(out_hdr,out_bcf,nSamples,errate,mps_depth,mps_depths);
+				simulate_record(out_hdr,out_bcf,nSamples,mps_depths,args,nSites,out_baseCounts_ff);
 				if(out_bcf->pos==-1){
 					if(pos0==0){
 						fprintf(stderr,"\n[ERROR]: Input file coordinates start from 0; but -pos0 is not set to 1. Please run again with -pos0 1.\n\n");
@@ -448,7 +469,7 @@ int main(int argc, char **argv) {
 					}
 
 					setblank(blank,out_bcf,hdr);
-					setval(out_hdr,blank,nSamples,errate,mps_depth,mps_depths);
+					simulate_record(out_hdr,blank,nSamples,mps_depths,args,nSites,out_baseCounts_ff);
 					blank->pos = nSites;
 					// fprintf(stderr,"blank->pos: %d\n",blank->pos+pos0);
 					if(bcf_write(out_ff, out_hdr, blank)!=0){
@@ -459,7 +480,7 @@ int main(int argc, char **argv) {
 
 				}
 				// fprintf(stderr,"After loop that fills in missing data will print out: %d\n",out_bcf->pos+pos0+1);
-				setval(out_hdr,out_bcf,nSamples,errate,mps_depth,mps_depths);
+				simulate_record(out_hdr,out_bcf,nSamples,mps_depths,args,nSites,out_baseCounts_ff);
 				out_bcf->pos += pos0;
 				if(bcf_write(out_ff, out_hdr, out_bcf)!=0){
 					fprintf(stderr,"Error: Failed to write\n");
@@ -476,7 +497,7 @@ int main(int argc, char **argv) {
 
 			while(nSites<contigsize){
 				setblank(blank,out_bcf,hdr);
-				setval(out_hdr,blank,nSamples,errate,mps_depth,mps_depths);
+				simulate_record(out_hdr,blank,nSamples,mps_depths,args,nSites,out_baseCounts_ff);
 				blank->pos = nSites;
 				if(bcf_write(out_ff, out_hdr, blank)!=0){
 					fprintf(stderr,"Error: Failed to write\n");
@@ -509,6 +530,21 @@ int main(int argc, char **argv) {
 			fprintf(stderr,"\nDumping output to file: %s\n\n",out_fn);
 		}
 
+		if(fclose(arg_ff)!=0){
+			fprintf(stderr,"Error closing file");
+			exit(1);
+		}
+
+
+		if(args->printBaseCounts==1){
+			if(fclose(out_baseCounts_ff)!=0){
+				fprintf(stderr,"Error closing file");
+				exit(1);
+			}else{
+				fprintf(stderr,"\nDumping baseCounts file to %s.baseCounts.tsv\n",out_fp);
+			}
+		}
+
 		free(out_fn);
 		free(args->in_fn);
 		free(args->out_fp);
@@ -518,7 +554,8 @@ int main(int argc, char **argv) {
 			free(gl_vals);
 			free(dp_vals);
 		}
-		fclose(arg_ff);
+
+
 		free(gt_arr);
 
 	}

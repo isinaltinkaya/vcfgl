@@ -25,8 +25,8 @@ argStruct *args_init(){
 	args->in_mps_depths=NULL;
 	args->errate=0.01;
 	args->seed=-1;
-	args->in_fa = NULL;
 	args->explode = 0;
+	args->printBaseCounts=0;
 	return args;
 
 
@@ -54,8 +54,8 @@ argStruct *args_get(int argc, char **argv){
 		else if(strcasecmp("-seed",arv)==0) args->seed=atoi(val);
 		else if(strcasecmp("-mode",arv)==0) args->output_mode=strdup(val);
 		else if(strcasecmp("-O",arv)==0) args->output_mode=strdup(val);
-		else if(strcasecmp("-in_fa",arv)==0) args->in_fa=strdup(val);
 		else if(strcasecmp("-explode",arv)==0) args->explode=atoi(val);
+		else if(strcasecmp("-printBaseCounts",arv)==0) args->printBaseCounts=atoi(val);
 
 		else{
 			fprintf(stderr,"Unknown arg:%s\n",arv);
