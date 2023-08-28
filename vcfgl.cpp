@@ -1,8 +1,6 @@
 
 /*
  *
- * VCF parser
- *
  *
  *
  * [[ MSPRIME SIMULATED VCF INPUT ]]
@@ -53,9 +51,62 @@
 #include "io.h"
 
 #include "version.h"
+#include "from_htslib.h"
+#include "shared.h"
 
 const int vcf_gl_order_idx[10]={0,1,4,2,5,7,3,6,8,9};
 
+typedef struct
+{
+	int type;
+	const char *str, *hdr;
+}
+tag_t;
+enum tag{ GP, GL, PL, GT, QS, I16, DP};
+tag_t tags[] =
+{
+	[GP]   = { .type = BCF_HT_REAL, 
+		.str = "GP", 
+		.hdr = "##FORMAT=<ID=GP,Number=G,Type=Float,Description=\"Genotype probabilities\">" 
+	},
+	[GL]   = { .type = BCF_HT_REAL, 
+		.str = "GL", 
+		.hdr = "##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"Genotype likelihood in log10 likelihood ratio format\">"
+	},
+	[PL]   = { .type = BCF_HT_INT,  
+		.str = "PL", 
+		.hdr = "##FORMAT=<ID=PL,Number=G,Type=Integer,Description=\"Phred-scaled genotype likelihoods\">" 
+	},
+	[GT]   = { .type = BCF_HT_STR,  
+		.str = "GT", 
+		.hdr = "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">" 
+	},
+	[QS]   = { .type = BCF_HT_INT,
+		.str = "QS",
+		.hdr = "##FORMAT=<ID=QS,Number=R,Type=Integer,Description=\"Phred-score allele quality sum. Auxiliary tag used for calling\">" 
+	},
+	[I16]   = { .type = BCF_HT_REAL, 
+		.str = "I16", 
+		.hdr = "##INFO=<ID=I16,Number=16,Type=Float,Description=\"Auxiliary tag used for calling, see description of bcf_callret1_t in bam2bcf.h\">"
+	},
+	[DP]    = { .type = BCF_HT_INT,
+		.str = "DP",
+		.hdr = "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Simulated read depth\">"
+	},
+
+};
+
+
+int sample_strand(){
+	int i=rand() % 2;
+	return(i);
+}
+
+
+int sample_tail_length(){
+	int i=sample_uniform_from_range(1,50);
+	return(i);
+}
 
 
 FILE *getFILE(const char*fname,const char* mode){
@@ -100,8 +151,6 @@ char *get_time(){
 }
 
 int32_t *gt_arr=NULL;
-int32_t *dp_vals=NULL;
-float *gl_vals=NULL;
 
 
 int setblank(bcf1_t *blk,bcf1_t *unmod,bcf_hdr_t *hdr){
@@ -123,27 +172,38 @@ int setblank(bcf1_t *blk,bcf1_t *unmod,bcf_hdr_t *hdr){
 }
 
 
-int simulate_record(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double* mps_depths, argStruct* args, const int site_i, FILE* out_baseCounts_ff){
+int simulate_record(bcf_hdr_t *out_hdr,bcf1_t *out_bcf_rec,int nSamples,double* mps_depths, argStruct* args, const int site_i, FILE* out_baseCounts_ff){
 
-	if(gl_vals==NULL){
-		gl_vals  =   (float*)malloc(10*nSamples*sizeof(float));
-		dp_vals  =   (int32_t*)malloc(10*nSamples*sizeof(int32_t));
+	int n=10*nSamples;
+
+	float *gl_vals=(float*)malloc(n*sizeof(float));
+	int32_t *dp_vals=(int32_t*)malloc(n*sizeof(int32_t));
+
+	float* gp_vals=NULL;
+	if(1==args->addGP){
+		gp_vals=(float*)malloc(n*sizeof(float));
 	}
+
+	int32_t *pl_vals=NULL;
+	if(1==args->addPL){
+		pl_vals=(int32_t*) malloc(n*sizeof(float));
+	}
+
 	int n_sim_reads;  
 	int32_t ngt_arr=0;
-	int ngt=bcf_get_genotypes(out_hdr, out_bcf, &gt_arr, &ngt_arr);
+	int ngt=bcf_get_genotypes(out_hdr, out_bcf_rec, &gt_arr, &ngt_arr);
 	if ( ngt<=0 ){
 		fprintf(stderr,"\nGT not present\n");
 	}
 
 	int gt_ploidy=ngt/nSamples;
-	
+
 
 
 	int acgt_counts[4]={0};
 
 	for (int sample_i=0; sample_i<nSamples; sample_i++) {
-		
+
 		if(args->printBaseCounts==1){
 			acgt_counts[4]={0};
 		}
@@ -160,6 +220,11 @@ int simulate_record(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double* mps_
 
 			for(int j=0;j<10;j++){
 				bcf_float_set_missing(gl_vals[sample_i*10+j]);
+				// bcf_float_set_missing(gp_vals[sample_i*10+j]);
+				if ( bcf_float_is_vector_end(gl_vals[sample_i*10+j]) ) {
+					NEVER;
+					ASSERT(0==1);
+				}
 			}
 			dp_vals[sample_i]=0;
 
@@ -221,7 +286,7 @@ int simulate_record(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double* mps_
 
 		}
 
-		
+
 		if(args->printBaseCounts==1){
 			fprintf(out_baseCounts_ff,"%d\t%d\t%d\t%d\t%d\t%d\n",site_i,sample_i,acgt_counts[0],acgt_counts[1],acgt_counts[2],acgt_counts[3]);
 		}
@@ -230,16 +295,89 @@ int simulate_record(bcf_hdr_t *out_hdr,bcf1_t *out_bcf,int nSamples,double* mps_
 	} //end sample loop
 
 
-	bcf_update_format_int32(out_hdr, out_bcf, "DP", dp_vals,nSamples);
+	bcf_update_format_int32(out_hdr, out_bcf_rec, "DP", dp_vals,nSamples);
 
 	// update ref, alt
-	if(bcf_update_alleles_str(out_hdr,out_bcf,"A,C,G,T")!=0){
+	if(bcf_update_alleles_str(out_hdr,out_bcf_rec,"A,C,G,T")!=0){
 		fprintf(stderr,"Error: Failed to update\n");
 		exit(1);
 	}
 
 
-	bcf_update_format_float(out_hdr, out_bcf, "GL", gl_vals,10*nSamples);
+	bcf_update_format_float(out_hdr, out_bcf_rec, "GL", gl_vals,n);
+
+
+	/// @@@@@@@@@@@
+
+
+	if(1==args->addPL){
+
+		// int miarr=-1;
+		// hts_expand(int32_t, n, miarr, pl_vals);
+		for (int i=0; i<n; i++)
+		{
+			if ( bcf_float_is_missing(gl_vals[i]) ) pl_vals[i] = bcf_int32_missing;
+			else if ( bcf_float_is_vector_end(gl_vals[i]) ) pl_vals[i] = bcf_int32_vector_end;
+			else pl_vals[i] = lroundf(-10*gl_vals[i]);
+		}
+		bcf_update_format_int32(out_hdr,out_bcf_rec,"PL",pl_vals,n);
+
+		free(pl_vals);
+		pl_vals=NULL;
+	}
+
+
+	/// @@@@@@@@@@@
+
+	if(1==args->addGP){
+		for (int i=0; i<nSamples; i++)
+		{
+			float *gpp = gp_vals+ i*10;
+			float *glp = gl_vals+ i*10;
+			float sum = 0;
+			for (int j=0; j<10; j++)
+			{
+				if ( bcf_float_is_vector_end(glp[j]) ) {
+					NEVER;// we never expect to truncate the vector and finish early
+				}
+				if ( bcf_float_is_missing(glp[j]) ) {
+					bcf_float_set_missing(gpp[j]);
+					continue;
+				}else{
+					gpp[j]=glp[j];
+				}
+				gpp[j] = pow(10, gpp[j]);
+				sum += gpp[j];
+			}
+			if ( sum<=0 ) continue;
+			for (int j=0; j<10; j++)
+			{
+				if ( bcf_float_is_missing(gpp[j]) ) {
+					continue;
+				}
+				if ( bcf_float_is_vector_end(gpp[j]) ) {
+					NEVER;
+					// break;
+				}
+
+				gpp[j] /= sum;
+			}
+		}
+		bcf_update_format_float(out_hdr,out_bcf_rec,"GP",gp_vals,n);
+		free(gp_vals);
+		gp_vals=NULL;
+	}
+
+
+
+
+	free(gl_vals);
+	gl_vals=NULL;
+	free(dp_vals);
+	dp_vals=NULL;
+
+
+
 	return 0;
 }
 
@@ -361,6 +499,7 @@ int main(int argc, char **argv) {
 			exit(1);
 		}
 		char *SOURCE_TAG;
+
 		if(asprintf(&SOURCE_TAG, "##source=vcfgl -err %f -depth %f -df %s -pos0 %d -seed %d -explode %d",args->errate,args->mps_depth,args->in_mps_depths, args->pos0,args->seed, args->explode)>0){
 
 			if(bcf_hdr_append(out_hdr, SOURCE_TAG)!=0){
@@ -383,21 +522,13 @@ int main(int argc, char **argv) {
 			exit(1);
 		}
 
+		ASSERT(bcf_hdr_append(out_hdr,tags[GL].hdr)==0);
+		ASSERT(bcf_hdr_append(out_hdr,tags[GP].hdr)==0);
+		ASSERT(bcf_hdr_append(out_hdr,tags[PL].hdr)==0);
 
-		if(bcf_hdr_append(out_hdr, "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Simulated read depth\">")!=0){
-			fprintf(stderr,"failed to append header\n");
-			exit(1);
-		}
+		ASSERT(bcf_hdr_append(out_hdr,tags[DP].hdr)==0);
 
-		if(bcf_hdr_append(out_hdr, "##FORMAT=<ID=GL,Number=G,Type=Float,Description=\"Genotype likelihood in log10 likelihood ratio format\">")!=0){
-			fprintf(stderr,"failed to append header\n");
-			exit(1);
-		}
-
-		if(bcf_hdr_write(out_ff,out_hdr)!=0){
-			fprintf(stderr,"failed to write bcf\n");
-			exit(1);
-		}
+		ASSERT(bcf_hdr_write(out_ff,out_hdr)==0);
 
 		bcf1_t *bcf = bcf_init();
 		int nSites=0;
@@ -426,34 +557,31 @@ int main(int argc, char **argv) {
 		fprintf(stderr,	"Number of contigs: %d\n",hdr->n[BCF_DT_CTG]);
 
 
-		bcf1_t *out_bcf=bcf_init();
+		bcf1_t *out_bcf_rec=bcf_init();
 		bcf1_t *blank = bcf_init();;
 
 		while (bcf_read(in_ff, hdr, bcf) == 0) {
-			//copy next record with data into out_bcf
-			out_bcf=bcf_copy(out_bcf,bcf);
+			//copy next record with data into out_bcf_rec
+			out_bcf_rec=bcf_copy(out_bcf_rec,bcf);
 			if(args->explode==0){
-				simulate_record(out_hdr,out_bcf,nSamples,mps_depths,args,nSites,out_baseCounts_ff);
-				if(out_bcf->pos==-1){
+				simulate_record(out_hdr,out_bcf_rec,nSamples,mps_depths,args,nSites,out_baseCounts_ff);
+				if(out_bcf_rec->pos==-1){
 					if(pos0==0){
 						fprintf(stderr,"\n[ERROR]: Input file coordinates start from 0; but -pos0 is not set to 1. Please run again with -pos0 1.\n\n");
 						exit(1);
 					}
 				}
-				out_bcf->pos += pos0;
-				if(bcf_write(out_ff, out_hdr, out_bcf)!=0){
+				out_bcf_rec->pos += pos0;
+				if(bcf_write(out_ff, out_hdr, out_bcf_rec)!=0){
 					fprintf(stderr,"Error: Failed to write\n");
 					exit(1);
 				}
 				nSites++;
 			}else{
 				//ensure that we have a empty blank record that we can modify
-				// if(blank==NULL){
-					// blank = bcf_dup(out_bcf);
-					blank = bcf_copy(blank,out_bcf);
-				// }
+				blank = bcf_copy(blank,out_bcf_rec);
 
-				if(out_bcf->pos==-1){
+				if(out_bcf_rec->pos==-1){
 					if(pos0==0){
 						fprintf(stderr,"\n[ERROR]: Input file coordinates start from 0; but -pos0 is not set to 1. Please run again with -pos0 1.\n\n");
 						exit(1);
@@ -461,14 +589,13 @@ int main(int argc, char **argv) {
 				}
 
 				while(1){//this block should run for every site with missing/nodata
-					//  fprintf(stderr,"\t\t-> out_bcfpos: %d nSites: %d\n",out_bcf->pos,nSites);
-					// if(nSites==out_bcf->pos){
-					if(nSites==out_bcf->pos+pos0){
+						 //  fprintf(stderr,"\t\t-> out_bcf_recpos: %d nSites: %d\n",out_bcf_rec->pos,nSites);
+					if(nSites==out_bcf_rec->pos+pos0){
 						// fprintf(stderr,"now breaking\n");
 						break;
 					}
 
-					setblank(blank,out_bcf,hdr);
+					setblank(blank,out_bcf_rec,hdr);
 					simulate_record(out_hdr,blank,nSamples,mps_depths,args,nSites,out_baseCounts_ff);
 					blank->pos = nSites;
 					// fprintf(stderr,"blank->pos: %d\n",blank->pos+pos0);
@@ -479,10 +606,10 @@ int main(int argc, char **argv) {
 					nSites++;
 
 				}
-				// fprintf(stderr,"After loop that fills in missing data will print out: %d\n",out_bcf->pos+pos0+1);
-				simulate_record(out_hdr,out_bcf,nSamples,mps_depths,args,nSites,out_baseCounts_ff);
-				out_bcf->pos += pos0;
-				if(bcf_write(out_ff, out_hdr, out_bcf)!=0){
+				// fprintf(stderr,"After loop that fills in missing data will print out: %d\n",out_bcf_rec->pos+pos0+1);
+				simulate_record(out_hdr,out_bcf_rec,nSamples,mps_depths,args,nSites,out_baseCounts_ff);
+				out_bcf_rec->pos += pos0;
+				if(bcf_write(out_ff, out_hdr, out_bcf_rec)!=0){
 					fprintf(stderr,"Error: Failed to write\n");
 					exit(1);
 				}
@@ -492,11 +619,11 @@ int main(int argc, char **argv) {
 		if(args->explode==1){
 			//		fprintf(stderr,	"Number of contigs: %d\n",hdr->n[BCF_DT_CTG]);
 			bcf_idpair_t *ctg = ctg = hdr->id[BCF_DT_CTG];
-			int contigsize = ctg[out_bcf->rid].val->info[0];
+			int contigsize = ctg[out_bcf_rec->rid].val->info[0];
 			// fprintf(stderr,"contigsize: %d\n",contigsize);
 
 			while(nSites<contigsize){
-				setblank(blank,out_bcf,hdr);
+				setblank(blank,out_bcf_rec,hdr);
 				simulate_record(out_hdr,blank,nSamples,mps_depths,args,nSites,out_baseCounts_ff);
 				blank->pos = nSites;
 				if(bcf_write(out_ff, out_hdr, blank)!=0){
@@ -514,7 +641,7 @@ int main(int argc, char **argv) {
 		bcf_hdr_destroy(hdr);
 		bcf_destroy(bcf);
 		bcf_hdr_destroy(out_hdr);
-		bcf_destroy(out_bcf);
+		bcf_destroy(out_bcf_rec);
 		bcf_destroy(blank);
 
 		int BCF_CLOSE;
@@ -545,17 +672,9 @@ int main(int argc, char **argv) {
 			}
 		}
 
+		args_destroy(args);
+
 		free(out_fn);
-		free(args->in_fn);
-		free(args->out_fp);
-		free(args->output_mode);
-		free(args);
-		if(gl_vals!=NULL){
-			free(gl_vals);
-			free(dp_vals);
-		}
-
-
 		free(gt_arr);
 
 	}

@@ -10,16 +10,15 @@
 
 argStruct *args_init(){
 
-
 	argStruct *args=(argStruct*)calloc(1,sizeof(argStruct));
 
-	args->out_fp=strdup("output");
-
+	args->out_fp=NULL;
 
 	args->in_fn=NULL;
 	args->pos0=0;
 
-	args->output_mode=strdup("b");
+	args->addGP=0;
+	args->addPL=0;
 
 	args->mps_depth=1.0;
 	args->in_mps_depths=NULL;
@@ -29,9 +28,16 @@ argStruct *args_init(){
 	args->printBaseCounts=0;
 	return args;
 
-
 }
 
+void args_destroy(argStruct* args){
+	
+	free(args->in_fn);
+	free(args->out_fp);
+	free(args->output_mode);
+	free(args);
+
+}
 
 
 
@@ -56,6 +62,8 @@ argStruct *args_get(int argc, char **argv){
 		else if(strcasecmp("-O",arv)==0) args->output_mode=strdup(val);
 		else if(strcasecmp("-explode",arv)==0) args->explode=atoi(val);
 		else if(strcasecmp("-printBaseCounts",arv)==0) args->printBaseCounts=atoi(val);
+		else if(strcasecmp("-addGP",arv)==0) args->addGP=atoi(val);
+		else if(strcasecmp("-addPL",arv)==0) args->addPL=atoi(val);
 
 		else{
 			fprintf(stderr,"Unknown arg:%s\n",arv);
@@ -78,7 +86,13 @@ argStruct *args_get(int argc, char **argv){
 		return 0;
 	}
 
+	if(NULL==args->output_mode){
+		args->output_mode=strdup("b");
+	}
 
+	if(NULL==args->out_fp){
+		args->out_fp=strdup("output");
+	}
 
 	return args;
 
@@ -119,4 +133,5 @@ double *read_depthsFile(const char* fname,int len){
 
 	return ret;
 }
+
 

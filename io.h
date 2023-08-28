@@ -5,12 +5,6 @@
 
 
 
-/*
- * Macro:[ASSERT]
- * shortcut to evaluate an expression, works the same way as the C-macro assert
- */
-#define ASSERT(expr) if (!(expr)) {fprintf(stderr,"\n\n*******\n[ERROR](%s:%d) %s\n*******\n",__FILE__,__LINE__,#expr);exit(1);}
-
 
 
 /*
@@ -53,6 +47,8 @@ typedef struct{
 	int seed;
 
 
+	int addGP;
+	int addPL;
 
 	char* output_mode;
 
@@ -68,6 +64,8 @@ argStruct *args_get(int argc, char **argv);
 
 
 double *read_depthsFile(const char* fname,int len);
+
+void args_destroy(argStruct* args);
 
 
 #endif

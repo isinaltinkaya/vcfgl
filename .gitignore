@@ -8,3 +8,6 @@ test/*_test*
 *.swp
 output.*
 version.h
+
+
+COMMIT_CHANGES

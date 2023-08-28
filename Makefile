@@ -1,11 +1,14 @@
 CXX ?= g++
 
 
-ifeq (dev,$(filter dev,$(MAKECMDGOALS)))
-CXXFLAGS  = -g -Wall -O0
+ifeq ($(DEV),1)
+$(info Compiling in developer mode)
+all: clean
+CXXFLAGS := -g -Wall -O0
 else
-$(info Compiling with optimizaton (-O3))
-CXXFLAGS  = -O3
+$(info Compiling in release mode; will enable optimizaton (-O3))
+all: clean
+CXXFLAGS := -O3
 endif
 
 LIBS = -lz -lm -lbz2 -llzma -lcurl -lpthread
@@ -37,7 +40,7 @@ $(info Use `make HTSSRC=/path/to/htslib` to build using a local htslib installat
 $(info Use `make HTSSRC=systemwide` to build using the systemwide htslib installation)
 
 HTSSRC := $(realpath $(CURDIR)/htslib)
-CXXFLAGS := -I"$(HTSSRC)"
+CXXFLAGS += -I"$(HTSSRC)"
 LIBHTS := $(HTSSRC)/libhts.a
 
 
@@ -45,7 +48,7 @@ all: .activate_module
 
 endif
 
-.PHONY: .activate_module test
+.PHONY: .activate_module test 
 
 .activate_module:
 	git submodule update --init --recursive
@@ -87,15 +90,17 @@ clean:
 
 test: 
 	./vcfgl -in test/t1.vcf -out test/t1_pos00_explode0_test -O v -seed 42 -depth 1 -err 0.01 -pos0 0 -explode 0;
-	bash -c "diff -I '^##fileDate' -I '^##source=vcfgl version:' test/t1_pos00_explode0_test.vcf test/t1_pos00_explode0_god.vcf";
+	bash -c "diff -I '^##'  test/t1_pos00_explode0_test.vcf test/reference/t1_pos00_explode0.vcf";
 	./vcfgl -in test/t1.vcf -out test/t1_pos00_explode1_test -O v -seed 42 -depth 1 -err 0.01 -pos0 0 -explode 1;
-	bash -c "diff -I '^##fileDate' -I '^##source=vcfgl version:' test/t1_pos00_explode1_test.vcf test/t1_pos00_explode1_god.vcf";
+	bash -c "diff -I '^##'  test/t1_pos00_explode1_test.vcf test/reference/t1_pos00_explode1.vcf";
 	./vcfgl -in test/t1.vcf -out test/t1_pos01_explode0_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 0;
-	bash -c "diff -I '^##fileDate' -I '^##source=vcfgl version:' test/t1_pos01_explode0_test.vcf test/t1_pos01_explode0_god.vcf";
+	bash -c "diff -I '^##'  test/t1_pos01_explode0_test.vcf test/reference/t1_pos01_explode0.vcf";
 	./vcfgl -in test/t1.vcf -out test/t1_pos01_explode1_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 1;
-	bash -c "diff -I '^##fileDate' -I '^##source=vcfgl version:' test/t1_pos01_explode1_test.vcf test/t1_pos01_explode1_god.vcf";
+	bash -c "diff -I '^##'  test/t1_pos01_explode1_test.vcf test/reference/t1_pos01_explode1.vcf";
 	./vcfgl -in test/t2.vcf -out test/t2_pos01_explode0_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 0;
-	bash -c "diff -I '^##fileDate' -I '^##source=vcfgl version:' test/t2_pos01_explode0_test.vcf test/t2_pos01_explode0_god.vcf";
+	bash -c "diff -I '^##'  test/t2_pos01_explode0_test.vcf test/reference/t2_pos01_explode0.vcf";
 	./vcfgl -in test/t2.vcf -out test/t2_pos01_explode1_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 1;
-	bash -c "diff -I '^##fileDate' -I '^##source=vcfgl version:' test/t2_pos01_explode1_test.vcf test/t2_pos01_explode1_god.vcf";
+	bash -c "diff -I '^##'  test/t2_pos01_explode1_test.vcf test/reference/t2_pos01_explode1.vcf";
+	./vcfgl -in test/t2.vcf -out test/t2_pos01_explode1_gp_gl_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 1 -addGP 1 -addPL 1;
+	bash -c "diff -I '^##'  test/t2_pos01_explode1_gp_gl_test.vcf test/reference/t2_pos01_explode1_gp_gl.vcf";
 
