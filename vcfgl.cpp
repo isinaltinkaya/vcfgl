@@ -51,7 +51,6 @@
 #include "io.h"
 
 #include "version.h"
-#include "from_htslib.h"
 #include "shared.h"
 
 const int vcf_gl_order_idx[10]={0,1,4,2,5,7,3,6,8,9};
