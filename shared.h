@@ -2,15 +2,34 @@
 #define __SHARED__
 
 
+#include <htslib/vcf.h>
+#include <htslib/vcfutils.h>
+#include <limits>
+#include "dev.h"
+
 /* ========================================================================== */
-/* MACRO DEFINITIONS ======================================================== */
+/* /BEGIN/ MACRO DEFINITIONS =================================================*/
 /* ========================================================================== */
 
 /* -> CONSTANTS --------------------------------------------------------------*/
 
-#define MAXGL -inf
-#define MAXGP -inf
+#define MAXGL 0
+#define MINGL NEG_INF
 #define MAXPL 255
+#define MINPL 0
+#define MAXGP 1.0
+#define MINGP 0.0
+
+// number of genotypes to simulate {AA,AC,CC,AG,CG,GG,AT,CT,GT,TT}
+#define SIM_NGTS 10
+
+#define SIM_PLOIDY 2
+
+// source: bcftools/bam2bcf.c L41
+#define CAP_DIST 25
+
+// source: bcftools/bam2bcf.c L381
+#define CAP_BASEQ 63
 
 /* -> FUNCTION-LIKE MACROS ---------------------------------------------------*/
 
@@ -30,7 +49,6 @@
  * @requires <float.h>
  */
 #define DBL_MAX_DIG_TOPRINT 3 + DBL_MANT_DIG - DBL_MIN_EXP
-// TODO deprecated
 
 /*
  * Macro:[AT]
@@ -76,16 +94,28 @@
 		} \
 	}while(0);
 
+
 /*
- * Macro:[NEVER]
- * indicates that a point in the code should never be reached
+ * Macro:[WARNING]
+ * print a custom warning message
  */
-#define NEVER \
-	do { \
-		ERROR("Control should never reach this point; please report this to the developers.") \
+#define WARNING(...)                                                                \
+	do{ \
+		fprintf(stderr, "\n\n[WARNING](%s/%s:%d): ", __FILE__, __FUNCTION__, __LINE__); \
+		fprintf(stderr, __VA_ARGS__);                                                   \
+		fprintf(stderr, "\n");                                                          \
 	}while(0);
+
+
+/* ========================================================================== */
+/* /END/ MACRO DEFINITIONS ================================================== */
+/* ========================================================================== */
+
+const double NEG_INF = -std::numeric_limits<double>::infinity();
+
+
+
 
 
 
 #endif // __SHARED__
-

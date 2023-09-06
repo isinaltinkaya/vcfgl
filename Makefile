@@ -3,10 +3,14 @@ CXX ?= g++
 
 ifeq ($(DEV),1)
 $(info Compiling in developer mode)
+COMPILEMODE = -DDEV=1
+# TODO disable clean and replace with ngsAMOVA style checks
 all: clean
 CXXFLAGS := -g -Wall -O0
 else
 $(info Compiling in release mode; will enable optimizaton (-O3))
+COMPILEMODE = -DDEV=0
+# TODO disable clean and replace with ngsAMOVA style checks
 all: clean
 CXXFLAGS := -O3
 endif
@@ -55,7 +59,7 @@ endif
 	$(MAKE) -C $(HTSSRC)
 
 
-VERSION = v0.1
+VERSION = v0.2
 
 
 ifneq "$(wildcard .git)" ""
@@ -77,8 +81,8 @@ OBJ = $(CXXSRC:.cpp=.o)
 -include $(OBJ:.o=.d)
 
 %.o: %.cpp
-	$(CXX) -c  $(CXXFLAGS) $*.cpp
-	$(CXX) -MM $(CXXFLAGS) $*.cpp >$*.d
+	$(CXX) -c  $(CXXFLAGS) $(COMPILEMODE) $*.cpp
+	$(CXX) -MM $(CXXFLAGS) $(COMPILEMODE) $*.cpp >$*.d
 
 
 
@@ -103,4 +107,6 @@ test:
 	bash -c "diff -I '^##'  test/t2_pos01_explode1_test.vcf test/reference/t2_pos01_explode1.vcf";
 	./vcfgl -in test/t2.vcf -out test/t2_pos01_explode1_gp_gl_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 1 -addGP 1 -addPL 1;
 	bash -c "diff -I '^##'  test/t2_pos01_explode1_gp_gl_test.vcf test/reference/t2_pos01_explode1_gp_gl.vcf";
+	./vcfgl -in test/t2.vcf -out test/t2_pos01_explode1_gp_gl_qs_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 1 -addQS 1 -addGP 1 -addPL 1;
+	bash -c "diff -I '^##'  test/t2_pos01_explode1_gp_gl_qs_test.vcf test/reference/t2_pos01_explode1_gp_gl_qs.vcf";
 

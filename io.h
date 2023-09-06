@@ -1,18 +1,22 @@
-
 #ifndef __ARGUMENTS__
 #define __ARGUMENTS_
 
+#include <htslib/kstring.h> // kstring_t
+#include "shared.h"
 
+kstring_t *kbuf_init();
+void kbuf_destroy(kstring_t *kbuf);
+
+extern void help_page();
 
 
 
 
 /*
  * @typedef
- * @abstract params - parameter structure
  *
  * @field *in_fn			pointer to input file name
- * @field *out_fp			pointer to output file prefix [angsdput]
+ * @field *out_fp			pointer to output file prefix 
  * @field errate			error rate [0.01]
  * @field mps_depth			mean per site depth [1]
  * @field in_mps_depths		assign depths to individuals from per individual mean per site depth file, one line per individual
@@ -49,6 +53,9 @@ typedef struct{
 
 	int addGP;
 	int addPL;
+	int addI16;
+	int addQS;
+
 
 	char* output_mode;
 

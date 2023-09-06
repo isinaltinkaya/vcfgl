@@ -1,6 +1,7 @@
-#ifndef ESTIMATOR
-#define ESTIMATOR
+#ifndef __ESTIMATOR__
+#define __ESTIMATOR__
 
+#include "lut.h"
 
 
 
@@ -10,4 +11,5 @@ void rescale_likelihood_ratio(double *like);
 
 
 
-#endif
+
+#endif // __ESTIMATOR__
