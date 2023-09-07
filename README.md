@@ -12,13 +12,8 @@ git clone git@github.com:isinaltinkaya/vcfgl.git; cd vcfgl; make
 
 ## Usage
 
-```
-./vcfgl -in {INPUT} -mode {OUTPUT_MODE} -out {OUTPUT_FILE_PREFIX} -err {ERROR_RATE} -depth {DEPTH} -seed {SEED} -pos0 {0|1} 
-```
-
 
 ```
-
 vcfgl
 
 	Usage: ./vcfgl -i <input> [options]
@@ -28,23 +23,23 @@ Options:
 	-i/-in/--input			Input file (required)
 	-o/-out/--output		Output file prefix (default:output)
 	-O/--output-mode		Output mode (default:b)
-							v	VCF file
-							b	BCF file
-							z	Compressed VCF file (vcf.gz)
-							b	Uncompressed BCF file
+					v	VCF file
+					b	BCF file
+					z	Compressed VCF file (vcf.gz)
+					b	Uncompressed BCF file
 	-err/--error-rate		Error rate (default:0.01)
 	-d/-depth/--depth		Mean per-site read depth (default:1.0)
-	-df/--depths-file		File containing mean per-site read depth for each sample (conflicts with -d)
-							Use `--depth inf` to set the simulated values to known true variables
-	-pos0					Is the start position 0-based? If -pos0 1 is used, all positions in the file will be shifted by +1
-	-seed					Random seed used to initialize the random number generator
-	-explode				Explode to unobserved sites in the input file (default:0=disabled)
+	-df/--depths-file		File containing mean per-site read depth for each sample (conflicts with -d).
+					Use `--depth inf` to set the simulated values to known true variables
+	-pos0				Is the start position 0-based? If -pos0 1 is used, all positions in the file will be shifted by +1
+	-seed				Random seed used to initialize the random number generator
+	-explode			Explode to unobserved sites in the input file (default:0=disabled)
 
 	-printBaseCounts		Print base counts (default:0=disabled)
-	-addGP					Add GP field (default:0=disabled)
-	-addPL					Add PL field (default:0=disabled)
-	-addI16					Add I16 field (default:0=disabled)
-	-addQS					Add QS field (default:0=disabled)
+	-addGP				Add GP field (default:0=disabled)
+	-addPL				Add PL field (default:0=disabled)
+	-addI16				Add I16 field (default:0=disabled)
+	-addQS				Add QS field (default:0=disabled)
 ```
 
 
@@ -162,24 +157,6 @@ positions: 0.0000 0.0000 0.0000 0.0000
 mutts = msprime.sim_mutations(ts, rate=msp_u, model="binary")
 with open(vcf_file,"w") as vcf:
     mutts.write_vcf(vcf)
-```
-
-### - Order of genotype likelihoods
-
-The order of genotype likelihoods in VCF file format is calculated as in the following pseudocode:
-
-```
-for P=ploidy and N=number of alternate alleles;
-for a_p in 0:N; for a_p-1 in 0:a_p; print(a1,a2);
-```
-
-For P=2 N=3
-
-```
-0,1,2,3
-A,C,G,T
-00,01,11,02,12,22,03,13,23,33
-AA,AC,CC,AG,CG,GG,AT,CT,GT,TT
 ```
 
 ### - Ancestral and derived alleles
