@@ -735,6 +735,11 @@ int simulate_record_true_values(bcf_hdr_t *out_hdr,bcf1_t *out_bcf_rec,int nSamp
 	} //end sample loop
 
 
+	// set REF and ALT alleles
+	ASSERT(0==(bcf_update_alleles_str(out_hdr,out_bcf_rec,"A,C")));
+
+
+
 	ASSERT(0==(bcf_update_format_float(out_hdr, out_bcf_rec, "GL", gl_vals,bcf_tags[GL].n)));
 	free(gl_vals);
 	gl_vals=NULL;
