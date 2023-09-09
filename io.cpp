@@ -1,11 +1,4 @@
 #include "io.h"
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <ctype.h>
-#include <sys/stat.h>
-#include <htslib/kstring.h> // kstring_t
-#include <stdio.h>
 
 
 void help_page(){
@@ -42,13 +35,17 @@ void help_page(){
 }
 
 
+
 argStruct *args_init(){
 
-	argStruct *args=(argStruct*)calloc(1,sizeof(argStruct));
+	args=(argStruct*)calloc(1,sizeof(argStruct));
 
 	args->out_fp=NULL;
-
 	args->in_fn=NULL;
+
+	args->datetime=NULL;
+	args->command=NULL;
+
 	args->pos0=0;
 
 	args->addGP=0;
@@ -69,17 +66,39 @@ argStruct *args_init(){
 void args_destroy(argStruct* args){
 	
 	free(args->in_fn);
-	free(args->out_fp);
-	free(args->output_mode);
-	free(args);
+	args->in_fn=NULL;
 
+	free(args->out_fp);
+	args->out_fp=NULL;
+
+	free(args->output_mode);
+	args->output_mode=NULL;
+
+	free(args->datetime);
+	args->datetime=NULL;
+
+	free(args->command);
+	args->command=NULL;
+
+	free(args);
+	args=NULL;
+
+}
+
+char *get_time(){
+	time_t current_time;
+	struct tm *local_time; 
+	current_time=time(NULL);
+	local_time=localtime(&current_time);
+	return(asctime(local_time));
 }
 
 
 
 argStruct *args_get(int argc, char **argv){
 
-	argStruct *args = args_init(); 
+	args = args_init(); 
+
 
 	while(*argv){
 
@@ -175,7 +194,27 @@ argStruct *args_get(int argc, char **argv){
 		args->out_fp=strdup("output");
 	}
 
-	return args;
+
+
+	args->datetime=strdup(get_time());
+
+	if(-999==args->mps_depth){
+		if (0!=args->errate){
+			ERROR("Cannot simulate true values when error rate is defined. Please set error rate to 0 and rerun.");
+		}
+		ASSERT(asprintf(&args->command,"vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth inf --depths-file %s -pos0 %d -seed %d -explode %d -printBaseCounts %d -addGP %d -addPL %d -addI16 %d -addQS %d\n",args->in_fn,args->out_fp,args->output_mode,args->errate,args->in_mps_depths,args->pos0,args->seed,args->explode,args->printBaseCounts,args->addGP,args->addPL,args->addI16,args->addQS)>0);
+	}else{
+		ASSERT(asprintf(&args->command,"vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth %f --depths-file %s -pos0 %d -seed %d -explode %d -printBaseCounts %d -addGP %d -addPL %d -addI16 %d -addQS %d\n",args->in_fn,args->out_fp,args->output_mode,args->errate,args->mps_depth,args->in_mps_depths,args->pos0,args->seed,args->explode,args->printBaseCounts,args->addGP,args->addPL,args->addI16,args->addQS)>0);
+
+	}
+
+
+	if(1==args->pos0){
+		fprintf(stderr, "\n -pos0=%d ; This means input VCF's positions are 0 based, and will shift coordinate system with +1\n", args->pos0);
+	}
+
+
+	return(args);
 
 }
 

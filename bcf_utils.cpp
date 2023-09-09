@@ -1,5 +1,148 @@
 #include "bcf_utils.h"
 
+#include "io.h"
+
+sim_rec::sim_rec(bcf_hdr_t* in_hdr){
+
+	this->nSamples=bcf_hdr_nsamples(in_hdr);
+
+	this->set_hdr(in_hdr);
+
+	if(args->in_mps_depths!=NULL){
+		this->mps_depths=read_depthsFile(args->in_mps_depths, this->nSamples);
+
+		fprintf(stderr, "\n");
+		for (int sample_i=0; sample_i<this->nSamples; sample_i++) {
+			fprintf(stderr, "Individual %d mean per-site depth is set to %f\n", sample_i,this->mps_depths[sample_i]);
+		}
+	}
+
+
+	this->gt_arr=NULL; // allocated in-place
+
+	this->dp_arr= bcf_tag_alloc<int32_t>(DP, 0);
+
+	this->gl_vals = (double*) malloc(this->nSamples*SIM_NGTS*sizeof(double));
+	ASSERT(NULL!=this->gl_vals);
+	for (int i=0;i<nSamples*SIM_NGTS; ++i){
+		this->gl_vals[i]=-0.0;
+	}
+
+
+	this->gl_arr= bcf_tag_alloc<float>(GL,-0.0,nSamples*SIM_NGTS);
+
+	if(1==args->addGP){
+		this->gp_arr= bcf_tag_alloc<float>(GL,-0.0,nSamples*SIM_NGTS);
+	}
+
+	if(1==args->addPL){
+		this->pl_arr = bcf_tag_alloc<int32_t>(PL,0, nSamples*SIM_NGTS);
+	}
+
+	if(1==args->addQS){
+		this->qs_arr= bcf_tag_alloc<float>(QS,0.0);
+	}
+
+	if(1==args->addI16){
+		this->i16_arr= bcf_tag_alloc<float>(I16,0.0);
+	}
+
+
+}
+
+sim_rec::~sim_rec(){
+
+	bcf_hdr_destroy(this->hdr);
+
+	free(this->gt_arr);
+	this->gt_arr=NULL;
+
+	//TODO delme
+	free(this->gl_vals);
+	this->gl_vals=NULL;
+
+	free(this->gl_arr);
+	this->gl_arr=NULL;
+
+	if(1==args->addGP){
+		free(this->gp_arr);
+		this->gp_arr=NULL;
+	}
+
+	if(1==args->addPL){
+		free(this->pl_arr);
+		this->pl_arr=NULL;
+	}
+
+	if(1==args->addQS){
+		free(this->qs_arr);
+		this->qs_arr=NULL;
+	}
+
+	if(1==args->addI16){
+		free(this->i16_arr);
+		this->i16_arr=NULL;
+	}
+
+
+	free(this->dp_arr);
+	this->dp_arr=NULL;
+
+}
+
+
+void sim_rec::set_hdr(bcf_hdr_t* in_hdr){
+
+	this->hdr = bcf_hdr_dup(in_hdr);
+
+	char *DATE_TAG=NULL;
+
+	ASSERT(asprintf(&DATE_TAG, "##fileDate=%s", args->datetime)>0);
+	ASSERT(0==bcf_hdr_append(this->hdr, DATE_TAG));
+	free(DATE_TAG);
+	DATE_TAG=NULL;
+
+	char *SOURCE_TAG=NULL;
+	ASSERT(asprintf(&SOURCE_TAG, "##source=%s", args->command)>0);
+	ASSERT(0==bcf_hdr_append(this->hdr, SOURCE_TAG));
+	free(SOURCE_TAG);
+	SOURCE_TAG=NULL;
+
+	char *SOURCE_VERSION_TAG;
+	ASSERT(asprintf(&SOURCE_VERSION_TAG, "##source=vcfgl version: %s",VCFGL_VERSION)>0);
+	ASSERT(0==bcf_hdr_append(this->hdr, SOURCE_VERSION_TAG));
+	free(SOURCE_VERSION_TAG);
+	SOURCE_VERSION_TAG=NULL;
+
+
+	ASSERT(0==bcf_hdr_append(this->hdr,bcf_tags[GL].hdr));
+
+
+	if(1==args->addGP){
+		ASSERT(0==bcf_hdr_append(this->hdr,bcf_tags[GP].hdr));
+	}
+
+	if(1==args->addPL){
+		ASSERT(0==bcf_hdr_append(this->hdr,bcf_tags[PL].hdr));
+	}
+
+	if(-999!=args->mps_depth){
+		bcf_tag_set_size(DP, nSamples);
+		ASSERT(0==bcf_hdr_append(this->hdr,bcf_tags[DP].hdr));
+
+		if(1==args->addI16){
+			ASSERT(0==bcf_hdr_append(this->hdr,bcf_tags[I16].hdr));
+		}
+
+		if(1==args->addQS){
+			ASSERT(0==bcf_hdr_append(this->hdr,bcf_tags[QS].hdr));
+		}
+	}
+
+
+
+}
+
 void bcf_tag_set_size(enum bcf_tag t, const int size){
 	int bcf_tag_size = bcf_tags[t].n;
 

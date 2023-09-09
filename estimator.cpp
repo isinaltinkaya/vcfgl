@@ -1,9 +1,5 @@
 #include "estimator.h"
 
-#include <stdio.h>
-#include <math.h>
-
-
 
 void gl_log10(int base, double errate, double *like){
 

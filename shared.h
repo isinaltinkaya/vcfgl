@@ -2,10 +2,10 @@
 #define __SHARED__
 
 
-#include <htslib/vcf.h>
-#include <htslib/vcfutils.h>
 #include <limits>
+
 #include "dev.h"
+
 
 /* ========================================================================== */
 /* /BEGIN/ MACRO DEFINITIONS =================================================*/

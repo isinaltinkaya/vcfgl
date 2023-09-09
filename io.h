@@ -2,6 +2,15 @@
 #define __ARGUMENTS_
 
 #include <htslib/kstring.h> // kstring_t
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <ctype.h>
+#include <sys/stat.h>
+#include <stdio.h>
+
+#include "version.h"
+
 #include "shared.h"
 
 kstring_t *kbuf_init();
@@ -10,10 +19,10 @@ void kbuf_destroy(kstring_t *kbuf);
 extern void help_page();
 
 
-
+typedef struct argStruct argStruct;
+extern argStruct *args;
 
 /*
- * @typedef
  *
  * @field *in_fn			pointer to input file name
  * @field *out_fp			pointer to output file prefix 
@@ -35,13 +44,16 @@ extern void help_page();
  * @field explode
  * @field printBaseCounts	should the program print base counts
  */
-typedef struct{
+struct argStruct{
 
 	char **argv;
 
 
 	char* in_fn;
 	char* out_fp;
+
+	char* datetime;
+	char* command;
 
 	double errate;
 	double mps_depth;
@@ -62,7 +74,7 @@ typedef struct{
 	int explode;
 	int printBaseCounts;
 	
-}argStruct;
+};
 
 
 argStruct *args_init();
@@ -75,4 +87,4 @@ double *read_depthsFile(const char* fname,int len);
 void args_destroy(argStruct* args);
 
 
-#endif
+#endif // __ARGUMENTS__
