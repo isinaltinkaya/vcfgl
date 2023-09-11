@@ -22,21 +22,23 @@ sim_rec::sim_rec(bcf_hdr_t* in_hdr){
 
 	this->dp_arr= bcf_tag_alloc<int32_t>(DP, 0);
 
-	this->gl_vals = (double*) malloc(this->nSamples*SIM_NGTS*sizeof(double));
+	const int MAX_TAGARR_SIZE=this->nSamples*MAX_NGTS;
+
+	this->gl_vals = (double*) malloc(MAX_TAGARR_SIZE*sizeof(double));
 	ASSERT(NULL!=this->gl_vals);
-	for (int i=0;i<nSamples*SIM_NGTS; ++i){
+	for (int i=0;i<MAX_TAGARR_SIZE; ++i){
 		this->gl_vals[i]=-0.0;
 	}
 
 
-	this->gl_arr= bcf_tag_alloc<float>(GL,-0.0,nSamples*SIM_NGTS);
+	this->gl_arr= bcf_tag_alloc<float>(GL,-0.0,MAX_TAGARR_SIZE);
 
 	if(1==args->addGP){
-		this->gp_arr= bcf_tag_alloc<float>(GL,-0.0,nSamples*SIM_NGTS);
+		this->gp_arr= bcf_tag_alloc<float>(GL,-0.0,MAX_TAGARR_SIZE);
 	}
 
 	if(1==args->addPL){
-		this->pl_arr = bcf_tag_alloc<int32_t>(PL,0, nSamples*SIM_NGTS);
+		this->pl_arr = bcf_tag_alloc<int32_t>(PL,0, MAX_TAGARR_SIZE);
 	}
 
 	if(1==args->addQS){

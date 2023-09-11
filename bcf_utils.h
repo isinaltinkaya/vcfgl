@@ -101,17 +101,6 @@ template <typename T> T* bcf_tag_alloc(enum bcf_tag t, T init_val){
 	return arr;
 }
 
-template <typename T> void bcf_tag_reset(T* arr, enum bcf_tag t, T init_val, const int size){
-
-	ASSERT(size>0);
-	bcf_tags[t].n=size;
-
-	ASSERT(NULL!=arr);
-	for(int i=0;i<size;++i){
-		arr[i]=init_val;
-	}
-	return;
-}
 
 template <typename T> void bcf_tag_reset(T* arr, enum bcf_tag t, T init_val){
 
@@ -146,10 +135,11 @@ void bcf_tag_set_size(enum bcf_tag t, const int size);
 
 /* -> MISC -------------------------------------------------------------------*/
 
+// better alternative: use lut 
 
 /// @brief nAlleles2nGenotypes - get the number of possible genotypes assuming ploidy==2
 /// @param n	number of alleles
-/// @return		number of expected genotypes				
+/// @return		number of expected genotypes
 /// equivalent to (n * (n+1)) / 2
 inline int nAlleles2nGenotypes(const int n){
 	return ( ((n * (n+1)) >> 1) );

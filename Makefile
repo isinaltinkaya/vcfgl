@@ -59,7 +59,7 @@ endif
 	$(MAKE) -C $(HTSSRC)
 
 
-VERSION = v0.2
+VERSION = v0.3.0
 
 
 ifneq "$(wildcard .git)" ""
@@ -93,20 +93,22 @@ clean:
 	$(RM) *.o *.d $(PROGRAM) version.h
 
 test: 
-	./vcfgl -in test/t1.vcf -out test/t1_pos00_explode0_test -O v -seed 42 -depth 1 -err 0.01 -pos0 0 -explode 0;
+	./vcfgl -i test/t1.vcf -o test/t1_pos00_explode0_test -O v --seed 42 -d 1 -e 0.01 --pos0 0 -explode 0;
 	bash -c "diff -I '^##'  test/t1_pos00_explode0_test.vcf test/reference/t1_pos00_explode0.vcf";
-	./vcfgl -in test/t1.vcf -out test/t1_pos00_explode1_test -O v -seed 42 -depth 1 -err 0.01 -pos0 0 -explode 1;
+	./vcfgl -i test/t1.vcf -o test/t1_pos00_explode1_test -O v --seed 42 -d 1 -e 0.01 --pos0 0 -explode 1;
 	bash -c "diff -I '^##'  test/t1_pos00_explode1_test.vcf test/reference/t1_pos00_explode1.vcf";
-	./vcfgl -in test/t1.vcf -out test/t1_pos01_explode0_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 0;
+	./vcfgl -i test/t1.vcf -o test/t1_pos01_explode0_test -O v --seed 42 -d 1 -e 0.01 --pos0 1 -explode 0;
 	bash -c "diff -I '^##'  test/t1_pos01_explode0_test.vcf test/reference/t1_pos01_explode0.vcf";
-	./vcfgl -in test/t1.vcf -out test/t1_pos01_explode1_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 1;
+	./vcfgl -i test/t1.vcf -o test/t1_pos01_explode1_test -O v --seed 42 -d 1 -e 0.01 --pos0 1 -explode 1;
 	bash -c "diff -I '^##'  test/t1_pos01_explode1_test.vcf test/reference/t1_pos01_explode1.vcf";
-	./vcfgl -in test/t2.vcf -out test/t2_pos01_explode0_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 0;
+	./vcfgl -i test/t2.vcf -o test/t2_pos01_explode0_test -O v --seed 42 -d 1 -e 0.01 --pos0 1 -explode 0;
 	bash -c "diff -I '^##'  test/t2_pos01_explode0_test.vcf test/reference/t2_pos01_explode0.vcf";
-	./vcfgl -in test/t2.vcf -out test/t2_pos01_explode1_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 1;
+	./vcfgl -i test/t2.vcf -o test/t2_pos01_explode1_test -O v --seed 42 -d 1 -e 0.01 --pos0 1 -explode 1;
 	bash -c "diff -I '^##'  test/t2_pos01_explode1_test.vcf test/reference/t2_pos01_explode1.vcf";
-	./vcfgl -in test/t2.vcf -out test/t2_pos01_explode1_gp_gl_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 1 -addGP 1 -addPL 1;
+	./vcfgl -i test/t2.vcf -o test/t2_pos01_explode1_gp_gl_test -O v --seed 42 -d 1 -e 0.01 --pos0 1 -explode 1 -addGP 1 -addPL 1;
 	bash -c "diff -I '^##'  test/t2_pos01_explode1_gp_gl_test.vcf test/reference/t2_pos01_explode1_gp_gl.vcf";
-	./vcfgl -in test/t2.vcf -out test/t2_pos01_explode1_gp_gl_qs_test -O v -seed 42 -depth 1 -err 0.01 -pos0 1 -explode 1 -addQS 1 -addGP 1 -addPL 1;
-	bash -c "diff -I '^##'  test/t2_pos01_explode1_gp_gl_qs_test.vcf test/reference/t2_pos01_explode1_gp_gl_qs.vcf";
+	./vcfgl -i test/t2.vcf -o test/t2_pos01_explode1_gp_gl_qs_trim1_test -O v --seed 42 -d 1 -e 0.01 --pos0 1 -explode 1 -addQS 1 -addGP 1 -addPL 1 --trim-alt-alleles 1;
+	bash -c "diff -I '^##'  test/t2_pos01_explode1_gp_gl_qs_trim1_test.vcf test/reference/t2_pos01_explode1_gp_gl_qs_trim1.vcf";
+	./vcfgl -i test/t2.vcf -o test/t2_pos01_explode1_gp_gl_qs_trim0_test -O v --seed 42 -d 1 -e 0.01 --pos0 1 -explode 1 -addQS 1 -addGP 1 -addPL 1 --trim-alt-alleles 0;
+	bash -c "diff -I '^##'  test/t2_pos01_explode1_gp_gl_qs_trim0_test.vcf test/reference/t2_pos01_explode1_gp_gl_qs_trim0.vcf";
 
