@@ -31,29 +31,29 @@ Usage: ./vcfgl -i <input> [options]
 
 
 Options:
-	-i/--input			Input file (required)
-	-o/--output			Output file prefix (default:output)
+	-i/--input		Input file (required)
+	-o/--output		Output file prefix (default:output)
 	-O/--output-mode	Output mode (default:b)
-						v	VCF file
-						b	BCF file
-						z	Compressed VCF file (vcf.gz)
-						b	Uncompressed BCF file
+				v	VCF file
+				b	BCF file
+				z	Compressed VCF file (vcf.gz)
+				u	Uncompressed BCF file
 
 	-e/--error-rate		Error rate (default:0.01)
-	-d/--depth			Mean per-site read depth (default:1.0)
-						Use `--depth inf` to set the simulated values to known true variables
+	-d/--depth		Mean per-site read depth (default:1.0)
+					Use `--depth inf` to set the simulated values to known true variables
 	-df/--depths-file	File containing mean per-site read depth for each sample (conflicts with -d)
-	--seed				Random seed used to initialize the random number generator
-	--pos0				Are the input coordinates are 0-based? (default:0)
-						If input cordinates are 0 based, use --pos0 1 to shift positions by +1
+	--seed			Random seed used to initialize the random number generator
+	--pos0			Are the input coordinates are 0-based? (default:0)
+				If input cordinates are 0 based, use --pos0 1 to shift positions by +1
 	--trim-alt-alleles	Trim ALT alleles not observed in simulated bases (default:0=disabled)
 
-	-explode			Explode to unobserved sites in the input file (default:0=disabled)
+	-explode		Explode to unobserved sites in the input file (default:0=disabled)
 	-printBaseCounts	Print base counts (default:0=disabled)
-	-addGP				Add GP field (default:0=disabled)
-	-addPL				Add PL field (default:0=disabled)
-	-addI16				Add I16 field (default:0=disabled)
-	-addQS				Add QS field (default:0=disabled)
+	-addGP			Add GP field (default:0=disabled)
+	-addPL			Add PL field (default:0=disabled)
+	-addI16			Add I16 field (default:0=disabled)
+	-addQS			Add QS field (default:0=disabled)
 
 ```
 
