@@ -302,11 +302,15 @@ argStruct *args_get(int argc, char **argv)
 		{
 			ERROR("Cannot simulate true values when error rate is defined. Please set error rate to 0 and rerun.");
 		}
-		ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth inf --depths-file %s --pos0 %d --seed %d -explode %d -printBaseCounts %d -addGP %d -addPL %d -addI16 %d -addQS %d\n", args->in_fn, args->out_fnp, args->output_mode, args->error_rate, args->mps_depths_fn, args->pos0, args->seed, args->explode, args->printBaseCounts, args->addGP, args->addPL, args->addI16, args->addQS) > 0);
+		ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth inf --depths-file %s --pos0 %d --seed %d -explode %d -printBaseCounts %d -addGP %d -addPL %d -addI16 %d -addQS %d --error-bias %d --beta-variance %f --trim-alt-alleles %d\n",
+		args->in_fn, args->out_fnp, args->output_mode, args->error_rate, args->mps_depths_fn, args->pos0, args->seed, args->explode, args->printBaseCounts, args->addGP, args->addPL, args->addI16, args->addQS, args->error_bias, args->beta_variance	) > 0);
+
 	}
 	else
 	{
-		ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth %f --depths-file %s --pos0 %d --seed %d -explode %d -printBaseCounts %d -addGP %d -addPL %d -addI16 %d -addQS %d\n", args->in_fn, args->out_fnp, args->output_mode, args->error_rate, args->mps_depth, args->mps_depths_fn, args->pos0, args->seed, args->explode, args->printBaseCounts, args->addGP, args->addPL, args->addI16, args->addQS) > 0);
+		ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth %f --depths-file %s --pos0 %d --seed %d -explode %d -printBaseCounts %d -addGP %d -addPL %d -addI16 %d -addQS %d --error-bias %d --beta-variance %f --trim-alt-alleles %d\n",
+		args->in_fn, args->out_fnp, args->output_mode, args->error_rate, args->mps_depth, args->mps_depths_fn, args->pos0, args->seed, args->explode, args->printBaseCounts, args->addGP, args->addPL, args->addI16, args->addQS, args->error_bias, args->beta_variance
+		) > 0);
 	}
 
 	if (1 == args->pos0)
