@@ -1,8 +1,6 @@
 #ifndef __BCF_UTILS__
 #define __BCF_UTILS__
 
-
-
 #include <htslib/kstring.h> // kstring_t
 
 #include <htslib/vcf.h>
@@ -19,47 +17,45 @@
 #include "shared.h"
 #include "version.h"
 
-
 /* ========================================================================== */
 /* /BEGIN/ BCF UTILS ======================================================== */
 
+typedef struct sim_rec
+{
 
-typedef struct sim_rec{
+	bcf_hdr_t *hdr = NULL;
 
-	bcf_hdr_t* hdr=NULL;
+	bcf1_t *input_rec = NULL; // used as rec if record is from input file
+	bcf1_t *blank_rec = NULL; // used as rec if record is created by -explode 1
 
-	bcf1_t* rec=NULL;
-	bcf1_t* blank_rec=NULL;
+	kstring_t *alleles_str = NULL;
 
-	kstring_t* alleles_str=NULL;
+	int nSamples = 0;
+	int nSites = 0;
 
-	int nSamples=0;
-	int nSites=0;
+	int site_i = -1;
 
-	int site_i=-1;
+	// TODO delme
+	double *gl_vals = NULL;
 
-	//TODO delme
-	double* gl_vals=NULL;
+	double *mps_depths = NULL;
 
-	double* mps_depths=NULL;
+	int32_t *dp_arr = NULL;
+	int32_t *gt_arr = NULL;
 
-	int32_t* dp_arr=NULL;
-	int32_t* gt_arr=NULL;
+	float *gl_arr = NULL;
+	float *gp_arr = NULL;
+	int32_t *pl_arr = NULL;
 
-	float* gl_arr=NULL;
-	float* gp_arr=NULL;
-	int32_t* pl_arr=NULL;
+	float *qs_arr = NULL;
+	float *i16_arr = NULL;
 
-	float* qs_arr=NULL;
-	float* i16_arr=NULL;
-
-	sim_rec(bcf_hdr_t* in_hdr);
+	sim_rec(bcf_hdr_t *in_hdr);
 	~sim_rec();
 
-	void set_hdr(bcf_hdr_t* in_hdr);
+	void set_hdr(bcf_hdr_t *in_hdr);
 
-
-}sim_rec;
+} sim_rec;
 
 /* -> BCF TAGS ---------------------------------------------------------------*/
 
@@ -69,86 +65,101 @@ typedef struct
 	int n; // expected number of values in tag
 		   // default value:
 		   // -1	soft-fixed to nSamples, fixed size for all sites
-		   // -2	not fixed, value can vary from site to site based on 
-		   // 			site specific values 
+		   // -2	not fixed, value can vary from site to site based on
+		   // 			site specific values
 		   // >0	hard-fixed with a predefined value that does not require
 		   // 			information about the data
 	int type;
-	const char *str=NULL;
-	const char *hdr=NULL;
-}bcf_tag_t;
+	const char *str = NULL;
+	const char *hdr = NULL;
+} bcf_tag_t;
 
-enum bcf_tag{DP, GT, GL, GP, PL, QS, I16};
+enum bcf_tag
+{
+	DP,
+	GT,
+	GL,
+	GP,
+	PL,
+	QS,
+	I16
+};
 extern bcf_tag_t bcf_tags[7];
 
-
-template <typename T> T* bcf_tag_alloc(enum bcf_tag t){
+template <typename T>
+T *bcf_tag_alloc(enum bcf_tag t)
+{
 	const int bcf_tag_size = bcf_tags[t].n;
-	ASSERT(bcf_tag_size>0);
-	T* arr = (T*) malloc(bcf_tag_size * sizeof(T));
-	ASSERT(NULL!=arr);
+	ASSERT(bcf_tag_size > 0);
+	T *arr = (T *)malloc(bcf_tag_size * sizeof(T));
+	ASSERT(NULL != arr);
 	return arr;
 }
 
-template <typename T> T* bcf_tag_alloc(enum bcf_tag t, T init_val){
+template <typename T>
+T *bcf_tag_alloc(enum bcf_tag t, T init_val)
+{
 	const int bcf_tag_size = bcf_tags[t].n;
-	ASSERT(bcf_tag_size>0);
-	T* arr = (T*) malloc(bcf_tag_size * sizeof(T));
-	for(int i=0;i<bcf_tag_size;++i){
-		arr[i]=init_val;
+	ASSERT(bcf_tag_size > 0);
+	T *arr = (T *)malloc(bcf_tag_size * sizeof(T));
+	for (int i = 0; i < bcf_tag_size; ++i)
+	{
+		arr[i] = init_val;
 	}
-	ASSERT(NULL!=arr);
+	ASSERT(NULL != arr);
 	return arr;
 }
 
+template <typename T>
+void bcf_tag_reset(T *arr, enum bcf_tag t, T init_val)
+{
 
-template <typename T> void bcf_tag_reset(T* arr, enum bcf_tag t, T init_val){
+	const int size = bcf_tags[t].n;
 
-	const int size=bcf_tags[t].n;
-
-	ASSERT(NULL!=arr);
-	for(int i=0;i<size;++i){
-		arr[i]=init_val;
+	ASSERT(NULL != arr);
+	for (int i = 0; i < size; ++i)
+	{
+		arr[i] = init_val;
 	}
 	return;
 }
 
-template <typename T> T* bcf_tag_alloc(enum bcf_tag t, T init_val, const int size){
+template <typename T>
+T *bcf_tag_alloc(enum bcf_tag t, T init_val, const int size)
+{
 
 	int bcf_tag_size = bcf_tags[t].n;
 
-	if(bcf_tag_size!=size){
-		bcf_tags[t].n=size;
+	if (bcf_tag_size != size)
+	{
+		bcf_tags[t].n = size;
 	}
 
-	ASSERT(size>0);
-	T* arr = (T*) malloc(size * sizeof(T));
-	for(int i=0;i<size;++i){
-		arr[i]=init_val;
+	ASSERT(size > 0);
+	T *arr = (T *)malloc(size * sizeof(T));
+	for (int i = 0; i < size; ++i)
+	{
+		arr[i] = init_val;
 	}
-	ASSERT(NULL!=arr);
+	ASSERT(NULL != arr);
 	return arr;
 }
-
 
 void bcf_tag_set_size(enum bcf_tag t, const int size);
 
 /* -> MISC -------------------------------------------------------------------*/
 
-// better alternative: use lut 
+// better alternative: use lut
 
 /// @brief nAlleles2nGenotypes - get the number of possible genotypes assuming ploidy==2
 /// @param n	number of alleles
 /// @return		number of expected genotypes
 /// equivalent to (n * (n+1)) / 2
-inline int nAlleles2nGenotypes(const int n){
-	return ( ((n * (n+1)) >> 1) );
+inline int nAlleles2nGenotypes(const int n)
+{
+	return (((n * (n + 1)) >> 1));
 }
 
-
-
-
 /* ========================================================================== */
-
 
 #endif // __BCF_UTILS__

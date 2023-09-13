@@ -51,6 +51,9 @@ Options:
 				u	Uncompressed BCF file
 
 	-e/--error-rate		Error rate (default:0.01)
+	--error-bias		Should the program sample errors? (default:0:no)
+					1: sample error probabilities from beta distribution
+	--beta-variance		Variance of the beta distribution
 	-d/--depth		Mean per-site read depth (default:1.0)
 					Use `--depth inf` to set the simulated values to known true variables
 	-df/--depths-file	File containing mean per-site read depth for each sample (conflicts with -d)
@@ -61,11 +64,11 @@ Options:
 
 	-explode		Explode to unobserved sites in the input file (default:0=disabled)
 	-printBaseCounts	Print base counts (default:0=disabled)
+
 	-addGP			Add GP field (default:0=disabled)
 	-addPL			Add PL field (default:0=disabled)
 	-addI16			Add I16 field (default:0=disabled)
 	-addQS			Add QS field (default:0=disabled)
-
 ```
 
 

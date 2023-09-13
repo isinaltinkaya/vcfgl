@@ -1,19 +1,73 @@
 #include "random_generator.h"
-
-#include <stdio.h>
-
-#include <inttypes.h>
-#include <math.h>
+#include "io.h"
+#include "shared.h"
 
 #define PI 3.141592654
 
-int sample_uniform_from_range(int min, int max){
-   return (min + rand() / (RAND_MAX / (max - min + 1) + 1));
+BetaSampler::BetaSampler(const double mean, const double var, const int seed)
+{
+
+	double oneOverMean = 1.0 / mean;
+
+	this->alpha = (((1.0 - mean) / var) - (oneOverMean)) * pow(mean, 2);
+	this->beta = this->alpha * ((oneOverMean)-1);
+
+	if (alpha == beta)
+	{
+		ERROR("Alpha and beta shape parameters of beta distribution are estimated as the same value %f, which is not allowed. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %f\n", this->alpha, mean, var)
+	}
+
+	if (alpha < 0.0)
+	{
+		ERROR("Alpha shape parameter of beta distribution is estimated as %f, which is less than the minimum allowed value of %f. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %f\n", alpha, 0.0, mean, var);
+	}
+	if (beta < 0.0)
+	{
+		ERROR("Beta shape parameter of beta distribution is estimated as %f, which is less than the minimum allowed value of %f. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %f\n", beta, 0.0, mean, var);
+	}
+
+	this->gamma_alpha = new std::gamma_distribution<double>(this->alpha, 1.0);
+	this->gamma_beta = new std::gamma_distribution<double>(this->beta, 1.0);
+
+	generator.seed(static_cast<unsigned long>(seed));
 }
 
+BetaSampler::~BetaSampler()
+{
+	delete gamma_alpha;
+	delete gamma_beta;
+}
 
+double BetaSampler::sample()
+{
+	std::gamma_distribution<double> gamma_alpha(alpha, 1.0);
+	std::gamma_distribution<double> gamma_beta(beta, 1.0);
+	double x = gamma_alpha(generator);
+	double y = gamma_beta(generator);
 
+	double ret = (x / (x + y));
 
+	if (ret == 0.0)
+	{
+		ERROR("Beta sampler returned %f. This is not allowed. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %f\n", ret, args->error_rate, args->beta_variance);
+	}
+
+	if (ret > 1.0)
+	{
+		ERROR("Beta sampler returned %f, which is greater than 1.0. This is not allowed. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %f\n", ret, args->error_rate, args->beta_variance);
+	}
+	else if (ret < 0.0)
+	{
+		ERROR("Beta sampler returned %f, which is less than 0.0. This is not allowed. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %f\n", ret, args->error_rate, args->beta_variance);
+	}
+
+	return (ret);
+}
+
+int sample_uniform_from_range(int min, int max)
+{
+	return (min + rand() / (RAND_MAX / (max - min + 1) + 1));
+}
 
 // Poisson random deviates
 //
@@ -27,38 +81,43 @@ int sample_uniform_from_range(int min, int max){
 double Poisson(double xm)
 {
 	double lgamma(double xx);
-	static double sq,alxm,g,oldm=(-1.0);
+	static double sq, alxm, g, oldm = (-1.0);
 	double em, t, y;
 
-	if (xm < 12.0) {
-		if (xm != oldm) {
-			oldm=xm;
-			g=exp(-xm);
+	if (xm < 12.0)
+	{
+		if (xm != oldm)
+		{
+			oldm = xm;
+			g = exp(-xm);
 		}
-		em=-1;
-		t=1.0;
-		do {
+		em = -1;
+		t = 1.0;
+		do
+		{
 			++em;
-			t *=drand48();
-		} while (t>g);
+			t *= drand48();
+		} while (t > g);
 	}
-	else {
-		if (xm!=oldm) {
-			oldm=xm;
-			sq=sqrt(2.0*xm);
-			alxm=log(xm);
-			g=xm*alxm-lgamma(xm+1.0);
+	else
+	{
+		if (xm != oldm)
+		{
+			oldm = xm;
+			sq = sqrt(2.0 * xm);
+			alxm = log(xm);
+			g = xm * alxm - lgamma(xm + 1.0);
 		}
-		do {
-			do {
-				y=tan(PI*drand48());
-				em=sq*y+xm;
-			} while (em< 0.0);
-			em=floor(em);
-			t=0.9*(1.0+y*y)*exp(em*alxm-lgamma(em+1.0)-g);
-		} while (drand48()>t);
+		do
+		{
+			do
+			{
+				y = tan(PI * drand48());
+				em = sq * y + xm;
+			} while (em < 0.0);
+			em = floor(em);
+			t = 0.9 * (1.0 + y * y) * exp(em * alxm - lgamma(em + 1.0) - g);
+		} while (drand48() > t);
 	}
 	return em;
 }
-
-

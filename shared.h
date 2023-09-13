@@ -13,13 +13,18 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 
 #define MAXGL 0
 #define MINGL NEG_INF
+
 #define MAXPL 255
 #define MINPL 0
+
 #define MAXGP 1.0
 #define MINGP 0.0
 
 // number of genotypes to simulate {AA,AC,CC,AG,CG,GG,AT,CT,GT,TT}
 #define MAX_NGTS 10
+
+// maximum number of quality scores to simulate {A,C,G,T}
+#define MAX_NQS 4
 
 // assume diploid samples
 #define SIM_PLOIDY 2

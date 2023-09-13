@@ -35,16 +35,23 @@ void help_page()
 
 	fprintf(stderr, "\t-i/--input\t\tInput file (required)\n");
 	fprintf(stderr, "\t-o/--output\t\tOutput file prefix (default:output)\n");
-	fprintf(stderr, "\t-O/--output-mode\t\tOutput mode (default:b)\n");
+	fprintf(stderr, "\t-O/--output-mode\tOutput mode (default:b)\n");
 	fprintf(stderr, "\t\t\t\tv\tVCF file\n");
 	fprintf(stderr, "\t\t\t\tb\tBCF file\n");
 	fprintf(stderr, "\t\t\t\tz\tCompressed VCF file (vcf.gz)\n");
-	fprintf(stderr, "\t\t\t\tb\tUncompressed BCF file\n");
+	fprintf(stderr, "\t\t\t\tu\tUncompressed BCF file\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "\t-e/--error-rate\t\tError rate (default:0.01)\n");
 	fprintf(stderr, "\t-d/--depth\t\tMean per-site read depth (default:1.0)\n");
 	fprintf(stderr, "\t\t\t\tUse `--depth inf` to set the simulated values to known true variables\n");
 	fprintf(stderr, "\t-df/--depths-file\tFile containing mean per-site read depth for each sample (conflicts with -d)\n");
+
+	fprintf(stderr, "\t--error-bias\t\tShould the program sample errors?\n");
+	fprintf(stderr, "\t\t\t\t0: no\n");
+	fprintf(stderr, "\t\t\t\t1: sample error probabilities from beta distribution\n");
+
+	fprintf(stderr, "\t--beta-variance\tVariance of the beta distribution\n");
+
 	fprintf(stderr, "\t--seed\t\t\tRandom seed used to initialize the random number generator\n");
 
 	fprintf(stderr, "\t--pos0\t\t\tAre the input coordinates are 0-based? (default:0)");
@@ -67,11 +74,19 @@ argStruct *args_init()
 
 	args = (argStruct *)calloc(1, sizeof(argStruct));
 
-	args->out_fp = NULL;
+	args->out_fnp = NULL;
 	args->in_fn = NULL;
+
+	args->betaSampler = NULL;
 
 	args->datetime = NULL;
 	args->command = NULL;
+
+	args->error_bias = 0;
+	args->beta_variance = 0.0;
+
+	// for setting the quality score with a fixed given error rate
+	args->error_rate_q = -1;
 
 	args->pos0 = 0;
 	args->trimAlts = 0;
@@ -82,8 +97,8 @@ argStruct *args_init()
 	args->addQS = 0;
 
 	args->mps_depth = 1.0;
-	args->in_mps_depths = NULL;
-	args->errate = 0.01;
+	args->mps_depths_fn = NULL;
+	args->error_rate = 0.01;
 	args->seed = -1;
 	args->explode = 0;
 	args->printBaseCounts = 0;
@@ -96,8 +111,8 @@ void args_destroy(argStruct *args)
 	free(args->in_fn);
 	args->in_fn = NULL;
 
-	free(args->out_fp);
-	args->out_fp = NULL;
+	free(args->out_fnp);
+	args->out_fnp = NULL;
 
 	free(args->output_mode);
 	args->output_mode = NULL;
@@ -107,6 +122,8 @@ void args_destroy(argStruct *args)
 
 	free(args->command);
 	args->command = NULL;
+
+	delete args->betaSampler;
 
 	free(args);
 	args = NULL;
@@ -150,7 +167,7 @@ argStruct *args_get(int argc, char **argv)
 
 		else if ((strcmp("-o", arv) == 0) || (strcmp("--output", arv) == 0))
 		{
-			args->out_fp = strdup(val);
+			args->out_fnp = strdup(val);
 		}
 
 		else if ((strcmp("-O", arv) == 0) || (strcmp("--output-mode", arv) == 0))
@@ -160,7 +177,7 @@ argStruct *args_get(int argc, char **argv)
 
 		else if ((strcmp("-e", arv) == 0) || (strcmp("--error-rate", arv) == 0))
 		{
-			args->errate = atof(val);
+			args->error_rate = atof(val);
 		}
 
 		else if ((strcmp("-d", arv) == 0) || (strcmp("--depth", arv) == 0))
@@ -197,7 +214,16 @@ argStruct *args_get(int argc, char **argv)
 
 		else if ((strcmp("-df", arv) == 0) || (strcmp("--depths-file", arv) == 0))
 		{
-			args->in_mps_depths = strdup(val);
+			args->mps_depths_fn = strdup(val);
+		}
+
+		else if (strcasecmp("--error-bias", arv) == 0)
+		{
+			args->error_bias = atoi(val);
+		}
+		else if (strcasecmp("--beta-variance", arv) == 0)
+		{
+			args->beta_variance = atof(val);
 		}
 
 		else if (strcasecmp("--pos0", arv) == 0)
@@ -263,29 +289,51 @@ argStruct *args_get(int argc, char **argv)
 		args->output_mode = strdup("b");
 	}
 
-	if (NULL == args->out_fp)
+	if (NULL == args->out_fnp)
 	{
-		args->out_fp = strdup("output");
+		args->out_fnp = strdup("output");
 	}
 
 	args->datetime = strdup(get_time());
 
 	if (-999 == args->mps_depth)
 	{
-		if (0 != args->errate)
+		if (0 != args->error_rate)
 		{
 			ERROR("Cannot simulate true values when error rate is defined. Please set error rate to 0 and rerun.");
 		}
-		ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth inf --depths-file %s --pos0 %d --seed %d -explode %d -printBaseCounts %d -addGP %d -addPL %d -addI16 %d -addQS %d\n", args->in_fn, args->out_fp, args->output_mode, args->errate, args->in_mps_depths, args->pos0, args->seed, args->explode, args->printBaseCounts, args->addGP, args->addPL, args->addI16, args->addQS) > 0);
+		ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth inf --depths-file %s --pos0 %d --seed %d -explode %d -printBaseCounts %d -addGP %d -addPL %d -addI16 %d -addQS %d --error-bias %d --beta-variance %f --trim-alt-alleles %d\n",
+		args->in_fn, args->out_fnp, args->output_mode, args->error_rate, args->mps_depths_fn, args->pos0, args->seed, args->explode, args->printBaseCounts, args->addGP, args->addPL, args->addI16, args->addQS, args->error_bias, args->beta_variance	) > 0);
+
 	}
 	else
 	{
-		ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth %f --depths-file %s --pos0 %d --seed %d -explode %d -printBaseCounts %d -addGP %d -addPL %d -addI16 %d -addQS %d\n", args->in_fn, args->out_fp, args->output_mode, args->errate, args->mps_depth, args->in_mps_depths, args->pos0, args->seed, args->explode, args->printBaseCounts, args->addGP, args->addPL, args->addI16, args->addQS) > 0);
+		ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth %f --depths-file %s --pos0 %d --seed %d -explode %d -printBaseCounts %d -addGP %d -addPL %d -addI16 %d -addQS %d --error-bias %d --beta-variance %f --trim-alt-alleles %d\n",
+		args->in_fn, args->out_fnp, args->output_mode, args->error_rate, args->mps_depth, args->mps_depths_fn, args->pos0, args->seed, args->explode, args->printBaseCounts, args->addGP, args->addPL, args->addI16, args->addQS, args->error_bias, args->beta_variance
+		) > 0);
 	}
 
 	if (1 == args->pos0)
 	{
 		fprintf(stderr, "\n --pos0=%d ; This means input VCF's positions are 0 based, and will shift coordinate system with +1\n", args->pos0);
+	}
+
+	if (1 == args->error_bias)
+	{
+
+		if (0 == args->error_rate)
+		{
+			ERROR("--error-bias %d requires --error-rate to be set. Please set --error-rate and rerun.", args->error_bias);
+		}
+		if (0 == args->beta_variance)
+		{
+			ERROR("--error-bias %d requires --beta-variance to be set. Please set --beta-variance and rerun.", args->error_bias);
+		}
+
+		if (1 == args->error_bias)
+		{
+			args->betaSampler = new BetaSampler(args->error_rate, args->beta_variance, args->seed);
+		}
 	}
 
 	return (args);
