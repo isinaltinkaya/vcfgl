@@ -9,8 +9,8 @@
 
 
 
-void gl_log10(int base, double errate, double *like);
-void gl_ln(int base, double errate, double *like);
+void gl_log10(int base, double error_rate, double *like);
+void gl_ln(int base, double error_rate, double *like);
 
 void rescale_likelihood_ratio(double *like);
 void rescale_likelihood_ratio(float *like);
