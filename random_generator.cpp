@@ -12,24 +12,22 @@ BetaSampler::BetaSampler(const double mean, const double var, const int seed)
 	this->alpha = (((1.0 - mean) / var) - (oneOverMean)) * pow(mean, 2);
 	this->beta = this->alpha * ((oneOverMean)-1);
 
-	if (alpha == beta)
+	if (alpha <= 0.0)
 	{
-		ERROR("Alpha and beta shape parameters of beta distribution are estimated as the same value %f, which is not allowed. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %f\n", this->alpha, mean, var)
+		ERROR("Alpha shape parameter of beta distribution is estimated as %f, which is less than the minimum allowed value of %f. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %e\n", alpha, 0.0, mean, var);
+	}
+	if (beta <= 0.0)
+	{
+		ERROR("Beta shape parameter of beta distribution is estimated as %f, which is less than the minimum allowed value of %f. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %e\n", beta, 0.0, mean, var);
 	}
 
-	if (alpha < 0.0)
-	{
-		ERROR("Alpha shape parameter of beta distribution is estimated as %f, which is less than the minimum allowed value of %f. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %f\n", alpha, 0.0, mean, var);
-	}
-	if (beta < 0.0)
-	{
-		ERROR("Beta shape parameter of beta distribution is estimated as %f, which is less than the minimum allowed value of %f. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %f\n", beta, 0.0, mean, var);
-	}
+	fprintf(stderr,"\n-> Beta distribution shape parameters are estimated as alpha=%f and beta=%f (mean=%f, variance=%e)\n", this->alpha, this->beta, mean, var);
 
 	this->gamma_alpha = new std::gamma_distribution<double>(this->alpha, 1.0);
 	this->gamma_beta = new std::gamma_distribution<double>(this->beta, 1.0);
 
 	generator.seed(static_cast<unsigned long>(seed));
+
 }
 
 BetaSampler::~BetaSampler()
@@ -47,19 +45,6 @@ double BetaSampler::sample()
 
 	double ret = (x / (x + y));
 
-	if (ret == 0.0)
-	{
-		ERROR("Beta sampler returned %f. This is not allowed. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %f\n", ret, args->error_rate, args->beta_variance);
-	}
-
-	if (ret > 1.0)
-	{
-		ERROR("Beta sampler returned %f, which is greater than 1.0. This is not allowed. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %f\n", ret, args->error_rate, args->beta_variance);
-	}
-	else if (ret < 0.0)
-	{
-		ERROR("Beta sampler returned %f, which is less than 0.0. This is not allowed. Please use different --error-rate and --beta-variance values. Current values are: --error-rate %f --beta-variance %f\n", ret, args->error_rate, args->beta_variance);
-	}
 
 	return (ret);
 }
@@ -121,3 +106,4 @@ double Poisson(double xm)
 	}
 	return em;
 }
+

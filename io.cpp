@@ -29,9 +29,16 @@ void help_page()
 	fprintf(stderr, "\n");
 	fprintf(stderr, "\n");
 
-	fprintf(stderr, "Usage: ./vcfgl -i <input> [options]\n\n");
+	fprintf(stderr, "Usage:\t./vcfgl -i <input> [options]\n\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Options:\n");
+
+	fprintf(stderr, "\t-v/--verbose\t\tVerbose (default:0=disabled)\n");
+	// fprintf(stderr, "\t-@/--threads\t\tNumber of threads (default:1)\n");
+
+	fprintf(stderr, "\n");
+
+	fprintf(stderr, "    -->\tInput/Output\n");
 
 	fprintf(stderr, "\t-i/--input\t\tInput file (required)\n");
 	fprintf(stderr, "\t-o/--output\t\tOutput file prefix (default:output)\n");
@@ -41,30 +48,42 @@ void help_page()
 	fprintf(stderr, "\t\t\t\tz\tCompressed VCF file (vcf.gz)\n");
 	fprintf(stderr, "\t\t\t\tu\tUncompressed BCF file\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "\t-e/--error-rate\t\tError rate (default:0.01)\n");
+
+	fprintf(stderr, "    -->\tSimulation parameters\n");
 	fprintf(stderr, "\t-d/--depth\t\tMean per-site read depth (default:1.0)\n");
 	fprintf(stderr, "\t\t\t\tUse `--depth inf` to set the simulated values to known true variables\n");
 	fprintf(stderr, "\t-df/--depths-file\tFile containing mean per-site read depth for each sample (conflicts with -d)\n");
-
-	fprintf(stderr, "\t--error-bias\t\tShould the program sample errors?\n");
+	fprintf(stderr, "\t-e/--error-rate\t\tError rate (default:0.01)\n");
+	fprintf(stderr, "\t--error-qs\t\tShould the program sample errors?\n");
 	fprintf(stderr, "\t\t\t\t0: no\n");
 	fprintf(stderr, "\t\t\t\t1: sample error probabilities from beta distribution\n");
-
-	fprintf(stderr, "\t--beta-variance\tVariance of the beta distribution\n");
+	fprintf(stderr, "\t--beta-variance\t\tVariance of the beta distribution\n");
 
 	fprintf(stderr, "\t--seed\t\t\tRandom seed used to initialize the random number generator\n");
+	fprintf(stderr, "\n");
 
-	fprintf(stderr, "\t--pos0\t\t\tAre the input coordinates are 0-based? (default:0)");
+	fprintf(stderr, "\t--pos0\t\t\tAre the input coordinates are 0-based? (default:0=no)");
 	fprintf(stderr, "\n\t\t\t\tIf input cordinates are 0 based, use --pos0 1 to shift positions by +1\n");
-	fprintf(stderr, "\t--trim-alt-alleles\tTrim ALT alleles not observed in simulated bases (default:0=disabled)\n");
+	fprintf(stderr, "\t--rm-invar-sites\tRemove sites where only one base for observed in total (default:0=disabled)\n");
+	// fprintf(stderr, "\t--trim-alt-alleles\tTrim ALT alleles not sampled during base sampling (default:0=disabled)\n");
+	fprintf(stderr, "\t--platform\t\tSimulate base qualities for a specific sequencing platform (default:0=disabled)\n");
+	fprintf(stderr, "\t\t\t\t1\tNovaSeq 6000. The qualities are binned into four possible quality values: 2, 12, 23 and 37.\n");
 
 	fprintf(stderr, "\n");
-	fprintf(stderr, "\t-explode\t\tExplode to unobserved sites in the input file (default:0=disabled)\n");
-	fprintf(stderr, "\t-printBaseCounts\tPrint base counts (default:0=disabled)\n");
+	fprintf(stderr, "Commands:\n");
+
+	fprintf(stderr, "    -->\tSpecify which fields to simulate\n");
+	fprintf(stderr, "\t-addGL\t\t\tAdd GL field (default:1=enabled)\n");
 	fprintf(stderr, "\t-addGP\t\t\tAdd GP field (default:0=disabled)\n");
 	fprintf(stderr, "\t-addPL\t\t\tAdd PL field (default:0=disabled)\n");
 	fprintf(stderr, "\t-addI16\t\t\tAdd I16 field (default:0=disabled)\n");
 	fprintf(stderr, "\t-addQS\t\t\tAdd QS field (default:0=disabled)\n");
+	fprintf(stderr, "\t-addFormatDP\t\tAdd FORMAT/DP field (default:1=enabled)\n");
+	fprintf(stderr, "\t-addFormatAD\t\tAdd FORMAT/AD field (default:0=disabled)\n");
+	// fprintf(stderr, "\t-addFormatADF\t\tAdd FORMAT/ADF field (default:0=disabled)\n");
+	// fprintf(stderr, "\t-addFormatADR\t\tAdd FORMAT/ADR field (default:0=disabled)\n");
+
+	fprintf(stderr, "\t-explode\t\tAlso simulate sites that were not observed in the input file (default:0=disabled)\n");
 
 	fprintf(stderr, "\n");
 }
@@ -74,6 +93,11 @@ argStruct *args_init()
 
 	args = (argStruct *)calloc(1, sizeof(argStruct));
 
+
+	args->n_threads = 1;
+
+	args->verbose = 0;
+
 	args->out_fnp = NULL;
 	args->in_fn = NULL;
 
@@ -82,7 +106,7 @@ argStruct *args_init()
 	args->datetime = NULL;
 	args->command = NULL;
 
-	args->error_bias = 0;
+	args->error_qs = 0;
 	args->beta_variance = 0.0;
 
 	// for setting the quality score with a fixed given error rate
@@ -90,18 +114,29 @@ argStruct *args_init()
 
 	args->pos0 = 0;
 	args->trimAlts = 0;
+	args->useUnknownAllele =0;
+	args->platform = 0;
 
+	args->rmInvarSites = 0;
+
+	args->addGL = 1;
 	args->addGP = 0;
 	args->addPL = 0;
 	args->addI16 = 0;
 	args->addQS = 0;
+	args->addFormatDP = 1;
+	args->addFormatAD = 0;
+	args->addFormatADF = 0; //TODO
+	args->addFormatADR = 0; //TODO
+	args->addInfoAD = 0; 
+	args->addInfoADF = 0; //TODO
+	args->addInfoADR = 0; //TODO
 
 	args->mps_depth = 1.0;
 	args->mps_depths_fn = NULL;
 	args->error_rate = 0.01;
 	args->seed = -1;
 	args->explode = 0;
-	args->printBaseCounts = 0;
 	return args;
 }
 
@@ -114,14 +149,26 @@ void args_destroy(argStruct *args)
 	free(args->out_fnp);
 	args->out_fnp = NULL;
 
+	free(args->out_fn);
+	args->out_fn = NULL;
+
 	free(args->output_mode);
 	args->output_mode = NULL;
+
+	free(args->output_mode_str);
+	args->output_mode_str = NULL;
 
 	free(args->datetime);
 	args->datetime = NULL;
 
 	free(args->command);
 	args->command = NULL;
+
+	if (NULL != args->mps_depths_fn)
+	{
+		free(args->mps_depths_fn);
+		args->mps_depths_fn = NULL;
+	}
 
 	delete args->betaSampler;
 
@@ -158,6 +205,16 @@ argStruct *args_get(int argc, char **argv)
 		{
 			help_page();
 			exit(0);
+		}
+
+		else if ((strcmp("--verbose", arv) == 0) || (strcmp("-v", arv) == 0))
+		{
+			args->verbose = atoi(val);
+		}
+
+		else if ((strcmp("--threads", arv) == 0) || (strcmp("-@", arv) == 0))
+		{
+			args->n_threads = atoi(val);
 		}
 
 		else if ((strcmp("-i", arv) == 0) || (strcmp("--input", arv) == 0))
@@ -215,11 +272,12 @@ argStruct *args_get(int argc, char **argv)
 		else if ((strcmp("-df", arv) == 0) || (strcmp("--depths-file", arv) == 0))
 		{
 			args->mps_depths_fn = strdup(val);
+			args->mps_depth = -1;
 		}
 
-		else if (strcasecmp("--error-bias", arv) == 0)
+		else if (strcasecmp("--error-qs", arv) == 0)
 		{
-			args->error_bias = atoi(val);
+			args->error_qs = atoi(val);
 		}
 		else if (strcasecmp("--beta-variance", arv) == 0)
 		{
@@ -236,8 +294,8 @@ argStruct *args_get(int argc, char **argv)
 
 		else if (strcmp("-explode", arv) == 0)
 			args->explode = atoi(val);
-		else if (strcasecmp("-printBaseCounts", arv) == 0)
-			args->printBaseCounts = atoi(val);
+		else if (strcasecmp("-addGL", arv) == 0)
+			args->addGL = atoi(val);
 		else if (strcasecmp("-addGP", arv) == 0)
 			args->addGP = atoi(val);
 		else if (strcasecmp("-addPL", arv) == 0)
@@ -246,9 +304,35 @@ argStruct *args_get(int argc, char **argv)
 			args->addI16 = atoi(val);
 		else if (strcasecmp("-addQS", arv) == 0)
 			args->addQS = atoi(val);
+		else if (strcasecmp("-addFormatDP", arv) == 0)
+			args->addFormatDP = atoi(val);
+		else if (strcasecmp("-addFormatAD", arv) == 0)
+			args->addFormatAD = atoi(val);
+		else if (strcasecmp("-addFormatADF", arv) == 0)
+			args->addFormatADF = atoi(val);
+		else if (strcasecmp("-addFormatADR", arv) == 0)
+			args->addFormatADR = atoi(val);
+		else if (strcasecmp("-addInfoAD", arv) == 0)
+			args->addInfoAD = atoi(val);
+		else if (strcasecmp("-addInfoADF", arv) == 0)
+			args->addInfoADF = atoi(val);
+		else if (strcasecmp("-addInfoADR", arv) == 0)
+			args->addInfoADR = atoi(val);
+
+		else if (strcasecmp("--rm-invar-sites", arv) == 0)
+			args->rmInvarSites = atoi(val);
 
 		else if (strcasecmp("--trim-alt-alleles", arv) == 0)
 			args->trimAlts = atoi(val);
+
+		else if (strcasecmp("--use-unknown-allele", arv) == 0)
+			args->useUnknownAllele = atoi(val);
+		
+
+		else if (strcasecmp("--platform", arv) == 0)
+		{
+			args->platform = atoi(val);
+		}
 
 		else
 		{
@@ -259,29 +343,41 @@ argStruct *args_get(int argc, char **argv)
 		++argv;
 	}
 
-	if (1 == args->trimAlts && 1 != args->addQS)
-	{
-		ERROR("--trim-alt-alleles requires -addQS 1.");
-	}
+
+
+	//TODO
 
 	if (1 == args->addI16)
 	{
-		WARNING("-addI16 1 is used. Will set mapping quality-related I16 values to 0.");
+		NEVER;
+		WARN("-addI16 1 is used. Will set mapping quality-related I16 values to 0.");
 	}
+
+	if (1==args->trimAlts)
+	{
+		NEVER;
+	}
+
+	if(1==args->explode){
+		// NEVER;
+	}
+
+	if(1!=args->n_threads){
+		// NEVER;
+	}
+	//
 
 	if (args->seed == -1)
 	{
 		int rseed = time(NULL);
-		fprintf(stderr, "\n-> No seed was given. Setting the random seed to the randomly chosen value: %d", rseed);
+		fprintf(stderr, "\n-> No seed was given. Setting the random seed to the randomly chosen value: %d\n", rseed);
 		args->seed = rseed;
 	}
 	srand48(args->seed);
 
 	if (args->in_fn == NULL)
 	{
-		fprintf(stderr, "Must supply -in\n");
-		free(args);
-		return 0;
+		ERROR("Input file is not specified. Please use -i/--input option to specify the input file.");
 	}
 
 	if (NULL == args->output_mode)
@@ -296,21 +392,24 @@ argStruct *args_get(int argc, char **argv)
 
 	args->datetime = strdup(get_time());
 
+	// -depth inf
 	if (-999 == args->mps_depth)
 	{
+
 		if (0 != args->error_rate)
 		{
-			ERROR("Cannot simulate true values when error rate is defined. Please set error rate to 0 and rerun.");
+			ERROR("Cannot simulate true values (--depth inf) with error rate (--error-rate) set to %f. Please set --error-rate to 0 and rerun.", args->error_rate);
 		}
-		ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth inf --depths-file %s --pos0 %d --seed %d -explode %d -printBaseCounts %d -addGP %d -addPL %d -addI16 %d -addQS %d --error-bias %d --beta-variance %f --trim-alt-alleles %d\n",
-		args->in_fn, args->out_fnp, args->output_mode, args->error_rate, args->mps_depths_fn, args->pos0, args->seed, args->explode, args->printBaseCounts, args->addGP, args->addPL, args->addI16, args->addQS, args->error_bias, args->beta_variance	) > 0);
 
-	}
-	else
-	{
-		ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth %f --depths-file %s --pos0 %d --seed %d -explode %d -printBaseCounts %d -addGP %d -addPL %d -addI16 %d -addQS %d --error-bias %d --beta-variance %f --trim-alt-alleles %d\n",
-		args->in_fn, args->out_fnp, args->output_mode, args->error_rate, args->mps_depth, args->mps_depths_fn, args->pos0, args->seed, args->explode, args->printBaseCounts, args->addGP, args->addPL, args->addI16, args->addQS, args->error_bias, args->beta_variance
-		) > 0);
+		if (1 == args->addI16)
+		{
+			ERROR("I16 tag cannot be added when --depth inf is set.");
+		}
+
+		if (1 == args->addQS)
+		{
+			ERROR("QS tag cannot be added when --depth inf is set.");
+		}
 	}
 
 	if (1 == args->pos0)
@@ -318,22 +417,83 @@ argStruct *args_get(int argc, char **argv)
 		fprintf(stderr, "\n --pos0=%d ; This means input VCF's positions are 0 based, and will shift coordinate system with +1\n", args->pos0);
 	}
 
-	if (1 == args->error_bias)
+	if (1 == args->error_qs)
 	{
 
 		if (0 == args->error_rate)
 		{
-			ERROR("--error-bias %d requires --error-rate to be set. Please set --error-rate and rerun.", args->error_bias);
+			ERROR("--error-qs %d requires --error-rate to be set. Please set --error-rate and rerun.", args->error_qs);
 		}
 		if (0 == args->beta_variance)
 		{
-			ERROR("--error-bias %d requires --beta-variance to be set. Please set --beta-variance and rerun.", args->error_bias);
+			ERROR("--error-qs %d requires --beta-variance to be set. Please set --beta-variance and rerun.", args->error_qs);
 		}
 
-		if (1 == args->error_bias)
+		if (1 == args->error_qs)
 		{
 			args->betaSampler = new BetaSampler(args->error_rate, args->beta_variance, args->seed);
 		}
+	}
+
+	// TODO but it should be possible to set the error rate to 0 without --depth inf
+	// error rate can only be 0 with --depth inf
+	// if (-999 != args->mps_depth && 0 == args->error_rate)
+	// {
+	// ERROR("--error-rate %f requires --depth inf. Please set --depth inf and rerun.", args->error_rate);
+	// }
+
+	char depth_val[100];
+	if (-999 == args->mps_depth)
+	{
+		sprintf(depth_val, "%s", "inf");
+	}
+	else if (-1 == args->mps_depth)
+	{
+		// depths file is defined
+		sprintf(depth_val, "%s", "depths_file");
+	}
+	else
+	{
+		sprintf(depth_val, "%f", args->mps_depth);
+	}
+
+	ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth %s --depths-file %s --pos0 %d --seed %d --error-qs %d --beta-variance %e --rm-invar-sites %d --trim-alt-alleles %d --platform %d -explode %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d  -addFormatDP %d -addFormatAD %d -addFormatADF %d -addFormatADR %d -addInfoAD %d -addInfoADF %d -addInfoADR %d", args->in_fn, args->out_fnp, args->output_mode, args->error_rate, depth_val, args->mps_depths_fn, args->pos0, args->seed, args->error_qs, args->beta_variance, args->rmInvarSites, args->trimAlts, args->platform, args->explode, args->addGL, args->addGP, args->addPL, args->addI16, args->addQS, args->addFormatDP, args->addFormatAD, args->addFormatADF, args->addFormatADR, args->addInfoAD, args->addInfoADF, args->addInfoADR) > 0);
+
+
+	args->out_fn = NULL;
+	args->output_mode_str=NULL;
+
+
+	switch (*args->output_mode)
+	{
+	case 'v':
+		fprintf(stderr, "\nOutput is VCF file\n");
+		args->out_fn = (char *)malloc(strlen(args->out_fnp) + strlen(".vcf") + 1);
+		strcpy(args->out_fn, args->out_fnp);
+		strcat(args->out_fn, ".vcf");
+		args->output_mode_str=strdup("w");
+		break;
+	case 'b':
+		fprintf(stderr, "\nOutput is BCF file\n");
+		args->out_fn = (char *)malloc(strlen(args->out_fnp) + strlen(".bcf") + 1);
+		strcpy(args->out_fn, args->out_fnp);
+		strcat(args->out_fn, ".bcf");
+		args->output_mode_str=strdup("wb");
+		break;
+	case 'z':
+		fprintf(stderr, "\nOutput is compressed VCF file\n");
+		args->out_fn = (char *)malloc(strlen(args->out_fnp) + strlen(".vcf.gz") + 1);
+		strcpy(args->out_fn, args->out_fnp);
+		strcat(args->out_fn, "vcf.gz");
+		args->output_mode_str=strdup("wz");
+		break;
+	case 'u':
+		fprintf(stderr, "\nOutput is uncompressed BCF file\n");
+		args->out_fn = (char *)malloc(strlen(args->out_fnp) + strlen(".bcf") + 1);
+		strcpy(args->out_fn, args->out_fnp);
+		strcat(args->out_fn, ".bcf");
+		args->output_mode_str=strdup("wbu");
+		break;
 	}
 
 	return (args);
@@ -349,7 +509,10 @@ size_t fsize(const char *fname)
 // modified from msToGlf.c
 double *read_depthsFile(const char *fname, int len)
 {
-	fprintf(stderr, "Reading depths file: %s for %d samples\n", fname, len);
+	if (args->verbose > 0)
+	{
+		fprintf(stderr, "Reading depths file: %s for %d samples\n", fname, len);
+	}
 
 	FILE *fp = NULL;
 	if ((fp = fopen(fname, "r")) == NULL)
@@ -358,7 +521,7 @@ double *read_depthsFile(const char *fname, int len)
 		exit(0);
 	}
 
-	char *buf = (char *)malloc(sizeof(char) * fsize(fname));
+	char buf[1024];
 	double *ret = (double *)malloc(len * sizeof(double));
 	if (fsize(fname) != fread(buf, sizeof(char), fsize(fname), fp))
 	{
@@ -368,28 +531,14 @@ double *read_depthsFile(const char *fname, int len)
 	int posi = 0;
 
 	ret[posi++] = atof(strtok(buf, "\n\t "));
-	char *tok;
-	while ((tok = strtok(NULL, "\n\t ")))
-		ret[posi++] = atof(tok);
+	if (len > 1)
+	{
+		char *tok;
+		while ((tok = strtok(NULL, "\n\t ")))
+			ret[posi++] = atof(tok);
+	}
+
+	fclose(fp);
 
 	return ret;
-}
-
-kstring_t *kbuf_init()
-{
-	kstring_t *kbuf = new kstring_t;
-	kbuf->l = 0;
-	kbuf->m = 0;
-	kbuf->s = NULL;
-	return kbuf;
-}
-
-void kbuf_destroy(kstring_t *kbuf)
-{
-	if (NULL != kbuf)
-	{
-		free(kbuf->s);
-		kbuf->s = NULL;
-		delete kbuf;
-	}
 }

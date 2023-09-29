@@ -11,5 +11,6 @@ version.h
 
 vgcore*
 
-
+.vscode/
 COMMIT_CHANGES
+
