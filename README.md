@@ -46,10 +46,8 @@ Options:
 	--seed			Random seed used to initialize the random number generator
 	--pos0			Are the input coordinates are 0-based? (default:0)
 				If input cordinates are 0 based, use --pos0 1 to shift positions by +1
-	--trim-alt-alleles	Trim ALT alleles not observed in simulated bases (default:0=disabled)
 
 	-explode		Explode to unobserved sites in the input file (default:0=disabled)
-	-printBaseCounts	Print base counts (default:0=disabled)
 	-addGP			Add GP field (default:0=disabled)
 	-addPL			Add PL field (default:0=disabled)
 	-addI16			Add I16 field (default:0=disabled)

@@ -6,12 +6,6 @@
  *
  */
 
-#include <stdio.h>
-#include <htslib/vcf.h>
-#include <htslib/vcfutils.h>
-#include <inttypes.h>
-#include <math.h>
-#include <time.h>
 
 #include "shared.h"
 #include "random_generator.h"
@@ -19,87 +13,37 @@
 #include "io.h"
 #include "bcf_utils.h"
 
+// #include <htslib/thread_pool.h>
+
 argStruct *args;
 
-/// @brief sample_strand - sample a strand
-/// @return		0: forward, 1: reverse
-inline int sample_strand()
-{
-	return (drand48() < 0.5 ? 0 : 1);
+int (*get_strand)(void);
+int (*simulate_record)(simRecord *sim);
+
+int set_strand_to_forward(void){
+	return(SIM_FORWARD_STRAND);
 }
 
-/// @brief sample_tail_distance - sample a tail length for I16 tag
-/// @return		int length
-inline int sample_tail_distance()
-{
-	int i;
-	if ((i = sample_uniform_from_range(1, 50)) > CAP_DIST)
-	{
-		return (CAP_DIST);
-	}
-	return (i);
-}
-
-int create_blank_record(sim_rec *sim, bcf1_t *blk, bcf1_t *unmod, bcf_hdr_t *hdr)
+int simulate_record_values(simRecord *sim)
 {
 
-	int32_t ngt_arr = 0;
-	int ngt = bcf_get_genotypes(hdr, blk, &sim->gt_arr, &ngt_arr);
-	if (ngt <= 0)
-	{
-		fprintf(stderr, "\nGT not present\n");
-	}
+	bcf1_t *rec = sim->rec;
 
-	int32_t *tmpia = sim->gt_arr;
-	for (int i = 0; i < bcf_hdr_nsamples(hdr); i++)
-	{
-		tmpia[2 * i + 0] = bcf_gt_phased(0);
-		tmpia[2 * i + 1] = bcf_gt_phased(0);
-	}
-	ASSERT(0 == (bcf_update_genotypes(hdr, blk, tmpia, bcf_hdr_nsamples(hdr) * 2)));
+	int sOffset = 0; // sample offset
 
-	return 0;
-}
-
-int simulate_record_values(sim_rec *sim, FILE *out_baseCounts_ff)
-{
-
-	double r_error_prob = args->error_rate;
-
-	// -------------------------------------------------------------------------
-	// reset tag arrays with fixed size
-	bcf_tag_reset<int32_t>(sim->dp_arr, DP, 0);
-	if (1 == args->addQS)
-	{
-		bcf_tag_reset<float>(sim->qs_arr, QS, 0);
-	}
-
-	// -------------------------------------------------------------------------
-	bcf_tag_reset<float>(sim->gl_arr, GL, -0.0);
-
-	if (1 == args->addGP)
-	{
-		bcf_tag_reset<float>(sim->gp_arr, GP, -0.0);
-	}
-
-	if (1 == args->addPL)
-	{
-		bcf_tag_reset<int32_t>(sim->pl_arr, PL, 0);
-	}
-	// -------------------------------------------------------------------------
-
-	// -------------------------------------------------------------------------
-
-	bcf1_t *rec = NULL;
-	(sim->blank_rec == NULL) ? rec = sim->input_rec : rec = sim->blank_rec;
-
-	kstring_t *alleles_str = kbuf_init();
-
+	double r_error_prob = args->error_rate; // init val
 	const int nSamples = sim->nSamples;
+
+	int acgt_fmt_ad_arr[nSamples * 4];
+	for (int i = 0; i < nSamples * 4; ++i)
+	{
+		acgt_fmt_ad_arr[i] = 0;
+	}
+
+	sim->reset_rec_objects();
 
 	double *gls = sim->gl_vals;
 
-	int nGenotypes = -1;
 
 	for (int i = 0; i < nSamples * MAX_NGTS; ++i)
 	{
@@ -111,9 +55,9 @@ int simulate_record_values(sim_rec *sim, FILE *out_baseCounts_ff)
 	int qScore = -1;
 
 	int which_strand, which_haplo = -1;
-	int refnref = -1;
-	int e_base, base = -1;
-	double e = -1.0; // simulated error rate instance
+
+	int true_base = -1; // true base (no error)
+	int r_base = -1;	// simulated base
 
 	int32_t ngt_arr = 0;
 	int ngt = bcf_get_genotypes(sim->hdr, rec, &sim->gt_arr, &ngt_arr);
@@ -122,32 +66,6 @@ int simulate_record_values(sim_rec *sim, FILE *out_baseCounts_ff)
 		ERROR("Could not find GT tag.");
 	}
 
-	if (2 != ngt / nSamples)
-	{
-		ERROR("Ploidy %d is not supported.\n", ngt / nSamples);
-	}
-
-	// refnref_n_q13_bases	number of bases where quality score >= 13 summed across all individuals
-	//
-	// \def refnref_n_q13_bases[2][2]
-	// 		refnref_n_q13_bases[reference|non-reference][forward-strand|reverse-strand]
-	//
-	// e.g.
-	// 		refnref_n_q13_bases[0][0] = #reference bases on forward-strand with q >= 13
-	int refnref_n_q13_bases[2][2] = {{0, 0}, {0, 0}};
-
-	// refnref_sum_taildist	sum of tail lengths
-	// e.g.
-	// 		refnref_sum_taildist[1]	= sum of tail lengths for non-ref bases
-	//
-	int refnref_sum_taildist[2] = {0, 0};
-	int refnref_sum_taildist_sq[2] = {0, 0};
-
-	int refnref_sum_qs[2] = {0, 0};
-	int refnref_sum_qs_sq[2] = {0, 0};
-
-	// \def acgt_counts[4]	base counts
-	int acgt_counts[4] = {0};
 
 	// per base qscore sums for each sample
 	// 	where alleles = {A, C, G, T} (thus [4])
@@ -160,29 +78,13 @@ int simulate_record_values(sim_rec *sim, FILE *out_baseCounts_ff)
 		}
 	}
 
-	// acgt2alleles[i] gives the index of the allele in ordered bcf REF+ALT alleles
-	// i		index of the allele in {A,C,G,T}
-	// return	index of the allele in ordered bcf REF+ALT alleles
-	// e.g.
-	// allele			A,C,G,T
-	// acgt_index i 	0,1,2,3
-	// ordered_index 	3,1,0,2 for a site where REF=T ALT=C,A,G
-	// for qs reordering
-	int acgt2alleles[5]; // alleles: ref, alt, alt2, alt3...
-	acgt2alleles[0] = acgt2alleles[1] = acgt2alleles[2] = acgt2alleles[3] = acgt2alleles[4] = -1;
-
 	// A,C,G,T,N
-	int seens[5] = {0, 1, 2, 3, 4};
+	// int seens[5] = {0, 1, 2, 3, 4};
 
 	int tail_dist = 0;
 
 	for (int sample_i = 0; sample_i < nSamples; sample_i++)
 	{
-
-		if (args->printBaseCounts == 1)
-		{
-			acgt_counts[0] = acgt_counts[1] = acgt_counts[2] = acgt_counts[3] = 0;
-		}
 
 		if (sim->mps_depths != NULL)
 		{
@@ -195,7 +97,7 @@ int simulate_record_values(sim_rec *sim, FILE *out_baseCounts_ff)
 
 		if (n_sim_reads == 0)
 		{
-			sim->dp_arr[sample_i] = 0;
+			sim->fmt_dp_arr[sample_i] = 0;
 		}
 		else
 		{
@@ -206,10 +108,18 @@ int simulate_record_values(sim_rec *sim, FILE *out_baseCounts_ff)
 
 			int bin_gts[2] = {0};
 
+			// TODO make it possible to use alt ref other than 0 1 
+
 			// binary input genotypes from simulated input
 			for (int i = 0; i < SIM_PLOIDY; i++)
 			{
 				bin_gts[i] = bcf_gt_allele(gt_ptr[i]);
+				
+
+				// TODO gets base form
+				// DEVPRINT("%d",*rec->d.allele[bcf_gt_allele(gt_ptr[0])]);
+				// if 0 1 (currently supported notation), this should be 0 or 1
+				
 				// use bit shifting to check if bin_gt[n] is 0 or 1
 				if ((bin_gts[i] >> 1) != 0)
 				{
@@ -218,473 +128,375 @@ int simulate_record_values(sim_rec *sim, FILE *out_baseCounts_ff)
 				}
 			}
 
-			int sim_strands[n_sim_reads] = {-1};
-			// int sim_quals[n_sim_reads]={-1};
+			// int sim_strands[n_sim_reads] = {-1};
 
 			for (int i = 0; i < n_sim_reads; i++)
 			{
 
 				(drand48() < 0.5) ? which_haplo = 0 : which_haplo = 1;
 
-				e = drand48();
+				r_base = true_base = bin_gts[which_haplo];
 
-				e_base = base = bin_gts[which_haplo];
-				if (e < args->error_rate)
+				if (drand48() < args->error_rate)
 				{
-					do
-					{
-						e_base = floor(4 * drand48());
-					} while (e_base == base);
-					base = e_base;
+					while ((r_base = (floor(4 * drand48()))) == true_base);
 				}
 
-				if (1 == args->error_bias)
+				if (1 == args->error_qs)
 				{
 					r_error_prob = args->betaSampler->sample();
 				}
 
-				// in expected input file, ref is always 0 and non-ref is always 1
-				// refnref == 0 -> we have ref
-				// refnref == 1 -> we have nonref
-				(0 == base) ? refnref = 0 : refnref = 1;
+				if (0==r_error_prob){
+					qScore = CAP_BASEQ;
+				}else{
+					if (0 == args->error_qs)
+					{
+						qScore = args->error_rate_q;
+					}
+					else
+					{
+						qScore = floor(-10 * log10(r_error_prob));
+					}
 
-				gl_log10(base, r_error_prob, sample_gls);
-
-				acgt_counts[base]++;
-
-				if (0 == args->error_bias)
-				{
-					qScore = args->error_rate_q;
 				}
-				else
-				{
-					qScore = floor(-10 * log10(r_error_prob));
-				}
+				gl_log10(r_base, r_error_prob, sample_gls);
+
+				acgt_fmt_ad_arr[(4 * sample_i) + r_base]++;
 
 				if (qScore > CAP_BASEQ)
+				{
 					qScore = CAP_BASEQ;
+				}
 
-				(1 == args->addI16) ? which_strand = sample_strand() : which_strand = 1;
-				sim_strands[i] = which_strand;
+				if (1 == args->platform)
+				{
+					// TODO use alias for this too
+					// map error probability to 4 possible base quality values: 2, 12, 23, 37
+					// and function factory
 
-				// DEVPRINT("sampled base %d (%c) at site %d for individual %d with qscore %d",base,"ACGTN"[base],rec->pos,sample_i,qScore);
+					if (qScore <= 2)
+					{
+						qScore = 2;
+					}
+					else if (qScore <= 14)
+					{
+						qScore = 12;
+					}
+					else if (qScore <= 30)
+					{
+						qScore = 23;
+					}
+					else
+					{
+						qScore = 37;
+					}
+				}
+
+				which_strand=get_strand();
+
+				// sim_strands[i] = which_strand;
 
 				if (qScore >= 13)
 				{
-					refnref_n_q13_bases[refnref][which_strand]++;
+					sim->acgt_n_q13_bases[(2*r_base) + which_strand]++;
 				}
 
-				refnref_sum_qs[refnref] = qScore;
-				refnref_sum_qs_sq[refnref] = qs_to_qs2(qScore);
+				// fprintf(stdout,"sampled base %d (%c) at site %ld for individual %d with qscore %d\n",r_base,"ACGTN"[r_base],rec->pos+1,sample_i,qScore);
+
+				sim->acgt_sum_qs[r_base] += qScore;
+				sim->acgt_sum_qs_sq[r_base] += qs_to_qs2(qScore);
+
 
 				tail_dist = sample_tail_distance();
-				refnref_sum_taildist[refnref] += tail_dist;
-				refnref_sum_taildist_sq[refnref] += tail_dist * tail_dist;
+				sim->acgt_sum_taildist[r_base] += tail_dist;
+				sim->acgt_sum_taildist_sq[r_base] += (tail_dist * tail_dist);
 
-				samples_acgt_qs[base][sample_i] += qScore;
+				samples_acgt_qs[r_base][sample_i] += qScore;
 			}
 
-			sim->dp_arr[sample_i] = n_sim_reads;
-		}
-
-		if (NULL != out_baseCounts_ff)
-		{
-			fprintf(out_baseCounts_ff, "%s\t%ld\t%d\t%d\t%d\t%d\t%d\n", bcf_hdr_id2name(sim->hdr, rec->rid), rec->pos, sample_i, acgt_counts[0], acgt_counts[1], acgt_counts[2], acgt_counts[3]);
+			sim->fmt_dp_arr[sample_i] = n_sim_reads;
 		}
 
 	} // end sample loop
 
-	int n_alleles = -1;
-	int use_as_alt = -1;
+	int acgt_info_ad_arr[4] = {0};
+	sOffset = 0;
+	for (int s = 0; s < nSamples; ++s)
+	{
+		sOffset = s * 4;
+		for (int b = 0; b < 4; ++b)
+		{
+			acgt_info_ad_arr[b] += acgt_fmt_ad_arr[sOffset + b];
+		}
+	}
 
-	// [BEGIN QS TAG] ------------------------------------------------------- //
-	if (1 == args->addQS)
+	sim->set_acgt_alleles_luts(acgt_info_ad_arr);
+
+	for (int b = 0; b < 4; ++b)
+	{
+		if (1 == args->trimAlts && 0 == acgt_info_ad_arr[b])
+		{
+			int tmpa = sim->acgt2alleles[b];
+			sim->acgt2alleles[b] = -1;
+			sim->alleles2acgt[tmpa] = -1;
+		}
+	}
+
+	sim->nAlleles = 0;
+	for (int a = 0; a < 4; ++a)
+	{
+		if (-1 == sim->alleles2acgt[a])
+			continue;
+
+		kputc("ACGT"[sim->alleles2acgt[a]], &sim -> alleles);
+		sim->nAlleles++;
+		if (a != 3 && -1 != sim->alleles2acgt[a + 1])
+		{
+			kputc(',', &sim->alleles);
+		}
+	}
+
+
+	// useUnknownAllele
+	// trimAlts
+	// rmInvarSites
+	// 
+	// at a site
+	// if nAlleles == 0
+	// 		observed nothing at all, all individuals are missing
+	// 		return -999; // always skip
+	//
+	// if nAlleles == 1
+	// 		observed only one allele at site
+	//
+	//			if rmInvarSites == 1
+	// 				return -1; // skip site
+	//			else (rmInvarSites==0)
+	////				if trimAlts == 1
+	////					trim out the unobserved alleles
+	////					if useUnknownAllele == 1
+	////						trimAlts 1 cannot be used with useUnknownAllele 1
+	////						NEVER;
+	// disable trimalts altogether
+	////				else (trimAlts==0)
+	//			if useUnknownAllele == 1
+	//				set ALT to <*> (unobserved)
+	//				set nAlleles=2
+	//			else (useUnknownAllele==0)
+	//				populate non-ref bases ({A,C,G,T} - {REF}, e.g. {C,G,T} for REF=A)
+	//				set nAlleles=4
+	if (0 == sim->nAlleles)
+	{
+		VWARN("No alleles were observed at site %ld.", rec->pos + 1);
+		return (-999);
+	}
+	else if (1 == sim->nAlleles)
+	{
+		VWARN("Observed only one allele at site %ld.", rec->pos + 1);
+		if (1 == args->rmInvarSites)
+		{
+			return (-1);
+		}
+	}
+	else if (0 > sim->nAlleles)
+	{
+		NEVER;
+	}
+	sim->nGenotypes = nAlleles_to_nGenotypes(sim->nAlleles);
+
+	int has_unobserved = 0;
+
+
+
+
+	// TODO if nGenotypes == 1, only one allele was observed, then set the alt to <*> and set nGenotypes to 2
+	if (1 == sim->nGenotypes)
 	{
 
-		// format after seq_nt16_str:
-		// 0,1,2,3 for A,C,G,T; 4 otherwise. <0 indel
-		// int ori_ref=seq_nt16_int[seq_nt16_table[SIM_acgt2alleles[0]]];
-		int ori_ref = 0; // equivalent to above
+		if(1==args->useUnknownAllele){
 
-		int ref4 = 0; // TODO
-
-		int unseen = -1;
-		acgt2alleles[0] = ref4;
-
-		float qsum[5] = {0.0};
-
-		// -- calculation of the qsum -- //
-		// sum the normalized qsum across all samples
-		// to account for differences in coverage
-		// modified from: bcftools/bam2bcf.c
-		for (int i = 0; i < nSamples; ++i)
-		{
-
-			float sum = 0.0;
-			for (int j = 0; j < 4; ++j)
-			{
-				sum += samples_acgt_qs[j][i];
-			}
-
-			if (0 != sum)
-			{
-				for (int j = 0; j < 4; ++j)
-				{
-					// per-sample normalization
-					qsum[j] += (float)samples_acgt_qs[j][i] / sum;
-				}
-			}
-			else
-			{
-				// WARNING("Sum of the quality scores at site with index %d is %d.",site_i);
-			}
-		}
-
-		// example: at site 0
-		// sample 1:
-		// 	sampled base,qual
-		//             C,4
-		//             T,4
-		//             A,1
-		//             T,6
-		//
-		// sample 2:
-		// 	sampled base,qual
-		//             G,7
-		//
-		// sample 1 sum of quals = 15
-		// normalized qsum for A,C,G,T
-		// sample1: 1/15,4/15,0,10/15
-		// sample2: 0,0,7/7,0
-		// qsum: 1/15,4/15,7/7,10/15
-
-		// DEVPRINT("qsum[0]=%f qsum[1]=%f qsum[2]=%f qsum[3]=%f qsum[4]=%f",qsum[0],qsum[1],qsum[2],qsum[3],qsum[4]);
-		// sorting only ALTs Qsums
-
-		// sort qsum in ascending order (insertion sort)
-		float *ptr[5], *tmp;
-
-		for (int i = 0; i < 5; i++)
-		{
-			ptr[i] = &qsum[i];
-		}
-
-		for (int i = 1; i < 4; i++)
-		{
-			for (int j = i; j > 0 && *ptr[j] < *ptr[j - 1]; j--)
-			{
-				tmp = ptr[j], ptr[j] = ptr[j - 1], ptr[j - 1] = tmp;
-			}
-		}
-
-		int i, j = 0;
-		// Set the reference allele and alternative allele(s)
-		for (i = 3, j = 1; i >= 0; i--) // i: alleles sorted by QS; j, acgt2alleles[j]: output allele ordering
-		{
-			int ipos = ptr[i] - qsum; // position in sorted qsum array
-			ASSERT(ipos > -1 && ipos < 5);
-			if (ipos == ref4)
-			{
-				sim->qs_arr[0] = qsum[ipos]; // REF's qsum
-			}
-			else
-			{
-				// NB this will cause the i to be >0 in the below checks
-				if (!qsum[ipos])
-				{
-					// NEVER;
-					break; // qsum is 0, this and consequent alleles are not seen in the pileup
-				}
-				sim->qs_arr[j] = qsum[ipos];
-				acgt2alleles[j++] = ipos;
-			}
-		}
-		int ref_base = 0; // TODO delme unnec var & ifs nextline
-		if (ref_base >= 0)
-		{
-
-			// for SNPs, find the "unseen" base
-			if (((ref4 < 4 && j < 4) || (ref4 == 4 && j < 5)) && i >= 0)
-			{
-				unseen = j, acgt2alleles[j++] = ptr[i] - qsum;
-			}
-			// observed: T -> n_alleles=2 (T,<*>)
-			// observed: A,G -> n_alleles=3 (A,G,<*>)
-			// observed: A,C,G -> n_alleles=4 (A,C,G,<*>)
-			// observed: A,C,G,T -> n_alleles=4 (A,C,G,T)
-			n_alleles = j;
-		}
-		else
-		{
 			NEVER;
-			// n_alleles = j;
-			// // if (n_alleles == 1) return -1; // no reliable supporting read. stop doing anything
-			// if (n_alleles == 1) NEVER;
-		}
-		// int has_alt = (n_alleles == 2 && unseen != -1) ? 0 : 1;
+			// set ALT to <*> (unobserved)
 
-		// DEVPRINT("sorted qsum[0->acgt2alleles[0]=%d]=%f qsum[1->acgt2alleles[1]=%d]=%f qsum[2->acgt2alleles[2]=%d]=%f qsum[3->acgt2alleles[3]=%d]=%f qsum[4->acgt2alleles[4]=%d]=%f",acgt2alleles[0],qsum[acgt2alleles[0]],acgt2alleles[1],qsum[acgt2alleles[1]],acgt2alleles[2],qsum[acgt2alleles[2]],acgt2alleles[3],qsum[acgt2alleles[3]],acgt2alleles[4],qsum[acgt2alleles[4]]);
-		// TODO sort the whole list and not only ALTs
+			kputc(',', &sim->alleles);
+			kputs("<*>", &sim->alleles);
+			sim->nAlleles++;
 
-		int nseen = 0;	 // #seen bases
-		int nunseen = 0; // #unseen bases
-		for (int ii = 0; ii < 5; ++ii)
-		{
-			if ((acgt2alleles[ii] >= 0) && (unseen != ii))
-			{
-				seens[acgt2alleles[ii]] = -999;
-				++nseen;
-			}
-			else
-			{
-				nunseen++;
-			}
+			has_unobserved = 1;
+
+			sim->nGenotypes = nAlleles_to_nGenotypes(sim->nAlleles);
+
+		}else{
+
 		}
 
-		if (1 == args->trimAlts)
+	}
+
+	sim->current_size_bcf_tag_number[FMT_NUMBER_G] = sim->nSamples * sim->nGenotypes;
+	sim->current_size_bcf_tag_number[FMT_NUMBER_R] = sim->nSamples * sim->nAlleles;
+	sim->current_size_bcf_tag_number[INFO_NUMBER_G] = sim->nGenotypes;
+	sim->current_size_bcf_tag_number[INFO_NUMBER_R] = sim->nAlleles;
+
+	const int nGenotypes = sim->nGenotypes;
+
+	ASSERT(0 == (bcf_update_alleles_str(sim->hdr, rec, sim->alleles.s)));
+	ASSERT(sim->nAlleles == rec->n_allele);
+
+
+	// set sorted values for FMT_NUMBER_R tags
+	// 		FMT_AD
+	//		FMT_ADF
+	//		FMT_ADR
+	sOffset = 0;
+	for (int s = 0; s < nSamples; ++s)
+	{
+		sOffset = s * sim->nAlleles;
+		for (int a = 0; a < sim->nAlleles; ++a)
 		{
-			n_alleles = nseen;
-		}
-		else if (0 == args->trimAlts)
-		{
-			n_alleles = 4;
-		}
+			int b = sim->alleles2acgt[a];
 
-		for (int i = 1; i < 5; ++i)
-		{
-			if (acgt2alleles[i] < 0)
-				break;
-
-			if (1 == args->trimAlts)
+			if (1 == args->addFormatAD)
 			{
-
-				if (1 == n_alleles)
+				if (-1 == b)
 				{
-					// invar site
-					// therefore set ALT to one of REF or ALT
-					// e.g.
-					// normally in -explode 1 we assume REF=A ALT=C
-					// at a site, if only C is observed (therefore 1==n_alleles)
-					// 		set ALT to A
-					// if only A is observed
-					// 		set ALT to C
-					// if only G is observed (very unlikely case, only if error_rate==1
-					// 		or very high and by chance we observe only an error)
-					// 		set ALT to A (basically first base in REFALT {A,C})
-
-					use_as_alt = 0; // default to first base in REFALT == A
-
-					// exclude the beginning of unseens (so called unseen) from our lookup acgt
-					acgt2alleles[unseen] = -1;
-
-					for (int ii = 0; ii < 4; ++ii)
-					{ // 4->exclude N
-						if (-999 == seens[ii])
-						{
-							if (ii == 0)
-							{
-								use_as_alt = 1;
-								// DEVPRINT("%d %d %d %d",acgt2alleles[0],acgt2alleles[1],acgt2alleles[2],acgt2alleles[3]);
-								// int old=acgt2alleles[use_as_alt];
-								acgt2alleles[use_as_alt] = use_as_alt;
-								// DEVPRINTX("ii=%d use_as_alt=%d acgt2alleles[use_as_alt] old =%d new=%d",ii,use_as_alt,old,acgt2alleles[use_as_alt]);
-							}
-							else if (ii == 1)
-							{
-								use_as_alt = 0;
-								acgt2alleles[use_as_alt] = use_as_alt;
-							}
-							else
-							{
-								NEVER;
-							}
-						}
-					}
+					continue;
 				}
-			}
-		}
-
-		kputc("ACGTN"[ori_ref], alleles_str);
-		for (int i = 1; i < 5; ++i)
-		{
-			if (acgt2alleles[i] < 0)
-				break;
-
-			if (1 == args->trimAlts)
-			{
-
-				if (1 == n_alleles)
-				{
-					n_alleles = 2; // n_alleles is now 2 since we set ALT above
-					kputc(',', alleles_str);
-					kputc("ACGT"[use_as_alt], alleles_str);
-				}
-				else
-				{
-
-					// trim enabled but all bases were observed
-					if (unseen == -1)
-					{
-						kputc(',', alleles_str);
-						kputc("ACGT"[acgt2alleles[i]], alleles_str);
-					}
-					else
-					{
-
-						if (i != 4 && acgt2alleles[i + 1] >= 0)
-						{
-							kputc(',', alleles_str);
-						}
-
-						if (unseen == i)
-						{
-							// kputs("<*>", alleles_str);
-						}
-						else
-						{
-							ASSERT(unseen != i);
-							kputc("ACGT"[acgt2alleles[i]], alleles_str);
-						}
-					}
-					//@@
-					// kputc("ACGT"[acgt2alleles[i]], alleles_str);
-					//@@
-				}
-			}
-			else if (0 == args->trimAlts)
-			{
-
-				kputc(',', alleles_str);
-
-				if (unseen == i)
-				{
-
-					int x = nunseen;
-					for (int ii = 0; ii < 4; ++ii)
-					{ // 4->exclude N
-						if (-999 == seens[ii])
-						{
-							// DEVPRINT("seen %d -> %c",ii,"ACGTN"[ii]);
-						}
-						else
-						{
-							// DEVPRINT("unseen %d -> %c",ii,"ACGTN"[ii]);
-
-							if (x > 0 && x != nunseen)
-							{
-								kputc(',', alleles_str);
-							}
-							x--;
-
-							kputc("ACGT"[ii], alleles_str);
-						}
-					}
-				}
-				else
-				{
-					kputc("ACGT"[acgt2alleles[i]], alleles_str);
-				}
-			}
-			else
-			{
-				NEVER;
+				sim->fmt_ad_arr[sOffset + a] = acgt_fmt_ad_arr[sOffset + b];
 			}
 		}
 	}
 
-	// [END QS TAG] --------------------------------------------------------- //
-
-	if (1 == args->trimAlts)
+	// set sorted values for FMT_INFO_R tags
+	// 		INFO_AD
+	//		INFO_ADF
+	//		INFO_ADR
+	for (int a = 0; a < sim->nAlleles; ++a)
 	{
-		nGenotypes = nAlleles_to_nGenotypes(n_alleles);
-	}
-	else
-	{
-		nGenotypes = MAX_NGTS;
-	}
-
-	const int sizeToUse = nSamples * nGenotypes;
-
-	// set REF and ALT alleles
-	if (0 == alleles_str->l)
-	{
-		ASSERT(1 != args->addQS);
-		kputs("A,C,G,T", alleles_str);
-	}
-	// ASSERT(alleles_str->l>1);
-	ASSERT(0 == (bcf_update_alleles_str(sim->hdr, rec, alleles_str->s)));
-
-	ASSERT(0 == (bcf_update_format_int32(sim->hdr, rec, "DP", sim->dp_arr, bcf_tags[DP].n)));
-
-	// [BEGIN GL TAG] ------------------------------------------------------- //
-	for (int sample_i = 0; sample_i < nSamples; ++sample_i)
-	{
-
-		double *sample_gls = gls + sample_i * MAX_NGTS;
-		// rescale_likelihood_ratio(sample_gls);
-
-		float *sample_gl_arr = sim->gl_arr + sample_i * nGenotypes;
-
-		if (0 == sim->dp_arr[sample_i])
+		int b = sim->alleles2acgt[a];
+		if (1 == args->addInfoAD)
 		{
-			if (0 == args->addQS)
+			if (-1 == b)
 			{
-				ASSERT(nGenotypes == MAX_NGTS);
+				continue;
 			}
+			sim->info_ad_arr[a] = acgt_info_ad_arr[b];
+		}
+	}
+
+	sOffset = 0;
+	// set sorted values for FMT_NUMBER_G tags
+	// 		GL
+	//		GP
+	//		PL
+	for (int s = 0; s < nSamples; ++s)
+	{
+		double *sample_gls = gls + s * MAX_NGTS;
+
+		sOffset = s * nGenotypes;
+		// nGenotypes ==
+		// == sim->current_size_bcf_tag_number[FMT_NUMBER_G]
+		// == sim->current_size_bcf_tag_number[bcf_tags[GL].n];
+
+		float *sample_gl_arr = sim->gl_arr + sOffset;
+
+		if (0 == sim->fmt_dp_arr[s])
+		{
 			for (int j = 0; j < nGenotypes; j++)
 			{
-				bcf_float_set_missing(sim->gl_arr[sample_i * nGenotypes + j]);
+				bcf_float_set_missing(sample_gl_arr[j]);
 			}
 		}
 		else
 		{
-			if (0 == args->trimAlts)
-			{
-				ASSERT(nGenotypes == MAX_NGTS);
-				for (int j = 0; j < nGenotypes; j++)
-				{
-					sample_gl_arr[j] = (float)sample_gls[lut_myGtIdx_to_vcfGtIdx[j]];
-				}
-			}
-			else
-			{
+			for (int a1 = 0; a1 < sim->nAlleles; ++a1){
+				for(int a2=a1; a2<sim->nAlleles; ++a2){
 
-				for (int a1 = 0; a1 < 4; ++a1)
-				{
-					for (int a2 = a1; a2 < 4; ++a2)
-					{
+					int b1= sim->alleles2acgt[a1];
+					int b2 = sim->alleles2acgt[a2];
 
-						int aa1 = acgt2alleles[a1];
-						int aa2 = acgt2alleles[a2];
+					if (b1 == -1 || b2 == -1)
+						continue;
 
-						if (aa1 == -1 || aa2 == -1)
-							continue;
-						// TODO
+					int newoffset = bcf_alleles2gt(a1, a2);
+					int oldoffset = bcf_alleles2gt(b1,b2);
 
-						int newoffset = bcf_alleles2gt(a1, a2);
-						int oldoffset = bcf_alleles2gt(aa1, aa2);
-
-						ASSERT(oldoffset > -1);
-						ASSERT(newoffset > -1);
-						sample_gl_arr[newoffset] = (float)sample_gls[lut_myGtIdx_to_vcfGtIdx[oldoffset]];
-					}
+					ASSERT(oldoffset > -1);
+					ASSERT(newoffset > -1);
+					sample_gl_arr[newoffset] = (float)sample_gls[lut_myGtIdx_to_vcfGtIdx[oldoffset]];
 				}
 			}
 			rescale_likelihood_ratio(sample_gl_arr, nGenotypes);
 		}
 	}
-	gls = NULL;
 
-	kbuf_destroy(alleles_str);
 
-	ASSERT(0 == (bcf_update_format_float(sim->hdr, rec, "GL", sim->gl_arr, sizeToUse)));
-	// [END GL TAG] --------------------------------------------------------- //
+	// [BEGIN CONSTRUCT QS TAG] ------------------------------------------------------- //
+	//
+	// example: at site 0
+	// sample 1:
+	//      sampled base,qual
+	//             C,4
+	//             T,4
+	//             A,1
+	//             T,6
+	//
+	// sample 2:
+	//      sampled base,qual
+	//             G,7
+	//
+	// sample 1 sum of quals = 15
+	// normalized qsum for A,C,G,T
+	// sample1: 1/15,4/15,0,10/15
+	// sample2: 0,0,7/7,0
+	// qsum: 1/15,4/15,7/7,10/15
+
+	if (1 == args->addQS)
+	{
+		int a = -1;
+		float sum = 0.0;
+
+		// -- calculation of the qsum -- //
+		// sum the normalized qsum across all samples
+		// to account for differences in coverage
+		// modified from: bcftools/bam2bcf.c
+		for (int s = 0; s < nSamples; ++s)
+		{
+
+			sum = 0.0;
+			for (int b = 0; b < 4; ++b)
+			{
+				sum += samples_acgt_qs[b][s];
+			}
+
+			if (0 != sum)
+			{
+				for (int b = 0; b < 4; ++b)
+				{
+					a = sim->acgt2alleles[b];
+					if (-1 == a)
+					{
+						continue;
+					}
+
+					// per-sample normalization
+					// save as ordered (base b --> allele index a)
+					sim->qs_arr[a] += (float)(samples_acgt_qs[b][s] / sum);
+				}
+			}
+		}
+	}
+
+	// [END CONSTRUCT QS TAG] --------------------------------------------------------- //
+
+
+
 
 	if (1 == args->addPL)
 	{
 
 		int x;
-		for (int i = 0; i < bcf_tags[PL].n; ++i)
+		for (int i = 0; i < sim->current_size_bcf_tag_number[bcf_tags[PL].n]; ++i)
 		{
 			if (bcf_float_is_missing(sim->gl_arr[i]))
 			{
@@ -693,158 +505,109 @@ int simulate_record_values(sim_rec *sim, FILE *out_baseCounts_ff)
 			else if (bcf_float_is_vector_end(sim->gl_arr[i]))
 			{
 				NEVER;
-				// sim->pl_arr[i] = bcf_int32_vector_end;
 			}
 			else
 			{
-				// ((x = lroundf(-10 * sim->gl_arr[i])) > MAXPL) ? sim->pl_arr[i] = MAXPL : sim->pl_arr[i] = x;
-				x = lroundf(-10 * sim->gl_arr[i]);
-				// (x > MAXPL) ? sim->pl_arr[i]=MAXPL:sim->pl_arr[i]=x;
-				if (x > MAXPL)
-				{
-
-					sim->pl_arr[i] = MAXPL;
-				}
-				else
-				{
-					sim->pl_arr[i] = x;
-				}
+				// TODO alias here too
+				((x = lroundf(-10 * sim->gl_arr[i])) > MAXPL) ? sim->pl_arr[i] = MAXPL : sim->pl_arr[i] = x;
+				// sim->pl_arr[i] = lroundf(-10 * sim->gl_arr[i]); // when max threshold disabled, vcfgl gives same results as bcftools +tag2tag -- --GL-to-PL
 			}
 		}
-		ASSERT(0 == (bcf_update_format_int32(sim->hdr, rec, "PL", sim->pl_arr, sizeToUse)));
 	}
+
 
 	if (1 == args->addGP)
 	{
-		for (int i = 0; i < nSamples; i++)
+		for (int s = 0; s < nSamples; ++s)
 		{
-			float *gpp = sim->gp_arr + i * nGenotypes;
-			float *glp = sim->gl_arr + i * nGenotypes;
+			sOffset = s * nGenotypes;
+			// float *gpp = sim->gp_arr + i * nGenotypes;
+			// float *glp = sim->gl_arr + i * nGenotypes;
 			float sum = 0;
 			for (int j = 0; j < nGenotypes; j++)
 			{
-				if (bcf_float_is_vector_end(glp[j]))
+				if (bcf_float_is_missing(sim->gl_arr[sOffset + j]))
+				{
+					bcf_float_set_missing(sim->gp_arr[sOffset + j]);
+					continue;
+				}
+				else if (bcf_float_is_vector_end(sim->gl_arr[sOffset + j]))
 				{
 					NEVER; // we never expect to truncate the vector and finish early
 				}
-				if (bcf_float_is_missing(glp[j]))
-				{
-					bcf_float_set_missing(gpp[j]);
-					continue;
-				}
 				else
 				{
-					gpp[j] = glp[j];
+					sim->gp_arr[sOffset + j] = sim->gl_arr[sOffset + j];
+					sim->gp_arr[sOffset + j] = pow(10, sim->gp_arr[sOffset + j]);
+					sum += sim->gp_arr[sOffset + j];
 				}
-				gpp[j] = pow(10, gpp[j]);
-				sum += gpp[j];
+
 			}
 			if (sum <= 0)
 				continue;
 			for (int j = 0; j < nGenotypes; j++)
 			{
-				if (bcf_float_is_missing(gpp[j]))
+				if (bcf_float_is_missing(sim->gp_arr[sOffset + j]))
 				{
 					continue;
 				}
-				if (bcf_float_is_vector_end(gpp[j]))
+				else if (bcf_float_is_vector_end(sim->gp_arr[sOffset + j]))
 				{
 					NEVER;
-					// break;
+				}else{
+					sim->gp_arr[sOffset + j] /= sum;
 				}
-
-				gpp[j] /= sum;
 			}
 		}
-		ASSERT(0 == (bcf_update_format_float(sim->hdr, rec, "GP", sim->gp_arr, sizeToUse)));
 	}
 
-	if (1 == args->addI16)
+
+	sim->set_tag_I16();
+
+
+	// [BEGIN REORDER GENOTYPES] ------------------------------------------------------- //
+	// reorder genotypes according to the new alleles order
+
+	int alleles_gts[sim->nHaplotypes];
+	for (int i = 0; i < sim->nHaplotypes; ++i)
 	{
-
-		// refnref_n_q13_bases[][]
-		// [ref|nonref][forward|reverse]
-
-		// 1   #reference Q13 bases on the forward strand
-		sim->i16_arr[0] = refnref_n_q13_bases[0][0];
-
-		// 2   #reference Q13 bases on the reverse strand
-		sim->i16_arr[1] = refnref_n_q13_bases[0][1];
-
-		// 3   #non-ref Q13 bases on the forward strand
-		sim->i16_arr[2] = refnref_n_q13_bases[1][0];
-
-		// 4   #non-ref Q13 bases on the reverse strand
-		sim->i16_arr[3] = refnref_n_q13_bases[1][1];
-
-		// 5   sum of reference base qualities
-		sim->i16_arr[4] = refnref_sum_qs[0];
-
-		// 6   sum of squares of reference base qualities
-		sim->i16_arr[5] = refnref_sum_qs_sq[0];
-
-		// 7   sum of non-ref base qualities
-		sim->i16_arr[6] = refnref_sum_qs[1];
-
-		// 8   sum of squares of non-ref base qualities
-		sim->i16_arr[7] = refnref_sum_qs_sq[1];
-
-		// 9   sum of ref mapping qualities
-		sim->i16_arr[8] = 0;
-
-		// 10  sum of squares of ref mapping qualities
-		sim->i16_arr[9] = 0;
-
-		// 11  sum of non-ref mapping qualities
-		sim->i16_arr[10] = 0;
-
-		// 12  sum of squares of non-ref mapping qualities
-		sim->i16_arr[11] = 0;
-
-		// 13  sum of tail distance for ref bases
-		sim->i16_arr[12] = refnref_sum_taildist[0];
-
-		// 14  sum of squares of tail distance for ref bases
-		sim->i16_arr[13] = refnref_sum_taildist_sq[0];
-
-		// 15  sum of tail distance for non-ref bases
-		sim->i16_arr[14] = refnref_sum_taildist[1];
-
-		// 16  sum of squares of tail distance for non-ref
-		sim->i16_arr[15] = refnref_sum_taildist_sq[1];
-
-		ASSERT(0 == (bcf_update_info_float(sim->hdr, rec, "I16", sim->i16_arr, 16)));
+		alleles_gts[i] = -1;
 	}
-
-	// [BEGIN ADD QS TAG] ------------------------------------------------------- //
-	if (1 == args->addQS)
+	for (int s = 0; s < nSamples; s++)
 	{
-		// TODO  n here should have been n_alleles
-		//  ASSERT(0 == (bcf_update_info_float(sim->hdr, rec, "QS", sim->qs_arr, bcf_tags[QS].n)));
-		ASSERT(0 == (bcf_update_info_float(sim->hdr, rec, "QS", sim->qs_arr, rec->n_allele)));
+		sOffset = s * SIM_PLOIDY;
+
+		// Assume REF=A ALT=C, thus bcf_gt_allele 0 -> A, 1 -> C
+		int a1 = sim->acgt2alleles[bcf_gt_allele(sim->gt_arr[sOffset + 0])];
+		int a2 = sim->acgt2alleles[bcf_gt_allele(sim->gt_arr[sOffset + 1])];
+		if (-1 == a1 || -1 == a2)
+		{
+			continue;
+		}
+		alleles_gts[sOffset + 0] = bcf_gt_phased(a1);
+		alleles_gts[sOffset + 1] = bcf_gt_phased(a2);
 	}
-	// [END ADD QS TAG] --------------------------------------------------------- //
+	bcf_update_genotypes(sim->hdr, rec, alleles_gts, sim->nHaplotypes);
+	// [END REORDER GENOTYPES] --------------------------------------------------------- //
+
+
+	sim->add_tags();
+	// TODO with trimming enabled, if the allele in the real genotype is not observed, and gt tag is not set to drop, give error and exit
 
 	return (0);
 }
 
-int simulate_record_true_values(sim_rec *sim)
+// TODO check if i still work
+// and add testcase forme
+int simulate_record_true_values(simRecord *sim)
 {
 
-	bcf1_t *rec = NULL;
-	(sim->blank_rec == NULL) ? rec = sim->input_rec : rec = sim->blank_rec;
+	bcf1_t *rec = sim->rec;
 
 	const int nSamples = sim->nSamples;
+	const int nGenotypes = sim->nGenotypes;
 
-	// without error, only 3 possible genotypes
-	// input:
-	//	REF	ALT
-	//	0	1
-	//
-	// gts:
-	// 00 01 11
-	const int nGenotypes = 3;
-	const int sizeToUse = nSamples * nGenotypes;
+	sim->current_size_bcf_tag_number[FMT_NUMBER_G] = sim->nSamples * nGenotypes;
 
 	int32_t ngt_arr = 0;
 	int ngt = bcf_get_genotypes(sim->hdr, rec, &sim->gt_arr, &ngt_arr);
@@ -857,27 +620,14 @@ int simulate_record_true_values(sim_rec *sim)
 		ERROR("Ploidy %d is not supported.\n", ngt / nSamples);
 	}
 
-	bcf_tag_reset<float>(sim->gl_arr, GL, -0.0);
-
-	if (1 == args->addGP)
-	{
-		bcf_tag_reset<float>(sim->gp_arr, GP, -0.0);
-	}
-
-	if (1 == args->addPL)
-	{
-		bcf_tag_reset<int32_t>(sim->pl_arr, PL, 0);
-	}
+	sim->reset_rec_objects();
 
 	for (int sample_i = 0; sample_i < nSamples; sample_i++)
 	{
 
-		if (args->printBaseCounts == 1)
-		{
-			NEVER;
-		}
-
 		int32_t *gt_ptr = sim->gt_arr + sample_i * SIM_PLOIDY;
+
+		// bcf_gt_allele(gt_ptr[i])
 
 		int bin_gts[2] = {0};
 
@@ -910,19 +660,7 @@ int simulate_record_true_values(sim_rec *sim)
 					sim->gp_arr[sample_i * nGenotypes + i] = MAXGP;
 				}
 			}
-			else
-			{
-				sim->gl_arr[sample_i * nGenotypes + i] = MINGL;
-
-				if (1 == args->addPL)
-				{
-					sim->pl_arr[sample_i * nGenotypes + i] = MINPL;
-				}
-				if (1 == args->addGP)
-				{
-					sim->gp_arr[sample_i * nGenotypes + i] = MINGP;
-				}
-			}
+			// else case is already handled by setting all values to MINXX during bcf_tag_reset
 		}
 
 	} // end sample loop
@@ -930,42 +668,22 @@ int simulate_record_true_values(sim_rec *sim)
 	// set REF and ALT alleles
 	ASSERT(0 == (bcf_update_alleles_str(sim->hdr, rec, "A,C")));
 
-	ASSERT(0 == (bcf_update_format_float(sim->hdr, rec, "GL", sim->gl_arr, sizeToUse)));
+	if (1 == args->addGL)
+	{
+		ASSERT(0 == (bcf_update_format_float(sim->hdr, rec, "GL", sim->gl_arr, sim->current_size_bcf_tag_number[bcf_tags[GL].n])));
+	}
 
 	if (1 == args->addGP)
 	{
-		ASSERT(0 == (bcf_update_format_float(sim->hdr, rec, "GP", sim->gp_arr, sizeToUse)));
+		ASSERT(0 == (bcf_update_format_float(sim->hdr, rec, "GP", sim->gp_arr, sim->current_size_bcf_tag_number[bcf_tags[GP].n])));
 	}
 
 	if (1 == args->addPL)
 	{
-		ASSERT(0 == (bcf_update_format_int32(sim->hdr, rec, "PL", sim->pl_arr, sizeToUse)));
-	}
-
-	if (1 == args->addI16)
-	{
-		NEVER;
-	}
-
-	if (1 == args->addQS)
-	{
-		NEVER;
+		ASSERT(0 == (bcf_update_format_int32(sim->hdr, rec, "PL", sim->pl_arr, sim->current_size_bcf_tag_number[bcf_tags[PL].n])));
 	}
 
 	return (0);
-}
-
-int simulate_record(sim_rec *sim, FILE *out_baseCounts_ff)
-{
-
-	if (-999 == args->mps_depth)
-	{
-		ASSERT(NULL == sim->mps_depths);
-		ASSERT(NULL == out_baseCounts_ff);
-		return simulate_record_true_values(sim);
-	}
-
-	return simulate_record_values(sim, out_baseCounts_ff);
 }
 
 int main(int argc, char **argv)
@@ -973,245 +691,270 @@ int main(int argc, char **argv)
 
 	args = args_get(--argc, ++argv);
 
-	if (args != NULL)
+	char *in_fn = args->in_fn;
+	const int pos0 = args->pos0;
+
+	FILE *arg_ff = openFILE(args->out_fnp, ".arg");
+	ASSERT(NULL != arg_ff);
+
+	fprintf(stderr, "\n%s", args->command);
+	fprintf(arg_ff, "\n%s", args->command);
+
+	fprintf(stderr, "\nReading file:\t\"%s\"\n", in_fn);
+	htsFile *in_ff = hts_open(in_fn, "r");
+	ASSERT(NULL != in_ff);
+
+	bcf_hdr_t *in_hdr = bcf_hdr_read(in_ff);
+	simRecord *sim = new simRecord(in_hdr);
+
+	fprintf(stderr, "\n\t-> Opening output file for writing: %s\n", args->out_fn);
+	htsFile* out_ff = hts_open(args->out_fn, args->output_mode_str);
+
+	// create multithreaded pool
+	// htsThreadPool tpool = {NULL, 0};
+	// if (args->n_threads > 1) {
+	// 	tpool.pool = hts_tpool_init(args->n_threads);
+	// 	ASSERT(NULL != tpool.pool);
+	// 	// add input stream to the pool
+	// 	// hts_set_opt(in_ff, HTS_OPT_THREAD_POOL, &tpool);
+	// 	// add output stream to the pool
+	// 	hts_set_opt(out_ff, HTS_OPT_THREAD_POOL, &tpool);
+	// }
+
+	ASSERT(bcf_hdr_write(out_ff, sim->hdr) == 0);
+
+	fprintf(stderr, "\n%s\n", args->datetime);
+
+	bcf1_t *in_rec = bcf_init();
+	int nSites = 0;
+	int nSitesSkipped = 0;
+
+	args->error_rate_q = floor(-10 * log10(args->error_rate));
+
+	// /BEGIN/ main sites loop ---------------------------------------------
+
+
+	if (-999 == args->mps_depth)
 	{
 
-		char *in_fn = args->in_fn;
-		char *out_fnp = args->out_fnp;
-		const int pos0 = args->pos0;
-
-		FILE *arg_ff = openFILE(out_fnp, ".arg");
-
-		fprintf(stderr, "\n%s", args->command);
-		fprintf(arg_ff, "\n%s", args->command);
-
-		FILE *out_baseCounts_ff = NULL;
-		if (args->printBaseCounts == 1)
-		{
-			out_baseCounts_ff = openFILE(out_fnp, ".baseCounts.tsv");
-			// TODO
-			fprintf(out_baseCounts_ff, "chrom\tpos\tsample\tA\tC\tG\tT\n");
-		}
-
-		vcfFile *in_ff = bcf_open(in_fn, "r");
-		vcfFile *out_ff = NULL;
-
-		char *OUT_EXT = NULL;
-		char *out_fn = NULL;
-		switch (*args->output_mode)
-		{
-		case 'v':
-			fprintf(stderr, "\nOutput is VCF file\n");
-			OUT_EXT = strdup(".vcf");
-			out_fn = (char *)malloc(strlen(out_fnp) + strlen(OUT_EXT) + 1);
-			strcpy(out_fn, out_fnp);
-			strcat(out_fn, OUT_EXT);
-			fprintf(stderr, "\n\t-> Opening output file for writing: %s\n", out_fn);
-			out_ff = bcf_open(out_fn, "w");
-			break;
-		case 'b':
-			fprintf(stderr, "\nOutput is BCF file\n");
-			OUT_EXT = strdup(".bcf");
-			out_fn = (char *)malloc(strlen(out_fnp) + strlen(OUT_EXT) + 1);
-			strcpy(out_fn, out_fnp);
-			strcat(out_fn, OUT_EXT);
-			fprintf(stderr, "\n\t-> Opening output file for writing: %s\n", out_fn);
-			out_ff = bcf_open(out_fn, "wb");
-			break;
-		case 'z':
-			fprintf(stderr, "\nOutput is compressed VCF file\n");
-			OUT_EXT = strdup(".vcf.gz");
-			out_fn = (char *)malloc(strlen(out_fnp) + strlen(OUT_EXT) + 1);
-			strcpy(out_fn, out_fnp);
-			strcat(out_fn, OUT_EXT);
-			fprintf(stderr, "\n\t-> Opening output file for writing: %s\n", out_fn);
-			out_ff = bcf_open(out_fn, "wz");
-			break;
-		case 'u':
-			fprintf(stderr, "\nOutput is uncompressed BCF file\n");
-			OUT_EXT = strdup(".bcf");
-			out_fn = (char *)malloc(strlen(out_fnp) + strlen(OUT_EXT) + 1);
-			strcpy(out_fn, out_fnp);
-			strcat(out_fn, OUT_EXT);
-			fprintf(stderr, "\n\t-> Opening output file for writing: %s\n", out_fn);
-			out_ff = bcf_open(out_fn, "wbu");
-			break;
-		}
-		free(OUT_EXT);
-
-		if (in_ff == NULL)
-		{
-			return 1;
-		}
-
-		if (bcf == 0)
-		{
-			return 1;
-		}
-
-		bcf_hdr_t *in_hdr = bcf_hdr_read(in_ff);
-		const int nSamples = bcf_hdr_nsamples(in_hdr);
-
-		sim_rec *sim = new sim_rec(in_hdr);
-		ASSERT(bcf_hdr_write(out_ff, sim->hdr) == 0);
-
-		fprintf(stderr, "\n%s\n", args->datetime);
-
-		bcf1_t *bcf = bcf_init();
-		int nSites = 0;
-
-		fprintf(stderr, "\nReading file:\t\"%s\"\n", in_fn);
-		fprintf(stderr, "Number of samples: %i\n", nSamples);
-		fprintf(stderr, "Number of contigs: %d\n", in_hdr->n[BCF_DT_CTG]);
-
-		args->error_rate_q = floor(-10 * log10(args->error_rate));
-
-		// TODO delme
-		//  // print contig name
-		//  bcf_idpair_t *ctg = in_hdr->id[BCF_DT_CTG];
-		//  for (int i = 0; i < in_hdr->n[BCF_DT_CTG]; ++i)
-		//  {
-		//  	fprintf(stderr, "Contig %d: %s\n", i, ctg[i].key);
-		//  }
-		//  // print individual names
-		//  bcf_idpair_t *ind = in_hdr->id[BCF_DT_SAMPLE];
-		//  for (int i = 0; i < in_hdr->n[BCF_DT_SAMPLE]; ++i)
-		//  {
-		//  	fprintf(stderr, "Individual %d: %s\n", i, ind[i].key);
-		//  }
-		//  NEVER;
-
-		bcf1_t *blank = bcf_init();
-		bcf1_t *rec = bcf_init();
-
-		// /BEGIN/ main sites loop ---------------------------------------------
-
-		// seperate the first read loop from others to avoid having pos==-1 check in each loop
-		ASSERT(0 == bcf_read(in_ff, in_hdr, bcf));
-		if (bcf->pos == -1)
-		{
-			if (pos0 == 0)
-			{
-				fprintf(stderr, "\n[ERROR]: Input file coordinates start from 0; but -pos0 is not set to 1. Please run again with -pos0 1.\n\n");
-				exit(1);
-			}
-		}
-
-		if (0 == args->explode)
-		{
-
-			do
-			{
-				rec = bcf_copy(rec, bcf);
-				sim->input_rec = rec;
-
-				sim->site_i = nSites;
-				ASSERT(0 == simulate_record(sim, out_baseCounts_ff));
-				sim->input_rec->pos += pos0;
-				ASSERT(0 == bcf_write(out_ff, sim->hdr, sim->input_rec));
-				nSites++;
-
-			} while (bcf_read(in_ff, in_hdr, bcf) == 0);
-
-			// EXPLODE -------------------------------------------------------------
-			// simulate by enumerating the invariable sites that are not present in the input vcf
-		}
-		else if (1 == args->explode)
-		{
-
-			do
-			{
-
-				rec = bcf_copy(rec, bcf);
-				sim->input_rec = rec;
-
-				blank = bcf_copy(blank, sim->input_rec);
-
-				while (1)
-				{ // this block should run for every site with missing/nodata
-				  //   fprintf(stderr,"\t\t-> out_bcf_recpos: %d nSites: %d\n",sim->input_rec->pos,nSites);
-					if (nSites == sim->input_rec->pos + pos0)
-					{
-						// fprintf(stderr,"now breaking\n");
-						break;
-					}
-
-					create_blank_record(sim, blank, sim->input_rec, in_hdr);
-					sim->blank_rec = blank;
-					sim->site_i = nSites;
-					blank->pos = nSites;
-					ASSERT(0 == simulate_record(sim, out_baseCounts_ff));
-					if (bcf_write(out_ff, sim->hdr, blank) != 0)
-					{
-						fprintf(stderr, "Error: Failed to write\n");
-						exit(1);
-					}
-					sim->blank_rec = NULL;
-					nSites++;
-				}
-				// fprintf(stderr,"After loop that fills in missing data will print out: %d\n",sim->input_rec->pos+pos0+1);
-				sim->site_i = nSites;
-				ASSERT(0 == simulate_record(sim, out_baseCounts_ff));
-				sim->input_rec->pos += pos0;
-				if (bcf_write(out_ff, sim->hdr, sim->input_rec) != 0)
-				{
-					fprintf(stderr, "Error: Failed to write\n");
-					exit(1);
-				}
-				nSites++;
-
-			} while (bcf_read(in_ff, in_hdr, bcf) == 0);
-
-			bcf_idpair_t *ctg = in_hdr->id[BCF_DT_CTG];
-			int contigsize = ctg[sim->input_rec->rid].val->info[0];
-
-			while (nSites < contigsize)
-			{
-				create_blank_record(sim, blank, sim->input_rec, in_hdr);
-				sim->blank_rec = blank;
-				sim->site_i = nSites;
-				blank->pos = nSites;
-				ASSERT(0 == simulate_record(sim, out_baseCounts_ff));
-				if (bcf_write(out_ff, sim->hdr, blank) != 0)
-				{
-					fprintf(stderr, "Error: Failed to write\n");
-					exit(1);
-				}
-				sim->blank_rec = NULL;
-				nSites++;
-			}
-		}
-		else
-		{
-			NEVER;
-		}
-
-		// /END/ main sites loop -----------------------------------------------
-
-		fprintf(stderr, "Total number of sites: %i\n", nSites);
-
-		bcf_hdr_destroy(in_hdr);
-		bcf_destroy(bcf);
-		bcf_destroy(blank);
-		bcf_destroy(rec);
-
-		ASSERT(0 == bcf_close(in_ff));
-		ASSERT(0 == bcf_close(out_ff));
-		ASSERT(0 == fclose(arg_ff));
-
-		if (args->printBaseCounts == 1)
-		{
-			ASSERT(0 == fclose(out_baseCounts_ff));
-			fprintf(stderr, "\nDumping baseCounts file to %s.baseCounts.tsv\n", out_fnp);
-		}
-
-		free(out_fn);
-		out_fn = NULL;
-
-		delete sim;
-
-		args_destroy(args);
+		// without error, only 3 possible genotypes
+		// input:
+		//	REF	ALT
+		//	0	1
+		//
+		// gts:
+		// 00 01 11
+		sim->nGenotypes = 3;
+		sim->current_size_bcf_tag_number[FMT_NUMBER_G] = sim->nSamples * sim->nGenotypes;
+		simulate_record = &simulate_record_true_values;
 	}
+	else
+	{
+		simulate_record = &simulate_record_values;
+	}
+
+
+	if(1 == args->addI16) {
+		get_strand=&sample_strand;
+	}else{
+		get_strand=&set_strand_to_forward;
+	}
+
+	if (0 == args->explode)
+	{
+
+		while (0 == bcf_read(in_ff, in_hdr, in_rec))
+		{
+
+			sim->rec = bcf_copy(sim->rec, in_rec);
+
+			int ret = simulate_record(sim);
+			sim->rec->pos += pos0;
+			if (-999 == ret)
+			{
+				// no alleles were observed at site
+				nSitesSkipped++;
+				continue;
+			}
+			else if (-1 == ret)
+			{
+				// observed only 1 allele at site
+				if (1 == args->rmInvarSites)
+				{
+					nSitesSkipped++;
+					continue;
+				}
+			}
+			else
+			{
+
+				ASSERT(0 == bcf_write(out_ff, sim->hdr, sim->rec));
+			}
+			nSites++;
+		}
+		// TODO
+		//  if explode mode off, we do not know how many records we need to simulate, but max is contig size
+
+		// EXPLODE -------------------------------------------------------------
+		// simulate by enumerating the invariable sites that are not present in the input vcf
+	}
+
+	// TODO use function factory for explode too? instead of arg check copy paste
+
+	if (1 == args->explode)
+	{
+
+		// TODO if explode mode on, we know exactly how many records we need to simulate (contig size)
+
+		// read the first record
+		ASSERT(0 == bcf_read(in_ff, in_hdr, in_rec));
+
+		// prepare blank record template
+		bcf1_t *blank_rec = bcf_init();
+		blank_rec = bcf_copy(blank_rec, in_rec);
+
+		int32_t *tmp_gt_arr = NULL;
+		int32_t tmp_n_gt_arr = 0;
+		int tmp_ngt = bcf_get_genotypes(in_hdr, blank_rec, &tmp_gt_arr, &tmp_n_gt_arr);
+		if (tmp_ngt <= 0)
+		{
+			ERROR("Could not find GT tag.");
+		}
+
+		for (int h = 0; h < sim->nHaplotypes; ++h)
+		{
+			tmp_gt_arr[h] = BCF_GT_PHASED_0;
+		}
+
+		do
+		{
+
+			while (1)
+			{ // this block should run for every site with missing/nodata
+				if (nSites == in_rec->pos + pos0)
+				{
+					// fprintf(stderr,"now breaking\n");
+					break;
+				}
+
+				blank_rec->pos = nSites;
+				ASSERT(0 == (bcf_update_genotypes(in_hdr, blank_rec, tmp_gt_arr, sim->nHaplotypes)));
+
+				sim->rec = bcf_copy(sim->rec, blank_rec);
+
+				int ret = simulate_record(sim);
+				if (-999 == ret)
+				{
+					// no alleles were observed at site
+					nSitesSkipped++;
+					continue;
+				}
+				else if (-1 == ret)
+				{
+					// observed only 1 allele at site
+					if (1 == args->rmInvarSites)
+					{
+						nSitesSkipped++;
+						continue;
+					}
+				}
+				else
+				{
+
+					ASSERT(0 == bcf_write(out_ff, sim->hdr, sim->rec));
+				}
+				nSites++;
+			}
+
+			sim->rec = bcf_copy(sim->rec, in_rec);
+			// ASSERT(0 == simulate_record(sim));
+			int ret = simulate_record(sim);
+
+			sim->rec->pos += pos0;
+			if (-999 == ret)
+			{
+				// no alleles were observed at site
+				nSitesSkipped++;
+				continue;
+			}
+			else if (-1 == ret)
+			{
+				// observed only 1 allele at site
+				if (1 == args->rmInvarSites)
+				{
+					nSitesSkipped++;
+					continue;
+				}
+			}
+			else
+			{
+				ASSERT(0 == bcf_write(out_ff, sim->hdr, sim->rec));
+			}
+
+			nSites++;
+
+		} while (bcf_read(in_ff, in_hdr, in_rec) == 0);
+
+		bcf_idpair_t *ctg = in_hdr->id[BCF_DT_CTG];
+		int contigsize = ctg[in_rec->rid].val->info[0];
+
+		while (nSites < contigsize)
+		{
+			blank_rec->pos = nSites;
+			ASSERT(0 == (bcf_update_genotypes(in_hdr, blank_rec, tmp_gt_arr, sim->nHaplotypes)));
+			sim->rec = bcf_copy(sim->rec, blank_rec);
+			// ASSERT(0 == simulate_record(sim));
+			int ret = simulate_record(sim);
+			if (-999 == ret)
+			{
+				// no alleles were observed at site
+				nSitesSkipped++;
+				continue;
+			}
+			else if (-1 == ret)
+			{
+				// observed only 1 allele at site
+				if (1 == args->rmInvarSites)
+				{
+					nSitesSkipped++;
+					continue;
+				}
+			}
+			else
+			{
+
+				ASSERT(0 == bcf_write(out_ff, sim->hdr, sim->rec));
+			}
+			nSites++;
+		}
+
+		bcf_destroy(blank_rec);
+		free(tmp_gt_arr);
+		tmp_gt_arr = NULL;
+	}
+
+	// /END/ main sites loop -----------------------------------------------
+
+	fprintf(stderr, "Total number of sites simulated: %i\n", nSites);
+	fprintf(stderr, "Number of sites skipped: %i\n", nSitesSkipped);
+
+	bcf_hdr_destroy(in_hdr);
+	bcf_destroy(in_rec);
+
+	ASSERT(0 == hts_close(in_ff));
+	ASSERT(0 == hts_close(out_ff));
+
+	// if(NULL!=tpool.pool){
+	// 	hts_tpool_destroy(tpool.pool);
+	// }
+	
+
+	ASSERT(0 == fclose(arg_ff));
+
+
+	delete sim;
+	
+	args_destroy(args);
 
 	return 0;
 }

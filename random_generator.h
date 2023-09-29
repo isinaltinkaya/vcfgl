@@ -29,4 +29,23 @@ int sample_uniform_from_range(int min, int max);
 
 double Poisson(double xm);
 
+/// @brief sample_strand - sample a strand
+/// @return		0: forward, 1: reverse
+inline int sample_strand()
+{
+	return (drand48() < 0.5 ? 0 : 1);
+}
+
+/// @brief sample_tail_distance - sample a tail length for I16 tag
+/// @return		int length
+inline int sample_tail_distance()
+{
+	int i;
+	if ((i = sample_uniform_from_range(1, 50)) > CAP_DIST)
+	{
+		return (CAP_DIST);
+	}
+	return (i);
+}
+
 #endif

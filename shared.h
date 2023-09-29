@@ -20,11 +20,14 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define MAXGP 1.0
 #define MINGP 0.0
 
-// number of genotypes to simulate {AA,AC,CC,AG,CG,GG,AT,CT,GT,TT}
-#define MAX_NGTS 10
+#define SIM_FORWARD_STRAND 0
+#define SIM_REVERSE_STRAND 1
 
-// maximum number of quality scores to simulate {A,C,G,T}
-#define MAX_NQS 4
+// maximum number of genotypes to simulate 
+#define MAX_NGTS 10 // {AA,AC,CC,AG,CG,GG,AT,CT,GT,TT}
+
+// maximum number of alleles to simulate
+#define MAX_NALLELES 4 // {A,C,G,T}
 
 // assume diploid samples
 #define SIM_PLOIDY 2
@@ -34,6 +37,10 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 
 // source: bcftools/bam2bcf.c L381
 #define CAP_BASEQ 63
+
+#define BCF_GT_PHASED_0 3 // bcf_gt_phased(0)
+#define BCF_GT_PHASED_1 5 // bcf_gt_phased(1)
+
 
 /* -> FUNCTION-LIKE MACROS ---------------------------------------------------*/
 
@@ -69,7 +76,7 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define ERROR(...)                                                                               \
 	do                                                                                           \
 	{                                                                                            \
-		fprintf(stderr, "\n\n*******\n[ERROR](%s/%s:%d)\n\t", __FILE__, __FUNCTION__, __LINE__); \
+		fprintf(stderr, "\n\n*******\n[ERROR](%s)<%s:%d>\n\t", __FUNCTION__, __FILE__, __LINE__); \
 		fprintf(stderr, __VA_ARGS__);                                                            \
 		fprintf(stderr, "\n*******\n");                                                          \
 		exit(1);                                                                                 \
@@ -103,15 +110,30 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 	} while (0);
 
 /*
- * Macro:[WARNING]
+ * Macro:[WARN]
  * print a custom warning message
  */
-#define WARNING(...)                                                                    \
+#define WARN(...)                                                                    \
 	do                                                                                  \
 	{                                                                                   \
 		fprintf(stderr, "\n\n[WARNING](%s/%s:%d): ", __FILE__, __FUNCTION__, __LINE__); \
 		fprintf(stderr, __VA_ARGS__);                                                   \
 		fprintf(stderr, "\n");                                                          \
+	} while (0);
+
+
+/*
+ * Macro:[VWARN]
+ * print a custom warning message if verbose is set
+ */
+#define VWARN(...)                                                                    \
+	do                                                                                  \
+	{                                                                                   \
+		if(0 != args->verbose){ \
+			fprintf(stderr, "\n\n[WARNING](%s/%s:%d): ", __FILE__, __FUNCTION__, __LINE__); \
+			fprintf(stderr, __VA_ARGS__);                                                   \
+			fprintf(stderr, "\n");                                                          \
+		} \
 	} while (0);
 
 /* LOOKUP TABLES & LOOKUP FUNCTIONS ------------------------------------------*/
@@ -130,8 +152,9 @@ extern const int lut_qs_to_qs2[64];
 // [1] "const int qs_to_qs2[64] = {0, 1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324, 361, 400, 441, 484, 529, 576, 625, 676, 729, 784, 841, 900, 961, 1024, 1089, 1156, 1225, 1296, 1369, 1444, 1521, 1600, 1681, 1764, 1849, 1936, 2025, 2116, 2209, 2304, 2401, 2500, 2601, 2704, 2809, 2916, 3025, 3136, 3249, 3364, 3481, 3600, 3721, 3844, 3969};"
 inline int qs_to_qs2(const int q)
 {
-	if (q > CAP_BASEQ)
+	if (q > CAP_BASEQ){
 		return lut_qs_to_qs2[CAP_BASEQ];
+	}
 	return lut_qs_to_qs2[q];
 }
 
