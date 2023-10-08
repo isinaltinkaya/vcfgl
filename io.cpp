@@ -80,7 +80,7 @@ void help_page()
 	fprintf(stderr, "\t-addQS\t\t\tAdd QS field (default:0=disabled)\n");
 	fprintf(stderr, "\t-addFormatDP\t\tAdd FORMAT/DP field (default:1=enabled)\n");
 	fprintf(stderr, "\t-addFormatAD\t\tAdd FORMAT/AD field (default:0=disabled)\n");
-	fprintf(stderr, "\t-addInfoDP\t\tAdd INFO/DP field (default:1=enabled)\n");
+	fprintf(stderr, "\t-addInfoDP\t\tAdd INFO/DP field (default:0=disabled)\n");
 	// fprintf(stderr, "\t-addFormatADF\t\tAdd FORMAT/ADF field (default:0=disabled)\n");
 	// fprintf(stderr, "\t-addFormatADR\t\tAdd FORMAT/ADR field (default:0=disabled)\n");
 
@@ -525,9 +525,6 @@ argStruct *args_get(int argc, char **argv)
 		strcpy(args->out_fn, args->out_fnp);
 		strcat(args->out_fn, ".vcf");
 		args->output_mode_str=strdup("w");
-		if(args->n_threads>1){
-			ERROR("Multithreading is not supported for VCF output. Please set --threads 1 and rerun.");
-		}
 		break;
 	case 'b':
 		fprintf(stderr, "\nOutput is BCF file (.bcf)\n");
