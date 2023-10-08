@@ -93,33 +93,37 @@ typedef struct simRecord
 	int* current_size_bcf_tag_number=NULL;
 
 
-	// TODO delme
 	double *gl_vals = NULL;
 
 	double *mps_depths = NULL;
 
 	int32_t *gt_arr = NULL;
 
+
+	// ---
+	// always created, only added if addTYPE==1
 	int32_t *fmt_dp_arr = NULL;
+	int32_t *info_dp_arr = NULL;
+	float *gl_arr = NULL;
+	// ---
+
+	int32_t *pl_arr = NULL;
+	float *gp_arr = NULL;
+	float *qs_arr = NULL;
+	float *i16_arr = NULL;
+
 	int32_t *fmt_ad_arr = NULL;
 	int32_t *fmt_adf_arr = NULL;
 	int32_t *fmt_adr_arr = NULL;
+
 	int32_t *info_ad_arr = NULL;
 	int32_t *info_adf_arr = NULL;
 	int32_t *info_adr_arr = NULL;
 
-	float *gl_arr = NULL;
-	float *gp_arr = NULL;
-	int32_t *pl_arr = NULL;
-
-	float *qs_arr = NULL;
-	float *i16_arr = NULL;
-
-
 	simRecord(bcf_hdr_t *in_hdr);
 	~simRecord();
 
-	void create_hdr(bcf_hdr_t *in_hdr);
+	void set_hdr(bcf_hdr_t *in_hdr);
 
 	// get sorted indices of values in acgt_arr (descending)
 	// without changing acgt_arr itself
@@ -129,6 +133,7 @@ typedef struct simRecord
 	void reset_rec_objects();
 
 	void add_tags();
+	void add_tags_missing();
 
 	// sim->set_tag_I16(&acgt_n_q13_bases[0][0], &acgt_sum_taildist[0], &acgt_sum_taildist_sq[0], &acgt_sum_qs[0], &acgt_sum_qs_sq[0]);
 	void set_tag_I16();
@@ -229,7 +234,7 @@ T *bcf_tag_alloc_max(enum bcf_tag t, T init_val, simRecord* sim)
 }
 
 template <typename T>
-void bcf_tag_reset(T *arr, enum bcf_tag t, T init_val, simRecord* sim)
+void bcf_tag_reset_max(T *arr, enum bcf_tag t, T init_val, simRecord* sim)
 {
 
 	const int size = sim->max_size_bcf_tag_number[bcf_tags[t].n];

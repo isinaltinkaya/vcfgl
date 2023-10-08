@@ -8,9 +8,7 @@ simRecord::simRecord(bcf_hdr_t *in_hdr)
 	this->rec = bcf_init();
 	this->alleles = KS_INITIALIZE;
 
-
 	this->nSamples = bcf_hdr_nsamples(in_hdr);
-
 
 	this->alleles2acgt = (int*) malloc(4 * sizeof(int));
 	for(int i=0;i<4;++i){
@@ -89,7 +87,7 @@ simRecord::simRecord(bcf_hdr_t *in_hdr)
 	// fixed size for all sites
 	this->current_size_bcf_tag_number[INFO_NUMBER_16]=16; 
 
-	this->create_hdr(in_hdr);
+	this->set_hdr(in_hdr);
 
 	if (args->mps_depths_fn != NULL)
 	{
@@ -106,53 +104,51 @@ simRecord::simRecord(bcf_hdr_t *in_hdr)
 
 	this->gt_arr = NULL; // allocated in-place
 
-
-
-	this->gl_vals = (double *)malloc(this->max_size_bcf_tag_number[bcf_tags[GL].n] * sizeof(double));
-	ASSERT(NULL != this->gl_vals);
-	for (int i = 0; i < this->max_size_bcf_tag_number[bcf_tags[GL].n]; i++)
-	{
-		this->gl_vals[i] = -0.0;
-	}
-
+	// collects data, not for directly writing to tag
+	// req. -0.0 before giving to gl_log10
+	this->gl_vals = bcf_tag_alloc_max<double>(GL, -0.0, this);
 
 	// always created, only added if addTYPE==1
-	this->gl_arr = bcf_tag_alloc_max<float>(GL, -0.0, this);
+	this->gl_arr = bcf_tag_alloc_max<float>(GL, MINGL, this);
 	this->fmt_dp_arr = bcf_tag_alloc_max<int32_t>(FMT_DP, 0, this);
-	this->info_ad_arr = bcf_tag_alloc_max<int32_t>(INFO_AD, 0, this);
+	this->info_dp_arr = bcf_tag_alloc_max<int32_t>(INFO_DP, 0, this);
 
-	if (1 == args->addGP)
+	if (args->addInfoAD)
 	{
-		this->gp_arr = bcf_tag_alloc_max<float>(GP, -0.0, this);
+		this->info_ad_arr = bcf_tag_alloc_max<int32_t>(INFO_AD, 0, this);
 	}
 
-	if (1 == args->addPL)
+	if (args->addGP)
 	{
-		this->pl_arr = bcf_tag_alloc_max<int32_t>(PL, 0, this);
+		this->gp_arr = bcf_tag_alloc_max<float>(GP, MINGP, this);
 	}
 
-	if (1 == args->addQS)
+	if (args->addPL)
+	{
+		this->pl_arr = bcf_tag_alloc_max<int32_t>(PL, MINPL, this);
+	}
+
+	if (args->addQS)
 	{
 		this->qs_arr = bcf_tag_alloc_max<float>(QS, 0.0, this);
 	}
 
-	if (1 == args->addI16)
+	if (args->addI16)
 	{
 		this->i16_arr = bcf_tag_alloc_max<float>(I16, 0.0, this);
 	}
 
-	if (1 == args->addFormatAD){
+	if (args->addFormatAD){
 		this->fmt_ad_arr = bcf_tag_alloc_max<int32_t>(FMT_AD, 0, this);
 	}
 
-	if (1 == args->addFormatADF){
+	if (args->addFormatADF){
 		this->fmt_adf_arr = bcf_tag_alloc_max<int32_t>(FMT_ADF, 0, this);
 	}
 
-	if (1 == args->addFormatADR){
+	if (args->addFormatADR){
 		this->fmt_adr_arr = bcf_tag_alloc_max<int32_t>(FMT_ADR, 0, this);
 	}
-
 
 }
 
@@ -181,11 +177,10 @@ simRecord::~simRecord()
 	free(this->acgt_sum_qs_sq);
 	this->acgt_sum_qs_sq = NULL;
 
-
 	bcf_hdr_destroy(this->hdr);
 
-	free(this->gt_arr);
-	this->gt_arr = NULL;
+	free(this->gt_arr);//TODO checkme
+	this->gt_arr = NULL; 
 
 	// TODO delme
 	free(this->gl_vals);
@@ -197,45 +192,51 @@ simRecord::~simRecord()
 	free(this->fmt_dp_arr);
 	this->fmt_dp_arr = NULL;
 
-	free(this->info_ad_arr);
-	this->info_ad_arr = NULL;
+	free(this->info_dp_arr);
+	this->info_dp_arr=NULL;
+
+	if (args->addInfoAD)
+	{
+		free(this->info_ad_arr);
+		this->info_ad_arr = NULL;
+	}
 
 
-	if (1 == args->addGP)
+	if (args->addGP)
 	{
 		free(this->gp_arr);
 		this->gp_arr = NULL;
 	}
 
-	if (1 == args->addPL)
+	if (args->addPL)
 	{
 		free(this->pl_arr);
 		this->pl_arr = NULL;
 	}
 
-	if (1 == args->addQS)
+	if (args->addQS)
 	{
 		free(this->qs_arr);
 		this->qs_arr = NULL;
 	}
 
-	if (1 == args->addI16)
+	if (args->addI16)
 	{
 		free(this->i16_arr);
 		this->i16_arr = NULL;
 	}
 
-	if (1 == args->addFormatAD){
+	if (args->addFormatAD){
 		free(this->fmt_ad_arr);
 		this->fmt_ad_arr = NULL;
 	}
 
-	if (1 == args->addFormatADF){
+	if (args->addFormatADF){
 		free(this->fmt_adf_arr);
 		this->fmt_adf_arr = NULL;
 	}
 
-	if (1 == args->addFormatADR){
+	if (args->addFormatADR){
 		free(this->fmt_adr_arr);
 		this->fmt_adr_arr = NULL;
 	}
@@ -259,66 +260,162 @@ simRecord::~simRecord()
 	this->acgt2alleles=NULL;
 
 
-
 }
 
 void simRecord::add_tags(){
 
-	if (1 == args->addInfoAD)
-	{
-		ASSERT(0 == (bcf_update_info_int32(this->hdr,this->rec, "AD", this->info_ad_arr, this->current_size_bcf_tag_number[bcf_tags[INFO_AD].n])));
-	}
 
-	if (1 == args->addFormatDP)
+	if (args->addFormatDP)
 	{
 		ASSERT(0 == (bcf_update_format_int32(this->hdr,this->rec, "DP", this->fmt_dp_arr, this->current_size_bcf_tag_number[bcf_tags[FMT_DP].n])));
 	}
 
-	if (1 == args->addFormatAD)
-	{
-		ASSERT(0 == (bcf_update_format_int32(this->hdr,this->rec, "AD", this->fmt_ad_arr, this->current_size_bcf_tag_number[bcf_tags[FMT_AD].n])));
-	}
-	if (1 == args->addFormatADF)
-	{
-		ASSERT(0 == (bcf_update_format_int32(this->hdr,this->rec, "ADF", this->fmt_adf_arr, this->current_size_bcf_tag_number[bcf_tags[FMT_ADF].n])));
-	}
-	if (1 == args->addFormatADR)
-	{
-		ASSERT(0 == (bcf_update_format_int32(this->hdr,this->rec, "ADR", this->fmt_adr_arr,this->current_size_bcf_tag_number[bcf_tags[FMT_ADR].n])));
+	if (args->addInfoDP){
+		ASSERT(0 == (bcf_update_info_int32(this->hdr,this->rec, "DP", this->info_dp_arr, this->current_size_bcf_tag_number[bcf_tags[INFO_DP].n])));
 	}
 
-
-	if (1 == args->addGL)
+	if (args->addGL)
 	{
 		ASSERT(0 == (bcf_update_format_float(this->hdr,this->rec, "GL", this->gl_arr, this->current_size_bcf_tag_number[bcf_tags[GL].n])));
 	}
 
-	if (1 == args->addPL)
+	if (args->addPL)
 	{
 		ASSERT(0 == (bcf_update_format_int32(this->hdr, this->rec, "PL", this->pl_arr, this->current_size_bcf_tag_number[bcf_tags[PL].n])));
 	}
 
-	if (1 == args->addGP)
+	if (args->addGP)
 	{
 		ASSERT(0 == (bcf_update_format_float(this->hdr, this->rec, "GP", this->gp_arr, this->current_size_bcf_tag_number[bcf_tags[GP].n])));
 	}
 
-	if (1 == args->addI16)
+	if (args->addQS)
+	{
+		ASSERT(0 == (bcf_update_info_float(this->hdr, this->rec, "QS", this->qs_arr, this->current_size_bcf_tag_number[bcf_tags[QS].n])));
+	}
+
+	if (args->addI16)
 	{
 
 		ASSERT(0 == (bcf_update_info_float(this->hdr, this->rec, "I16", this->i16_arr, 16)));
 	}
 
-	// [BEGIN ADD QS TAG] ------------------------------------------------------- //
-	if (1 == args->addQS)
+
+	if (args->addFormatAD)
 	{
-		// already reordered while setting sim->qs_arr
-		ASSERT(0 == (bcf_update_info_float(this->hdr, this->rec, "QS", this->qs_arr, this->current_size_bcf_tag_number[bcf_tags[QS].n])));
+		ASSERT(0 == (bcf_update_format_int32(this->hdr,this->rec, "AD", this->fmt_ad_arr, this->current_size_bcf_tag_number[bcf_tags[FMT_AD].n])));
+	}
+	if (args->addFormatADF)
+	{
+		NEVER;//TODO
+		ASSERT(0 == (bcf_update_format_int32(this->hdr,this->rec, "ADF", this->fmt_adf_arr, this->current_size_bcf_tag_number[bcf_tags[FMT_ADF].n])));
+	}
+	if (args->addFormatADR)
+	{
+		NEVER;//TODO
+		ASSERT(0 == (bcf_update_format_int32(this->hdr,this->rec, "ADR", this->fmt_adr_arr,this->current_size_bcf_tag_number[bcf_tags[FMT_ADR].n])));
+	}
+
+	if (args->addInfoAD)
+	{
+		ASSERT(0 == (bcf_update_info_int32(this->hdr,this->rec, "AD", this->info_ad_arr, this->current_size_bcf_tag_number[bcf_tags[INFO_AD].n])));
+	}
+	if (args->addInfoADF)
+	{
+		NEVER;//TODO
+	}
+	if (args->addInfoADR)
+	{
+		NEVER;//TODO
 	}
 
 
 
+
 }
+
+
+union { uint32_t i=bcf_float_missing; float f; } bcf_float_missing_union = { .i = bcf_float_missing };
+float bcf_float_missing_union_f = bcf_float_missing_union.f;
+
+// add tags filled with missing values
+void simRecord::add_tags_missing(){
+
+	if (args->addFormatDP)
+	{
+		// reset not necessary since missing state (0) is the same as init state
+		ASSERT(0 == (bcf_update_format_int32(this->hdr,this->rec, "DP", this->fmt_dp_arr, this->current_size_bcf_tag_number[bcf_tags[FMT_DP].n])));
+	}
+
+	if (args->addInfoDP){
+		// reset not necessary since missing state (0) is the same as init state
+		ASSERT(0 == (bcf_update_info_int32(this->hdr,this->rec, "DP", this->info_dp_arr, this->current_size_bcf_tag_number[bcf_tags[INFO_DP].n])));
+	}
+
+	if (args->addGL)
+	{
+		bcf_tag_reset_max<float>(this->gl_arr, GL, bcf_float_missing_union_f, this);
+		ASSERT(0 == (bcf_update_format_float(this->hdr,this->rec, "GL", this->gl_arr, this->current_size_bcf_tag_number[bcf_tags[GL].n])));
+	}
+	if (args->addPL)
+	{
+		bcf_tag_reset_max<int32_t>(this->pl_arr, PL, bcf_int32_missing, this);
+		ASSERT(0 == (bcf_update_format_int32(this->hdr, this->rec, "PL", this->pl_arr, this->current_size_bcf_tag_number[bcf_tags[PL].n])));
+	}
+
+	if (args->addGP)
+	{
+		bcf_tag_reset_max<float>(this->gp_arr, GP, bcf_float_missing_union_f, this);
+		ASSERT(0 == (bcf_update_format_float(this->hdr, this->rec, "GP", this->gp_arr, this->current_size_bcf_tag_number[bcf_tags[GP].n])));
+	}
+
+	if (args->addQS)
+	{
+		bcf_tag_reset_max<float>(this->qs_arr, QS, bcf_float_missing_union_f, this);
+		ASSERT(0 == (bcf_update_info_float(this->hdr, this->rec, "QS", this->qs_arr, this->current_size_bcf_tag_number[bcf_tags[QS].n])));
+	}
+
+	if (args->addI16)
+	{
+		// this->i16_arr = bcf_tag_alloc_max<float>(I16, bcf_float_missing_union_f, this);
+		ASSERT(0 == (bcf_update_info_float(this->hdr, this->rec, "I16", this->i16_arr, 16)));
+	}
+
+	if (args->addFormatAD){
+		// reset not necessary since missing state (0) is the same as init state
+		bcf_tag_reset_max<int32_t>(this->fmt_ad_arr, FMT_AD, 0, this);
+		ASSERT(0 == (bcf_update_format_int32(this->hdr,this->rec, "AD", this->fmt_ad_arr, this->current_size_bcf_tag_number[bcf_tags[FMT_AD].n])));
+	}
+
+	if (args->addFormatADF){
+		NEVER; // TODO
+		// reset not necessary since missing state (0) is the same as init state
+		ASSERT(0 == (bcf_update_format_int32(this->hdr,this->rec, "ADF", this->fmt_adf_arr, this->current_size_bcf_tag_number[bcf_tags[FMT_ADF].n])));
+	}
+
+	if (args->addFormatADR){
+		NEVER; // TODO
+		// reset not necessary since missing state (0) is the same as init state
+		ASSERT(0 == (bcf_update_format_int32(this->hdr,this->rec, "ADR", this->fmt_adr_arr,this->current_size_bcf_tag_number[bcf_tags[FMT_ADR].n])));
+	}
+
+	if (args->addInfoAD)
+	{
+		// reset not necessary since missing state (0) is the same as init state
+		ASSERT(0 == (bcf_update_info_int32(this->hdr,this->rec, "AD", this->info_ad_arr, this->current_size_bcf_tag_number[bcf_tags[INFO_AD].n])));
+	}
+
+	if (args->addInfoADF)
+	{
+		NEVER;//TODO
+	}
+	if (args->addInfoADR)
+	{
+		NEVER;//TODO
+	}
+
+}
+
 
 void simRecord::reset_rec_objects(){
 
@@ -356,45 +453,68 @@ void simRecord::reset_rec_objects(){
 	this->acgt_sum_qs_sq[2] = 0.0;
 	this->acgt_sum_qs_sq[3] = 0.0;
 
+	bcf_tag_reset_max<double>(this->gl_vals, GL, -0.0, this);
 
-	// always created, only added if addTYPE==1
-	bcf_tag_reset<int32_t>(this->fmt_dp_arr, FMT_DP, 0, this);
-	bcf_tag_reset<float>(this->gl_arr, GL, MINGL, this);
-	bcf_tag_reset<int32_t>(this->info_ad_arr, INFO_AD, 0, this);
+	// always created, but only added if addTYPE==1
+	bcf_tag_reset_max<int32_t>(this->fmt_dp_arr, FMT_DP, 0, this);
+	bcf_tag_reset_max<int32_t>(this->info_dp_arr, INFO_DP, 0, this);
+	bcf_tag_reset_max<float>(this->gl_arr, GL, MINGL, this);
 
-	if (1 == args->addFormatAD)
+	if (args->addGP)
 	{
-		bcf_tag_reset<int32_t>(this->fmt_ad_arr, FMT_AD, 0, this);
-	}
-	if (1 == args->addFormatADF)
-	{
-		bcf_tag_reset<int32_t>(this->fmt_adf_arr, FMT_ADF, 0, this);
-	}
-	if (1 == args->addFormatADR)
-	{
-		bcf_tag_reset<int32_t>(this->fmt_adr_arr, FMT_ADR, 0, this);
+		bcf_tag_reset_max<float>(this->gp_arr, GP, MINGP, this);
 	}
 
-	if (1 == args->addQS)
+	if (args->addPL)
 	{
-		bcf_tag_reset<float>(this->qs_arr, QS, 0, this);
+		bcf_tag_reset_max<int32_t>(this->pl_arr, PL, MINPL , this);
 	}
 
-	if (1 == args->addGP)
+	if (args->addQS)
 	{
-		bcf_tag_reset<float>(this->gp_arr, GP, MINGP, this);
+		bcf_tag_reset_max<float>(this->qs_arr, QS, 0, this);
 	}
 
-	if (1 == args->addPL)
+	if(args->addI16){
+		bcf_tag_reset_max<float>(this->i16_arr, I16, 0.0, this);
+	}
+
+	if (args->addFormatAD)
 	{
-		bcf_tag_reset<int32_t>(this->pl_arr, PL, MINPL , this);
+		bcf_tag_reset_max<int32_t>(this->fmt_ad_arr, FMT_AD, 0, this);
+	}
+	if (args->addFormatADF)
+	{
+		bcf_tag_reset_max<int32_t>(this->fmt_adf_arr, FMT_ADF, 0, this);
+	}
+	if (args->addFormatADR)
+	{
+		bcf_tag_reset_max<int32_t>(this->fmt_adr_arr, FMT_ADR, 0, this);
+	}
+
+
+	if (args->addInfoAD)
+	{
+		bcf_tag_reset_max<int32_t>(this->info_ad_arr, INFO_AD, 0, this);
+	}
+
+	if (args->addInfoADF)
+	{
+		NEVER;//TODO
+		bcf_tag_reset_max<int32_t>(this->info_adf_arr, INFO_ADF, 0, this);
+	}
+
+	if (args->addInfoADR)
+	{
+		NEVER;//TODO
+		bcf_tag_reset_max<int32_t>(this->info_adr_arr, INFO_ADR, 0, this);
 	}
 
 	this->alleles.l = 0;
 
 }
 
-void simRecord::create_hdr(bcf_hdr_t *in_hdr)
+void simRecord::set_hdr(bcf_hdr_t *in_hdr)
 {
 
 	this->hdr = bcf_hdr_dup(in_hdr);
@@ -418,52 +538,61 @@ void simRecord::create_hdr(bcf_hdr_t *in_hdr)
 	free(SOURCE_VERSION_TAG);
 	SOURCE_VERSION_TAG = NULL;
 
-	if (1 == args->addGL){
+	if(args->addFormatDP){
+		ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[FMT_DP].hdr));
+	}
+	
+	if(args->addInfoDP){
+		ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[INFO_DP].hdr));
+	}
+
+	if (args->addGL){
 		ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[GL].hdr));
 	}
 
-	if (1 == args->addGP)
-	{
-		ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[GP].hdr));
-	}
 
-	if (1 == args->addPL)
+	if (args->addPL)
 	{
 		ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[PL].hdr));
 	}
 
-	if (-999 != args->mps_depth)
+	if (args->addGP)
 	{
-		if(1==args->addFormatDP){
-			ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[FMT_DP].hdr));
-		}
+		ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[GP].hdr));
+	}
 
-		if (1 == args->addI16)
-		{
-			ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[I16].hdr));
-		}
+	if (args->addQS)
+	{
+		ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[QS].hdr));
+	}
 
-		if (1 == args->addQS)
-		{
-			ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[QS].hdr));
-		}
+	if (args->addI16)
+	{
+		ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[I16].hdr));
 	}
 
 
-	if (1 == args->addFormatAD){
+	if (args->addFormatAD){
 		ASSERT(0==bcf_hdr_append(this->hdr, bcf_tags[FMT_AD].hdr));
 	}
-	if (1 == args->addFormatADF){
-		ASSERT(0==bcf_hdr_append(this->hdr, bcf_tags[FMT_ADF].hdr));
+	if (args->addFormatADF){
+		NEVER;//TODO
+		// ASSERT(0==bcf_hdr_append(this->hdr, bcf_tags[FMT_ADF].hdr));
 	}
-	if (1 == args->addFormatADR){
-		ASSERT(0==bcf_hdr_append(this->hdr, bcf_tags[FMT_ADR].hdr));
+	if (args->addFormatADR){
+		NEVER;//TODO
+		// ASSERT(0==bcf_hdr_append(this->hdr, bcf_tags[FMT_ADR].hdr));
 	}
 
-	if (1 == args->addInfoAD){
+	if (args->addInfoAD){
 		ASSERT(0==bcf_hdr_append(this->hdr, bcf_tags[INFO_AD].hdr));
 	}
-
+	if (args->addInfoADF){
+		NEVER;//TODO
+	}
+	if (args->addInfoADR){
+		NEVER;//TODO
+	}
 
 }
 
@@ -509,81 +638,89 @@ void simRecord::set_acgt_alleles_luts(int* acgt_arr)
 	return;
 }
 
+
+
+// requires:
+// acgt_n_q13_bases
+// acgt_sum_qs
+// acgt_sum_qs_sq
+// acgt_sum_taildist
+// acgt_sum_taildist_sq
 void simRecord::set_tag_I16(void){
 
 	if(1==args->addI16){
 
-	// ------------------------------------------------------- //
-	// I16 REF fields
-	// ------------------------------------------------------- //
-	int refb=this->alleles2acgt[0];
+		// ------------------------------------------------------- //
+		// I16 REF fields
+		// ------------------------------------------------------- //
+		int refb=this->alleles2acgt[0];
 
-	// 1   #reference Q13 bases on the forward strand
-	this->i16_arr[0] = acgt_n_q13_bases[(refb*2)+SIM_FORWARD_STRAND];
+		// 1   #reference Q13 bases on the forward strand
+		this->i16_arr[0] = this->acgt_n_q13_bases[(refb*2)+SIM_FORWARD_STRAND];
 
-	// 2   #reference Q13 bases on the reverse strand
-	this->i16_arr[1] = acgt_n_q13_bases[(refb*2)+SIM_REVERSE_STRAND];
+		// 2   #reference Q13 bases on the reverse strand
+		this->i16_arr[1] = this->acgt_n_q13_bases[(refb*2)+SIM_REVERSE_STRAND];
 
-	// 5   sum of reference base qualities
-	this->i16_arr[4] = acgt_sum_qs[refb];
+		// 5   sum of reference base qualities
+		this->i16_arr[4] = this->acgt_sum_qs[refb];
 
-	// 6   sum of squares of reference base qualities
-	this->i16_arr[5] = acgt_sum_qs_sq[refb];
+		// 6   sum of squares of reference base qualities
+		this->i16_arr[5] = this->acgt_sum_qs_sq[refb];
 
-	// 13  sum of tail distance for ref bases
-	this->i16_arr[12] = acgt_sum_taildist[refb];
+		// 13  sum of tail distance for ref bases
+		this->i16_arr[12] = this->acgt_sum_taildist[refb];
 
-	// 14  sum of squares of tail distance for ref bases
-	this->i16_arr[13] = acgt_sum_taildist_sq[refb];
+		// 14  sum of squares of tail distance for ref bases
+		this->i16_arr[13] = this->acgt_sum_taildist_sq[refb];
 
-	// ------------------------------------------------------- //
-	// I16 NON-REF fields
-	// ------------------------------------------------------- //
-	// start from 1 to exclude the reference allele
-	int b=-1;
-	ASSERT(this->nAlleles>1);
-	for (int a = 1; a < this->nAlleles; ++a)
-	{
-		b=this->alleles2acgt[a];
+		// ------------------------------------------------------- //
+		// I16 NON-REF fields
+		// ------------------------------------------------------- //
+		// start from 1 to exclude the reference allele
+		int b=-1;
+		ASSERT(this->nAlleles>1);
+		for (int a = 1; a < this->nAlleles; ++a)
+		{
+			b=this->alleles2acgt[a];
 
-		// 3   #non-ref Q13 bases on the forward strand
-		this->i16_arr[2] += acgt_n_q13_bases[(b*2)+SIM_FORWARD_STRAND];
+			// 3   #non-ref Q13 bases on the forward strand
+			this->i16_arr[2] += this->acgt_n_q13_bases[(b*2)+SIM_FORWARD_STRAND];
 
-		// 4   #non-ref Q13 bases on the reverse strand
-		this->i16_arr[3] += acgt_n_q13_bases[(b*2)+SIM_REVERSE_STRAND];
+			// 4   #non-ref Q13 bases on the reverse strand
+			this->i16_arr[3] += this->acgt_n_q13_bases[(b*2)+SIM_REVERSE_STRAND];
 
-		// 7   sum of non-ref base qualities
-		this->i16_arr[6] += acgt_sum_qs[b];
+			// 7   sum of non-ref base qualities
+			this->i16_arr[6] += this->acgt_sum_qs[b];
 
-		// 8   sum of squares of non-ref base qualities
-		this->i16_arr[7] += acgt_sum_qs_sq[b];
+			// 8   sum of squares of non-ref base qualities
+			this->i16_arr[7] += this->acgt_sum_qs_sq[b];
 
-		// 15  sum of tail distance for non-ref bases
-		this->i16_arr[14] += acgt_sum_taildist[b];
+			// 15  sum of tail distance for non-ref bases
+			this->i16_arr[14] += this->acgt_sum_taildist[b];
 
-		// 16  sum of squares of tail distance for non-ref
-		this->i16_arr[15] += acgt_sum_taildist_sq[b];
+			// 16  sum of squares of tail distance for non-ref
+			this->i16_arr[15] += this->acgt_sum_taildist_sq[b];
 
 
-	}
+		}
 
-	// ------------------------------------------------------- //
-	// I16 fields that are currently not simulated
-	// and are set to 0
-	// ------------------------------------------------------- //
-	// TODO
+		// ------------------------------------------------------- //
+		// I16 fields that are currently not simulated
+		// and are set to 0
+		// ------------------------------------------------------- //
+		// TODO
 
-	// 9   sum of ref mapping qualities
-	this->i16_arr[8] = 0;
+		// 9   sum of ref mapping qualities
+		this->i16_arr[8] = 0;
 
-	// 10  sum of squares of ref mapping qualities
-	this->i16_arr[9] = 0;
+		// 10  sum of squares of ref mapping qualities
+		this->i16_arr[9] = 0;
 
-	// 11  sum of non-ref mapping qualities
-	this->i16_arr[10] = 0;
+		// 11  sum of non-ref mapping qualities
+		this->i16_arr[10] = 0;
 
-	// 12  sum of squares of non-ref mapping qualities
-	this->i16_arr[11] = 0;
+		// 12  sum of squares of non-ref mapping qualities
+		this->i16_arr[11] = 0;
 
 }
 
@@ -653,7 +790,7 @@ bcf_tag_t bcf_tags[] =
 			.hdr = "##FORMAT=<ID=PL,Number=G,Type=Integer,Description=\"Phred-scaled genotype likelihoods\">",
 		},
 
-		/* bcf_tag: [FORMAT/FMT_DP]
+		/* bcf_tag: [FORMAT/DP]
 		 */
 
 		[FMT_DP] = {
@@ -663,11 +800,14 @@ bcf_tag_t bcf_tags[] =
 			.hdr = "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Simulated per-sample read depth\">",
 		},
 
+		/* bcf_tag: [INFO/DP]
+		 */
+
 		[INFO_DP] = {
 			.n = INFO_NUMBER_1,
 			.type = BCF_HT_INT,
 			.str = "DP",
-			.hdr = "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">",
+			.hdr = "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"Total read depth\">",
 		},
 
 		/* bcf_tag: [INFO/QS]

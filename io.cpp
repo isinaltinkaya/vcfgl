@@ -29,12 +29,12 @@ void help_page()
 	fprintf(stderr, "\n");
 	fprintf(stderr, "\n");
 
-	fprintf(stderr, "Usage:\t./vcfgl -i <input> [options]\n\n");
+	fprintf(stderr, "Usage:\tvcfgl -i <input> [options]\n\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Options:\n");
 
 	fprintf(stderr, "\t-v/--verbose\t\tVerbose (default:0=disabled)\n");
-	// fprintf(stderr, "\t-@/--threads\t\tNumber of threads (default:1)\n");
+	fprintf(stderr, "\t-@/--threads\t\tNumber of threads (default:1)\n");
 
 	fprintf(stderr, "\n");
 
@@ -80,6 +80,7 @@ void help_page()
 	fprintf(stderr, "\t-addQS\t\t\tAdd QS field (default:0=disabled)\n");
 	fprintf(stderr, "\t-addFormatDP\t\tAdd FORMAT/DP field (default:1=enabled)\n");
 	fprintf(stderr, "\t-addFormatAD\t\tAdd FORMAT/AD field (default:0=disabled)\n");
+	fprintf(stderr, "\t-addInfoDP\t\tAdd INFO/DP field (default:1=enabled)\n");
 	// fprintf(stderr, "\t-addFormatADF\t\tAdd FORMAT/ADF field (default:0=disabled)\n");
 	// fprintf(stderr, "\t-addFormatADR\t\tAdd FORMAT/ADR field (default:0=disabled)\n");
 
@@ -125,6 +126,7 @@ argStruct *args_init()
 	args->addI16 = 0;
 	args->addQS = 0;
 	args->addFormatDP = 1;
+	args->addInfoDP= 0;
 	args->addFormatAD = 0;
 	args->addFormatADF = 0; //TODO
 	args->addFormatADR = 0; //TODO
@@ -312,6 +314,8 @@ argStruct *args_get(int argc, char **argv)
 			args->addFormatADF = atoi(val);
 		else if (strcasecmp("-addFormatADR", arv) == 0)
 			args->addFormatADR = atoi(val);
+		else if (strcasecmp("-addInfoDP", arv) == 0)
+			args->addInfoDP = atoi(val);
 		else if (strcasecmp("-addInfoAD", arv) == 0)
 			args->addInfoAD = atoi(val);
 		else if (strcasecmp("-addInfoADF", arv) == 0)
@@ -344,12 +348,17 @@ argStruct *args_get(int argc, char **argv)
 	}
 
 
+	
+	if(args->rmInvarSites){
 
 	//TODO
+	//
+		NEVER;
+	}
 
 	if (1 == args->addI16)
 	{
-		NEVER;
+		WARN("I16 tag simulation is still under development. Please use with caution.");
 		WARN("-addI16 1 is used. Will set mapping quality-related I16 values to 0.");
 	}
 
@@ -363,9 +372,11 @@ argStruct *args_get(int argc, char **argv)
 	}
 
 	if(1!=args->n_threads){
-		// NEVER;
+		if(0==args->n_threads){
+			VWARN("--threads 0 implies --threads 1. Setting number of threads to 1 (no multithreading).");
+			args->n_threads=1;
+		}
 	}
-	//
 
 	if (args->seed == -1)
 	{
@@ -395,21 +406,55 @@ argStruct *args_get(int argc, char **argv)
 	// -depth inf
 	if (-999 == args->mps_depth)
 	{
+		
+		
+		if(args->addFormatDP){
+			ERROR("(-addFormatDP 1) FORMAT/DP tag cannot be added when --depth inf is set.");
+		}
+		
+		if(args->addInfoDP){
+			ERROR("(-addInfoDP 1) INFO/DP tag cannot be added when --depth inf is set.");
+		}
+
+
+		if (1 == args->addI16)
+		{
+			ERROR("(-addI16 1) I16 tag cannot be added when --depth inf is set.");
+
+		}
+
+		if (1 == args->addQS)
+		{
+			ERROR("(-addQS 1) QS tag cannot be added when --depth inf is set.");
+			//TODO maybe add a very very high qs val instead?
+		}
+
+		if (args->addFormatAD){
+			ERROR("(-addFormatAD 1) FORMAT/AD tag cannot be added when --depth inf is set.");
+		}
+		if (args->addFormatADF){
+			ERROR("(-addFormatADF 1) FORMAT/ADF tag cannot be added when --depth inf is set.");
+		}
+		if (args->addFormatADR){
+			ERROR("(-addFormatADR 1) FORMAT/ADR tag cannot be added when --depth inf is set.");
+		}
+
+		if (args->addInfoAD){
+			ERROR("(-addInfoAD 1) INFO/AD tag cannot be added when --depth inf is set.");
+		}
+		if (args->addInfoADF){
+			ERROR("(-addInfoADF 1) INFO/ADF tag cannot be added when --depth inf is set.");
+		}
+		if (args->addInfoADR){
+			ERROR("(-addInfoADR 1) INFO/ADR tag cannot be added when --depth inf is set.");
+		}
+		
 
 		if (0 != args->error_rate)
 		{
 			ERROR("Cannot simulate true values (--depth inf) with error rate (--error-rate) set to %f. Please set --error-rate to 0 and rerun.", args->error_rate);
 		}
 
-		if (1 == args->addI16)
-		{
-			ERROR("I16 tag cannot be added when --depth inf is set.");
-		}
-
-		if (1 == args->addQS)
-		{
-			ERROR("QS tag cannot be added when --depth inf is set.");
-		}
 	}
 
 	if (1 == args->pos0)
@@ -424,15 +469,20 @@ argStruct *args_get(int argc, char **argv)
 		{
 			ERROR("--error-qs %d requires --error-rate to be set. Please set --error-rate and rerun.", args->error_qs);
 		}
-		if (0 == args->beta_variance)
+
+		if (0<= args->beta_variance)
 		{
-			ERROR("--error-qs %d requires --beta-variance to be set. Please set --beta-variance and rerun.", args->error_qs);
+			ERROR("--error-qs %d requires --beta-variance to be set to a positive value. Please set --beta-variance and rerun.", args->error_qs);
 		}
 
 		if (1 == args->error_qs)
 		{
 			args->betaSampler = new BetaSampler(args->error_rate, args->beta_variance, args->seed);
 		}
+	}
+
+	if ((0 != args->beta_variance)&&(0==args->error_qs)){
+			ERROR("--beta-variance %d requires --error-qs 1.", args->error_qs);
 	}
 
 	// TODO but it should be possible to set the error rate to 0 without --depth inf
@@ -457,7 +507,7 @@ argStruct *args_get(int argc, char **argv)
 		sprintf(depth_val, "%f", args->mps_depth);
 	}
 
-	ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth %s --depths-file %s --pos0 %d --seed %d --error-qs %d --beta-variance %e --rm-invar-sites %d --trim-alt-alleles %d --platform %d -explode %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d  -addFormatDP %d -addFormatAD %d -addFormatADF %d -addFormatADR %d -addInfoAD %d -addInfoADF %d -addInfoADR %d", args->in_fn, args->out_fnp, args->output_mode, args->error_rate, depth_val, args->mps_depths_fn, args->pos0, args->seed, args->error_qs, args->beta_variance, args->rmInvarSites, args->trimAlts, args->platform, args->explode, args->addGL, args->addGP, args->addPL, args->addI16, args->addQS, args->addFormatDP, args->addFormatAD, args->addFormatADF, args->addFormatADR, args->addInfoAD, args->addInfoADF, args->addInfoADR) > 0);
+	ASSERT(asprintf(&args->command, "vcfgl --input %s --output %s --output-mode %s --error-rate %f --depth %s --depths-file %s --pos0 %d --seed %d --error-qs %d --beta-variance %e --rm-invar-sites %d --trim-alt-alleles %d --platform %d -explode %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d  -addFormatDP %d -addFormatAD %d -addFormatADF %d -addFormatADR %d -addInfoDP %d -addInfoAD %d -addInfoADF %d -addInfoADR %d", args->in_fn, args->out_fnp, args->output_mode, args->error_rate, depth_val, args->mps_depths_fn, args->pos0, args->seed, args->error_qs, args->beta_variance, args->rmInvarSites, args->trimAlts, args->platform, args->explode, args->addGL, args->addGP, args->addPL, args->addI16, args->addQS, args->addFormatDP, args->addFormatAD, args->addFormatADF, args->addFormatADR, args->addInfoDP, args->addInfoAD, args->addInfoADF, args->addInfoADR) > 0);
 
 
 	args->out_fn = NULL;
@@ -467,28 +517,37 @@ argStruct *args_get(int argc, char **argv)
 	switch (*args->output_mode)
 	{
 	case 'v':
-		fprintf(stderr, "\nOutput is VCF file\n");
+		fprintf(stderr, "\nOutput is VCF file (.vcf)\n");
+		if(args->n_threads>1){
+			ERROR("Multithreading is not supported for VCF output. Please set --threads 1 and rerun.");
+		}
 		args->out_fn = (char *)malloc(strlen(args->out_fnp) + strlen(".vcf") + 1);
 		strcpy(args->out_fn, args->out_fnp);
 		strcat(args->out_fn, ".vcf");
 		args->output_mode_str=strdup("w");
+		if(args->n_threads>1){
+			ERROR("Multithreading is not supported for VCF output. Please set --threads 1 and rerun.");
+		}
 		break;
 	case 'b':
-		fprintf(stderr, "\nOutput is BCF file\n");
+		fprintf(stderr, "\nOutput is BCF file (.bcf)\n");
 		args->out_fn = (char *)malloc(strlen(args->out_fnp) + strlen(".bcf") + 1);
 		strcpy(args->out_fn, args->out_fnp);
 		strcat(args->out_fn, ".bcf");
 		args->output_mode_str=strdup("wb");
 		break;
 	case 'z':
-		fprintf(stderr, "\nOutput is compressed VCF file\n");
+		if(args->n_threads>1){
+			ERROR("Multithreading is not supported for VCF output. Please set --threads 1 and rerun.");
+		}
+		fprintf(stderr, "\nOutput is compressed VCF file (.vcf.gz)\n");
 		args->out_fn = (char *)malloc(strlen(args->out_fnp) + strlen(".vcf.gz") + 1);
 		strcpy(args->out_fn, args->out_fnp);
-		strcat(args->out_fn, "vcf.gz");
+		strcat(args->out_fn, ".vcf.gz");
 		args->output_mode_str=strdup("wz");
 		break;
 	case 'u':
-		fprintf(stderr, "\nOutput is uncompressed BCF file\n");
+		fprintf(stderr, "\nOutput is uncompressed BCF file (.bcf)\n");
 		args->out_fn = (char *)malloc(strlen(args->out_fnp) + strlen(".bcf") + 1);
 		strcpy(args->out_fn, args->out_fnp);
 		strcat(args->out_fn, ".bcf");

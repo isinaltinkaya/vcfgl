@@ -59,7 +59,7 @@ endif
 	$(MAKE) -C $(HTSSRC)
 
 
-VERSION = v0.3.1
+VERSION = v0.3.2
 
 
 ifneq "$(wildcard .git)" ""
@@ -94,5 +94,4 @@ clean:
 
 test: 
 	bash test/runTests.sh
-	./vcfgl
 

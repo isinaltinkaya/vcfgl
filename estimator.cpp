@@ -32,6 +32,7 @@ void gl_ln(int base, double error_rate, double *like)
 		like[lut_acgt_offsets[base][o]] += homFalse;
 }
 
+// requires like[i] == -0.0 for all i's
 void gl_log10(int base, double error_rate, double *like)
 {
 

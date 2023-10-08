@@ -78,6 +78,7 @@ extern argStruct *args;
  * @field addFormatAD		add FORMAT/AD field
  * @field addFormatADF		add FORMAT/ADF field
  * @field addFormatADR		add FORMAT/ADR field
+ * @field addInfoDP			add INFO/DP field
  *
  */
 struct argStruct
@@ -127,6 +128,7 @@ struct argStruct
 	int addFormatAD;
 	int addFormatADF;
 	int addFormatADR;
+	int addInfoDP;
 	int addInfoAD;
 	int addInfoADF;
 	int addInfoADR;

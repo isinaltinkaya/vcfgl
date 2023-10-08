@@ -13,11 +13,17 @@
 #include "io.h"
 #include "bcf_utils.h"
 
-// #include <htslib/thread_pool.h>
+#include <htslib/thread_pool.h>
 
 argStruct *args;
 
 int (*get_strand)(void);
+
+// a negative value is returned iff 1==args->rmInvarSites
+// negative return values indicate skip the site
+// value of the negative return value indicate the reason for skipping
+// -1	observed only 1 allele at site
+// -2	no alleles were observed at site
 int (*simulate_record)(simRecord *sim);
 
 int set_strand_to_forward(void){
@@ -41,14 +47,6 @@ int simulate_record_values(simRecord *sim)
 	}
 
 	sim->reset_rec_objects();
-
-	double *gls = sim->gl_vals;
-
-
-	for (int i = 0; i < nSamples * MAX_NGTS; ++i)
-	{
-		sim->gl_vals[i] = -0.0;
-	}
 
 	int n_sim_reads = -1;
 
@@ -104,7 +102,7 @@ int simulate_record_values(simRecord *sim)
 
 			int32_t *gt_ptr = sim->gt_arr + sample_i * SIM_PLOIDY;
 
-			double *sample_gls = gls + sample_i * MAX_NGTS;
+			double *sample_gls = sim->gl_vals + sample_i * MAX_NGTS;
 
 			int bin_gts[2] = {0};
 
@@ -117,6 +115,7 @@ int simulate_record_values(simRecord *sim)
 				
 
 				// TODO gets base form
+				// use bcf_unpack(rec,BCF_UN_STR)
 				// DEVPRINT("%d",*rec->d.allele[bcf_gt_allele(gt_ptr[0])]);
 				// if 0 1 (currently supported notation), this should be 0 or 1
 				
@@ -129,6 +128,10 @@ int simulate_record_values(simRecord *sim)
 			}
 
 			// int sim_strands[n_sim_reads] = {-1};
+
+			// for(int i=0;i<10;i++){
+				// ASSERT(sample_gls[i]==-0.0);
+			// }
 
 			for (int i = 0; i < n_sim_reads; i++)
 			{
@@ -216,9 +219,34 @@ int simulate_record_values(simRecord *sim)
 			}
 
 			sim->fmt_dp_arr[sample_i] = n_sim_reads;
+			sim->info_dp_arr[0]+=n_sim_reads;
 		}
 
 	} // end sample loop
+	
+
+	if(0 == sim->info_dp_arr[0]){
+	// no reads were simulated for any of the individuals
+
+		VWARN("No alleles were observed at site %ld.", rec->pos + 1);
+		if (1 == args->rmInvarSites)
+		{
+			return (-2);
+		}
+		if ( 1 == args->trimAlts){
+			if(0==args->useUnknownAllele){
+				NEVER;
+			}
+			// REF=<*> ALT=.
+			NEVER; //TODO fornow
+		}
+		// set all requested fields to missing
+		sim->nAlleles=4;
+		sim->nGenotypes=10;
+		ASSERT(0 == (bcf_update_alleles_str(sim->hdr, rec, "A,C,G,T")));
+		sim->add_tags_missing();
+		return (0);
+	}
 
 	int acgt_info_ad_arr[4] = {0};
 	sOffset = 0;
@@ -233,21 +261,26 @@ int simulate_record_values(simRecord *sim)
 
 	sim->set_acgt_alleles_luts(acgt_info_ad_arr);
 
+	int nUnobservedBases=0;
 	for (int b = 0; b < 4; ++b)
 	{
-		if (1 == args->trimAlts && 0 == acgt_info_ad_arr[b])
+		if ( 0 == acgt_info_ad_arr[b])
 		{
-			int tmpa = sim->acgt2alleles[b];
-			sim->acgt2alleles[b] = -1;
-			sim->alleles2acgt[tmpa] = -1;
+			if ( 1 == args->trimAlts){
+				int tmpa = sim->acgt2alleles[b];
+				sim->acgt2alleles[b] = -1;
+				sim->alleles2acgt[tmpa] = -1;
+			}
+			nUnobservedBases++;
 		}
 	}
 
 	sim->nAlleles = 0;
 	for (int a = 0; a < 4; ++a)
 	{
-		if (-1 == sim->alleles2acgt[a])
+		if (-1 == sim->alleles2acgt[a]){
 			continue;
+		}
 
 		kputc("ACGT"[sim->alleles2acgt[a]], &sim -> alleles);
 		sim->nAlleles++;
@@ -257,6 +290,8 @@ int simulate_record_values(simRecord *sim)
 		}
 	}
 
+	int nObserved = sim->nAlleles - nUnobservedBases;
+
 
 	// useUnknownAllele
 	// trimAlts
@@ -265,7 +300,14 @@ int simulate_record_values(simRecord *sim)
 	// at a site
 	// if nAlleles == 0
 	// 		observed nothing at all, all individuals are missing
-	// 		return -999; // always skip
+	// 		if rmInvarSites == 1
+	// 			return -1; //skip site
+	// 		else
+	// 			if trimAlts == 1
+	// 				never; trimAlts 1 cannot be used with rmInvarSites 1 
+	// 			else
+	// 				set all requested tags to missing
+	// 				set alleles to REF:A ALT:C,G,T; no need to sort and update gts
 	//
 	// if nAlleles == 1
 	// 		observed only one allele at site
@@ -286,28 +328,28 @@ int simulate_record_values(simRecord *sim)
 	//			else (useUnknownAllele==0)
 	//				populate non-ref bases ({A,C,G,T} - {REF}, e.g. {C,G,T} for REF=A)
 	//				set nAlleles=4
-	if (0 == sim->nAlleles)
+
+	if (0 == nObserved)
 	{
-		VWARN("No alleles were observed at site %ld.", rec->pos + 1);
-		return (-999);
+		NEVER;
 	}
-	else if (1 == sim->nAlleles)
+	else if (1 == nObserved)
 	{
 		VWARN("Observed only one allele at site %ld.", rec->pos + 1);
 		if (1 == args->rmInvarSites)
 		{
 			return (-1);
 		}
+		if ( 1 == args->trimAlts){
+			// REF=ALLELE, ALT=<*>
+			// NEVER; //TODO fornow
+		}
 	}
-	else if (0 > sim->nAlleles)
-	{
-		NEVER;
-	}
+
+
 	sim->nGenotypes = nAlleles_to_nGenotypes(sim->nAlleles);
 
 	int has_unobserved = 0;
-
-
 
 
 	// TODO if nGenotypes == 1, only one allele was observed, then set the alt to <*> and set nGenotypes to 2
@@ -316,7 +358,6 @@ int simulate_record_values(simRecord *sim)
 
 		if(1==args->useUnknownAllele){
 
-			NEVER;
 			// set ALT to <*> (unobserved)
 
 			kputc(',', &sim->alleles);
@@ -328,6 +369,7 @@ int simulate_record_values(simRecord *sim)
 			sim->nGenotypes = nAlleles_to_nGenotypes(sim->nAlleles);
 
 		}else{
+			NEVER;
 
 		}
 
@@ -348,16 +390,17 @@ int simulate_record_values(simRecord *sim)
 	// 		FMT_AD
 	//		FMT_ADF
 	//		FMT_ADR
-	sOffset = 0;
-	for (int s = 0; s < nSamples; ++s)
+	// if (args->addFormatAD || args->addFormatADF || args->addFormatADR)//TODO
+	if (args->addFormatAD)
 	{
-		sOffset = s * sim->nAlleles;
-		for (int a = 0; a < sim->nAlleles; ++a)
+		sOffset = 0;
+		for (int s = 0; s < nSamples; ++s)
 		{
-			int b = sim->alleles2acgt[a];
-
-			if (1 == args->addFormatAD)
+			sOffset = s * sim->nAlleles;
+			for (int a = 0; a < sim->nAlleles; ++a)
 			{
+				int b = sim->alleles2acgt[a];
+
 				if (-1 == b)
 				{
 					continue;
@@ -371,11 +414,12 @@ int simulate_record_values(simRecord *sim)
 	// 		INFO_AD
 	//		INFO_ADF
 	//		INFO_ADR
-	for (int a = 0; a < sim->nAlleles; ++a)
+	// if (args->addInfoAD||args->addInfoADF||args->addInfoADR)//TODO
+	if (args->addInfoAD)
 	{
-		int b = sim->alleles2acgt[a];
-		if (1 == args->addInfoAD)
+		for (int a = 0; a < sim->nAlleles; ++a)
 		{
+			int b = sim->alleles2acgt[a];
 			if (-1 == b)
 			{
 				continue;
@@ -391,7 +435,7 @@ int simulate_record_values(simRecord *sim)
 	//		PL
 	for (int s = 0; s < nSamples; ++s)
 	{
-		double *sample_gls = gls + s * MAX_NGTS;
+		double *sample_gls = sim->gl_vals + s * MAX_NGTS;
 
 		sOffset = s * nGenotypes;
 		// nGenotypes ==
@@ -597,8 +641,6 @@ int simulate_record_values(simRecord *sim)
 	return (0);
 }
 
-// TODO check if i still work
-// and add testcase forme
 int simulate_record_true_values(simRecord *sim)
 {
 
@@ -696,6 +738,10 @@ int main(int argc, char **argv)
 
 	FILE *arg_ff = openFILE(args->out_fnp, ".arg");
 	ASSERT(NULL != arg_ff);
+	
+	// fprintf(stderr, "vcfgl [version: %s] [build: %s %s] [htslib: %s]\n", VCFGL_VERSION, __DATE__, __TIME__, hts_version());
+	// fprintf(arg_ff, "vcfgl [version: %s] [build: %s %s] [htslib: %s]\n", VCFGL_VERSION, __DATE__, __TIME__, hts_version());
+
 
 	fprintf(stderr, "\n%s", args->command);
 	fprintf(arg_ff, "\n%s", args->command);
@@ -711,15 +757,15 @@ int main(int argc, char **argv)
 	htsFile* out_ff = hts_open(args->out_fn, args->output_mode_str);
 
 	// create multithreaded pool
-	// htsThreadPool tpool = {NULL, 0};
-	// if (args->n_threads > 1) {
-	// 	tpool.pool = hts_tpool_init(args->n_threads);
-	// 	ASSERT(NULL != tpool.pool);
-	// 	// add input stream to the pool
-	// 	// hts_set_opt(in_ff, HTS_OPT_THREAD_POOL, &tpool);
-	// 	// add output stream to the pool
-	// 	hts_set_opt(out_ff, HTS_OPT_THREAD_POOL, &tpool);
-	// }
+	htsThreadPool tpool = {NULL, 0};
+	if (args->n_threads > 1) {
+		tpool.pool = hts_tpool_init(args->n_threads);
+		ASSERT(NULL != tpool.pool);
+		// add input stream to the pool
+		hts_set_opt(in_ff, HTS_OPT_THREAD_POOL, &tpool);
+		// add output stream to the pool
+		hts_set_opt(out_ff, HTS_OPT_THREAD_POOL, &tpool);
+	}
 
 	ASSERT(bcf_hdr_write(out_ff, sim->hdr) == 0);
 
@@ -734,6 +780,7 @@ int main(int argc, char **argv)
 	// /BEGIN/ main sites loop ---------------------------------------------
 
 
+	//TODO HERE
 	if (-999 == args->mps_depth)
 	{
 
@@ -760,6 +807,8 @@ int main(int argc, char **argv)
 		get_strand=&set_strand_to_forward;
 	}
 
+	int ret; // return value
+
 	if (0 == args->explode)
 	{
 
@@ -768,43 +817,24 @@ int main(int argc, char **argv)
 
 			sim->rec = bcf_copy(sim->rec, in_rec);
 
-			int ret = simulate_record(sim);
+			ret = simulate_record(sim);
 			sim->rec->pos += pos0;
-			if (-999 == ret)
+
+			if (ret < 0)
 			{
-				// no alleles were observed at site
 				nSitesSkipped++;
 				continue;
 			}
-			else if (-1 == ret)
-			{
-				// observed only 1 allele at site
-				if (1 == args->rmInvarSites)
-				{
-					nSitesSkipped++;
-					continue;
-				}
-			}
-			else
-			{
 
-				ASSERT(0 == bcf_write(out_ff, sim->hdr, sim->rec));
-			}
+			ASSERT(0 == bcf_write(out_ff, sim->hdr, sim->rec));
 			nSites++;
 		}
-		// TODO
-		//  if explode mode off, we do not know how many records we need to simulate, but max is contig size
 
-		// EXPLODE -------------------------------------------------------------
-		// simulate by enumerating the invariable sites that are not present in the input vcf
 	}
-
-	// TODO use function factory for explode too? instead of arg check copy paste
-
-	if (1 == args->explode)
+	else if (1 == args->explode)
 	{
-
-		// TODO if explode mode on, we know exactly how many records we need to simulate (contig size)
+		// EXPLODE 1 -------------------------------------------------------- //
+		// simulate by enumerating the invariable sites that are not present in the input vcf
 
 		// read the first record
 		ASSERT(0 == bcf_read(in_ff, in_hdr, in_rec));
@@ -833,7 +863,6 @@ int main(int argc, char **argv)
 			{ // this block should run for every site with missing/nodata
 				if (nSites == in_rec->pos + pos0)
 				{
-					// fprintf(stderr,"now breaking\n");
 					break;
 				}
 
@@ -842,56 +871,31 @@ int main(int argc, char **argv)
 
 				sim->rec = bcf_copy(sim->rec, blank_rec);
 
-				int ret = simulate_record(sim);
-				if (-999 == ret)
+				ret = simulate_record(sim);
+				if (ret < 0)
 				{
-					// no alleles were observed at site
 					nSitesSkipped++;
+					//TODO 
+					// nSites++;
+				// DEVPRINT("nsites %d",nSites);
+						// DEVPRINT("pos %d",in_rec->pos + pos0);
 					continue;
 				}
-				else if (-1 == ret)
-				{
-					// observed only 1 allele at site
-					if (1 == args->rmInvarSites)
-					{
-						nSitesSkipped++;
-						continue;
-					}
-				}
-				else
-				{
 
-					ASSERT(0 == bcf_write(out_ff, sim->hdr, sim->rec));
-				}
+				ASSERT(0 == bcf_write(out_ff, sim->hdr, sim->rec));
 				nSites++;
 			}
 
-			sim->rec = bcf_copy(sim->rec, in_rec);
-			// ASSERT(0 == simulate_record(sim));
-			int ret = simulate_record(sim);
-
-			sim->rec->pos += pos0;
-			if (-999 == ret)
-			{
-				// no alleles were observed at site
-				nSitesSkipped++;
-				continue;
-			}
-			else if (-1 == ret)
-			{
-				// observed only 1 allele at site
-				if (1 == args->rmInvarSites)
+				sim->rec = bcf_copy(sim->rec, in_rec);
+				ret = simulate_record(sim);
+				sim->rec->pos += pos0;
+				if (ret < 0)
 				{
 					nSitesSkipped++;
 					continue;
 				}
-			}
-			else
-			{
 				ASSERT(0 == bcf_write(out_ff, sim->hdr, sim->rec));
-			}
-
-			nSites++;
+				nSites++;
 
 		} while (bcf_read(in_ff, in_hdr, in_rec) == 0);
 
@@ -903,28 +907,15 @@ int main(int argc, char **argv)
 			blank_rec->pos = nSites;
 			ASSERT(0 == (bcf_update_genotypes(in_hdr, blank_rec, tmp_gt_arr, sim->nHaplotypes)));
 			sim->rec = bcf_copy(sim->rec, blank_rec);
-			// ASSERT(0 == simulate_record(sim));
-			int ret = simulate_record(sim);
-			if (-999 == ret)
+			ret = simulate_record(sim);
+
+			if (ret < 0)
 			{
-				// no alleles were observed at site
 				nSitesSkipped++;
 				continue;
 			}
-			else if (-1 == ret)
-			{
-				// observed only 1 allele at site
-				if (1 == args->rmInvarSites)
-				{
-					nSitesSkipped++;
-					continue;
-				}
-			}
-			else
-			{
 
-				ASSERT(0 == bcf_write(out_ff, sim->hdr, sim->rec));
-			}
+			ASSERT(0 == bcf_write(out_ff, sim->hdr, sim->rec));
 			nSites++;
 		}
 
@@ -944,9 +935,9 @@ int main(int argc, char **argv)
 	ASSERT(0 == hts_close(in_ff));
 	ASSERT(0 == hts_close(out_ff));
 
-	// if(NULL!=tpool.pool){
-	// 	hts_tpool_destroy(tpool.pool);
-	// }
+	if(NULL!=tpool.pool){
+		hts_tpool_destroy(tpool.pool);
+	}
 	
 
 	ASSERT(0 == fclose(arg_ff));
