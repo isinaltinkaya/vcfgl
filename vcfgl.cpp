@@ -163,10 +163,6 @@ int simulate_record_values(simRecord *sim)
 					}
 
 				}
-				gl_log10(r_base, r_error_prob, sample_gls);
-
-				acgt_fmt_ad_arr[(4 * sample_i) + r_base]++;
-
 				if (qScore > CAP_BASEQ)
 				{
 					qScore = CAP_BASEQ;
@@ -174,27 +170,44 @@ int simulate_record_values(simRecord *sim)
 
 				if (1 == args->platform)
 				{
-					// TODO use alias for this too
-					// map error probability to 4 possible base quality values: 2, 12, 23, 37
-					// and function factory
+
+					// [R]
+					// qToP<-function(q){10^(-q/10)}
+					// 
+					// > qToP(2)
+					// [1] 0.6309573
+					// > qToP(12)
+					// [1] 0.06309573
+					// > qToP(23)
+					// [1] 0.005011872
+					// > qToP(37)
+					// [1] 0.0001995262
 
 					if (qScore <= 2)
 					{
 						qScore = 2;
+						r_error_prob=0.6309573;
 					}
 					else if (qScore <= 14)
 					{
 						qScore = 12;
+						r_error_prob=0.06309573;
 					}
 					else if (qScore <= 30)
 					{
 						qScore = 23;
+						r_error_prob=0.005011872;
 					}
 					else
 					{
 						qScore = 37;
+						r_error_prob=0.0001995262;
 					}
+
 				}
+
+
+				acgt_fmt_ad_arr[(4 * sample_i) + r_base]++;
 
 				which_strand=get_strand();
 
@@ -207,15 +220,21 @@ int simulate_record_values(simRecord *sim)
 
 				// fprintf(stdout,"sampled base %d (%c) at site %ld for individual %d with qscore %d\n",r_base,"ACGTN"[r_base],rec->pos+1,sample_i,qScore);
 
+				// ind,site,read,base,error_prob,qscore
+				if(sample_i==0){
+					fprintf(stdout,"%d,%ld,%d,%c,%f,%d\n",sample_i,rec->pos+1,i,"ACGTN"[r_base],r_error_prob,qScore);
+				}
+
 				sim->acgt_sum_qs[r_base] += qScore;
 				sim->acgt_sum_qs_sq[r_base] += qs_to_qs2(qScore);
-
 
 				tail_dist = sample_tail_distance();
 				sim->acgt_sum_taildist[r_base] += tail_dist;
 				sim->acgt_sum_taildist_sq[r_base] += (tail_dist * tail_dist);
 
 				samples_acgt_qs[r_base][sample_i] += qScore;
+
+				gl_log10(r_base, r_error_prob, sample_gls);
 			}
 
 			sim->fmt_dp_arr[sample_i] = n_sim_reads;
@@ -345,7 +364,6 @@ int simulate_record_values(simRecord *sim)
 			// NEVER; //TODO fornow
 		}
 	}
-
 
 	sim->nGenotypes = nAlleles_to_nGenotypes(sim->nAlleles);
 

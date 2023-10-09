@@ -470,16 +470,19 @@ argStruct *args_get(int argc, char **argv)
 			ERROR("--error-qs %d requires --error-rate to be set. Please set --error-rate and rerun.", args->error_qs);
 		}
 
-		if (0<= args->beta_variance)
+		if (args->beta_variance < 0)
 		{
 			ERROR("--error-qs %d requires --beta-variance to be set to a positive value. Please set --beta-variance and rerun.", args->error_qs);
-		}
+		}else if(0==args->beta_variance){
+			WARN("--error-qs %d, but --beta-variance is set to 0. This is equivalent to --error-qs 0. Setting --error-qs to 0.", args->error_qs);
+			args->error_qs=0;
+		}else{
 
-		if (1 == args->error_qs)
-		{
 			args->betaSampler = new BetaSampler(args->error_rate, args->beta_variance, args->seed);
 		}
+
 	}
+
 
 	if ((0 != args->beta_variance)&&(0==args->error_qs)){
 			ERROR("--beta-variance %d requires --error-qs 1.", args->error_qs);
