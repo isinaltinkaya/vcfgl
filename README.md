@@ -44,50 +44,50 @@ Options:
 	-@/--threads		Number of threads (default:1)
 
     ->	Input/Output
-	-i/--input			Input file (required)
-	-o/--output			Output file prefix (default:output)
+	-i/--input		Input file (required)
+	-o/--output		Output file prefix (default:output)
 	-O/--output-mode	Output mode (default:b)
-						v	VCF file
-						b	BCF file
-						z	Compressed VCF file (vcf.gz)
-						u	Uncompressed BCF file
+				v	VCF file
+				b	BCF file
+				z	Compressed VCF file (vcf.gz)
+				u	Uncompressed BCF file
 
     ->	Simulation parameters
-	-d/--depth			Mean per-site read depth
-						Use `--depth inf` to set the simulated values to known true variables
+	-d/--depth		Mean per-site read depth
+				Use `--depth inf` to set the simulated values to known true variables
 	-df/--depths-file	File containing mean per-site read depth for each sample (conflicts with -d)
 	-e/--error-rate		Error rate
-	--error-qs			Simulate errors in quality scores (default:0=disabled)
-						1	Simulate errors in quality scores by simulating the errors in the
-							probability of wrong base calls not accounted in the reported quality 
-							scores and genotype likelihoods. 
-						2	Simulate errors in quality scores by simulating the errors in the 
-							reported quality scores and genotype likelihoods. 
+	--error-qs		Simulate errors in quality scores (default:0=disabled)
+				1	Simulate errors in quality scores by simulating the errors in the
+					probability of wrong base calls not accounted in the reported quality 
+					scores and genotype likelihoods. 
+				2	Simulate errors in quality scores by simulating the errors in the 
+					reported quality scores and genotype likelihoods. 
 	--beta-variance		Variance of the beta distribution (default:disabled)
-	--precise-gl		Should the program use the precise error rates in the 
-						genotype likelihood calculation? (default:1=enabled)
-						1	Use precise error rates in the genotype likelihood calculation.
-						0	Use the error rates calculated from the discretised phred scaled 
-							quality scores in the genotype likelihood calculation.
-	--pos0				Are the input coordinates are 0-based? (default:0=no)
-						If input cordinates are 0 based, use --pos0 1 to shift positions by +1
-	--seed				Random seed used to initialize the random number generator
-	--platform			Simulate base qualities for a specific sequencing platform (default:0=disabled)
-						1	NovaSeq 6000. The qualities are binned into four possible quality values: 2, 12, 23 and 37.
-	-explode			Also simulate sites that were not observed in the input file (default:0=disabled)
+	--precise-gl		Should the program use the precise error rates in the  genotype likelihood
+				 calculation? (default:1=enabled)
+				1	Use precise error rates in the genotype likelihood calculation.
+				0	Use the error rates calculated from the discretised phred scaled 
+					quality scores in the genotype likelihood calculation.
+	--pos0			Are the input coordinates are 0-based? (default:0=no)
+				If input cordinates are 0 based, use --pos0 1 to shift positions by +1
+	--seed			Random seed used to initialize the random number generator
+	--platform		Simulate base qualities for a specific sequencing platform (default:0=disabled)
+				1	NovaSeq 6000. The qualities are binned into four possible quality values: 2, 12, 23 and 37.
+	-explode		Also simulate sites that were not observed in the input file (default:0=disabled)
 
 
 Commands:
     ->	Specify which fields to simulate
-	-addGL				Add GL field (default:1=enabled)
-	-addGP				Add GP field (default:0=disabled)
-	-addPL				Add PL field (default:0=disabled)
-	-addI16				Add I16 field (default:0=disabled)
-	-addQS				Add QS field (default:0=disabled)
+	-addGL			Add GL field (default:1=enabled)
+	-addGP			Add GP field (default:0=disabled)
+	-addPL			Add PL field (default:0=disabled)
+	-addI1			Add I16 field (default:0=disabled)
+	-addQS			Add QS field (default:0=disabled)
 	-addFormatDP		Add FORMAT/DP field (default:1=enabled)
 	-addFormatAD		Add FORMAT/AD field (default:0=disabled)
-	-addInfoDP			Add INFO/DP field (default:0=disabled)
-	-addInfoAD			Add INFO/AD field (default:0=disabled)
+	-addInfoDP		Add INFO/DP field (default:0=disabled)
+	-addInfoAD		Add INFO/AD field (default:0=disabled)
 
 ```
 
