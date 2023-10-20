@@ -59,7 +59,7 @@ endif
 	$(MAKE) -C $(HTSSRC)
 
 
-VERSION = v0.3.2
+VERSION = v0.3.3
 
 
 ifneq "$(wildcard .git)" ""
