@@ -86,6 +86,7 @@ struct argStruct {
 
     char* datetime;
     char* command;
+    char* versionInfo;
 
     BetaSampler* betaSampler = NULL;
 

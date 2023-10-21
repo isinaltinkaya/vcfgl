@@ -156,17 +156,17 @@ argStruct* args_init() {
     args->mps_depths_fn = NULL;
 
     // parameters
-    args->mps_depth = -1.0;
+    args->mps_depth = ARGS_DEPTH_ISUNDEF;
     args->error_rate = -1.0;
     args->error_qs = 0;
     args->beta_variance = -1.0;
 
     args->usePreciseGlError = 1;
     args->pos0 = 0;
-    args->trimAlts = 0;
-    args->useUnknownAllele = 0;
+    args->trimAlts = 0; //TODO
+    args->useUnknownAllele = 0; //TODO
     args->platform = 0;
-    args->rmInvarSites = 0;
+    args->rmInvarSites = 0; //TODO
 
     // vcf tags to add
     args->addGL = 1;
@@ -174,7 +174,7 @@ argStruct* args_init() {
     args->addPL = 0;
     args->addI16 = 0;
     args->addQS = 0;
-    args->addFormatDP = 1;
+    args->addFormatDP = 0;
     args->addInfoDP = 0;
     args->addFormatAD = 0;
     args->addFormatADF = 0;  // TODO
@@ -195,6 +195,8 @@ argStruct* args_init() {
 
     args->datetime = NULL;
     args->command = NULL;
+    args->versionInfo = NULL;
+
 
     args->base_pick_error_prob = -1.0;
     args->error_prob_forQs = -1.0;
@@ -281,7 +283,7 @@ argStruct* args_get(int argc, char** argv) {
                         continue;
                     is_number = false;
                     if (strcasecmp("inf", tmp + i) == 0) {
-                        args->mps_depth = -999.0;
+                        args->mps_depth = ARGS_DEPTH_ISINF;
                     }
                 }
             }
@@ -289,14 +291,14 @@ argStruct* args_get(int argc, char** argv) {
             tmp = NULL;
             if (is_number) {
                 args->mps_depth = atof(val);
-            } else if (-999.0 != args->mps_depth) {
-                ERROR("--depth is set to unknown value %s", val);
+            } else if ( ARGS_DEPTH_ISINF != args->mps_depth) {
+				NEVER;
             }
         }
 
         else if ((strcmp("-df", arv) == 0) || (strcmp("--depths-file", arv) == 0)) {
             args->mps_depths_fn = strdup(val);
-            // args->mps_depth = -1.0;// already -1.0 in init
+			args->mps_depth = ARGS_DEPTH_ISFILE;
         }
 
         else if (strcasecmp("--pos0", arv) == 0)
@@ -354,6 +356,19 @@ argStruct* args_get(int argc, char** argv) {
         ++argv;
     }
 
+    if (NULL == args->out_fnp) {
+        args->out_fnp = strdup("output");
+    }
+
+    args->arg_ff = openFILE(args->out_fnp, ".arg");
+
+	ASSERT(asprintf(&args->versionInfo,"vcfgl [version: %s] [build: %s %s] [htslib: %s]\n",VCFGL_VERSION, __DATE__, __TIME__, hts_version()));
+	fprintf(stderr,args->versionInfo);
+	fprintf(args->arg_ff,args->versionInfo);
+
+	// ---------------------------------------------------------------------- //
+	// validate args 
+
     if (args->rmInvarSites) {
         // TODO
         //
@@ -402,14 +417,9 @@ argStruct* args_get(int argc, char** argv) {
         args->output_mode = strdup("b");
     }
 
-    if (NULL == args->out_fnp) {
-        args->out_fnp = strdup("output");
-    }
-
     args->datetime = strdup(get_time());
 
-    // -depth inf
-    if (-999.0 == args->mps_depth) {
+    if (ARGS_DEPTH_ISINF == args->mps_depth) {
         if (args->addFormatDP) {
             ERROR(
                 "(-addFormatDP 1) FORMAT/DP tag cannot be added when --depth "
@@ -471,20 +481,15 @@ argStruct* args_get(int argc, char** argv) {
                 "rerun.",
                 args->error_rate);
         }
-    } else if (0.0 == args->mps_depth) {
-        ERROR("Depth cannot be 0. Please set --depth to a positive value and rerun.");
-    }
 
+    } else if (ARGS_DEPTH_ISUNDEF == args->mps_depth){
+		ERROR("Average per-site read depth value is required. Please set it using --depth or --depths-file and re-run.");
+    } else if (ARGS_DEPTH_ISFILE == args->mps_depth){
+		//
+    } else if (0.0 >= args->mps_depth) {
+        ERROR("Depth cannot be %f. Please set --depth to a positive value and rerun.",args->mps_depth);
+	}
 
-    args->arg_ff = openFILE(args->out_fnp, ".arg");
-
-    fprintf(stderr, "vcfgl [version: %s] [build: %s %s] [htslib: %s]\n",
-        VCFGL_VERSION, __DATE__, __TIME__, hts_version());
-    fprintf(args->arg_ff, "vcfgl [version: %s] [build: %s %s] [htslib: %s]\n",
-        VCFGL_VERSION, __DATE__, __TIME__, hts_version());
-
-    fprintf(stderr, "\n%s", args->command);
-    fprintf(args->arg_ff, "\n%s", args->command);
 
 
     if (1 == args->pos0) {
@@ -512,11 +517,11 @@ argStruct* args_get(int argc, char** argv) {
     if (args->error_rate < 0.0) {
         ERROR("Error rate (--error-rate) should be set to a positive value. Please set --error-rate and rerun.");
     } else if (args->error_rate == 0.0) {
-        // NEVER;//TODO
+		WARN("Error rate (--error-rate) is set to 0.0. This is not well tested, please use with caution and report any issues.");
     }
 
     if ((args->beta_variance >= 0) && (0 == args->error_qs)) {
-        ERROR("--beta-variance %e requires --error-qs 1.", args->beta_variance);
+        ERROR("--beta-variance %e requires --error-qs 1 or 2.", args->beta_variance);
     }
 
     if (1 == args->error_qs || 2 == args->error_qs) {
@@ -526,20 +531,29 @@ argStruct* args_get(int argc, char** argv) {
         args->betaSampler = new BetaSampler(args->error_rate, args->beta_variance, args->seed);
     }
 
-    char depth_val[100];
-    if (-999.0 == args->mps_depth) {
-        sprintf(depth_val, "%s", "inf");
-    } else if (-1.0 == args->mps_depth) {
-        // depths file is defined instead of mps_depth
-        sprintf(depth_val, "%s", "depths_file");
+
+    char depth_val[1024];
+    if (ARGS_DEPTH_ISINF == args->mps_depth) {
+        sprintf(depth_val, "--depth %s", "inf");
+    } else if (ARGS_DEPTH_ISFILE == args->mps_depth) {
+		ASSERT(NULL!=args->mps_depths_fn);
+        sprintf(depth_val, "--depths-file %s", args->mps_depths_fn);
     } else {
-        sprintf(depth_val, "%f", args->mps_depth);
+        sprintf(depth_val, "--depth %f", args->mps_depth);
     }
+
+	// ---------------------------------------------------------------------- //
+	// all args checks are finished
 
     ASSERT(asprintf(
         &args->command,
-        "vcfgl --verbose %d --threads %d --input %s --output %s --output-mode %s --depth %s --depths-file %s --error-rate %f --error-qs %d --beta-variance %e --precise-gl %d --pos0 %d --seed %d --trim-alt-alleles %d --rm-invar-sites %d --use-unknown-allele %d --platform %d -explode %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d  -addFormatDP %d -addFormatAD %d -addFormatADF %d -addFormatADR %d -addInfoDP %d -addInfoAD %d -addInfoADF %d -addInfoADR %d",
-        args->verbose, args->n_threads, args->in_fn, args->out_fnp, args->output_mode, depth_val, args->mps_depths_fn, args->error_rate, args->error_qs, args->beta_variance, args->usePreciseGlError, args->pos0, args->seed, args->trimAlts, args->rmInvarSites, args->useUnknownAllele, args->platform, args->explode, args->addGL, args->addGP, args->addPL, args->addI16, args->addQS, args->addFormatDP, args->addFormatAD, args->addFormatADF, args->addFormatADR, args->addInfoDP, args->addInfoAD, args->addInfoADF, args->addInfoADR) > 0);
+        "vcfgl --verbose %d --threads %d --input %s --output %s --output-mode %s %s --error-rate %f --error-qs %d --beta-variance %e --precise-gl %d --pos0 %d --seed %d --trim-alt-alleles %d --rm-invar-sites %d --use-unknown-allele %d --platform %d -explode %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d  -addFormatDP %d -addFormatAD %d -addFormatADF %d -addFormatADR %d -addInfoDP %d -addInfoAD %d -addInfoADF %d -addInfoADR %d",
+        args->verbose, args->n_threads, args->in_fn, args->out_fnp, args->output_mode, depth_val, args->error_rate, args->error_qs, args->beta_variance, args->usePreciseGlError, args->pos0, args->seed, args->trimAlts, args->rmInvarSites, args->useUnknownAllele, args->platform, args->explode, args->addGL, args->addGP, args->addPL, args->addI16, args->addQS, args->addFormatDP, args->addFormatAD, args->addFormatADF, args->addFormatADR, args->addInfoDP, args->addInfoAD, args->addInfoADF, args->addInfoADR) > 0);
+
+
+	ASSERT(NULL!=args->command);
+    fprintf(stderr, "\n%s", args->command);
+    fprintf(args->arg_ff, "\n%s", args->command);
 
     args->out_fn = NULL;
     args->output_mode_str = NULL;
@@ -612,6 +626,9 @@ void args_destroy(argStruct* args) {
 
     free(args->command);
     args->command = NULL;
+
+    free(args->versionInfo);
+    args->versionInfo = NULL;
 
     if (NULL != args->mps_depths_fn) {
         free(args->mps_depths_fn);

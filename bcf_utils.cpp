@@ -536,12 +536,18 @@ void simRecord::set_hdr(bcf_hdr_t* in_hdr) {
     free(SOURCE_TAG);
     SOURCE_TAG = NULL;
 
+	ASSERT(NULL!=args->versionInfo);
     char* SOURCE_VERSION_TAG;
-    ASSERT(asprintf(&SOURCE_VERSION_TAG, "##source=vcfgl version: %s",
-                    VCFGL_VERSION) > 0);
+    ASSERT(asprintf(&SOURCE_VERSION_TAG, "##sourceVersion=%s",args->versionInfo) > 0);
     ASSERT(0 == bcf_hdr_append(this->hdr, SOURCE_VERSION_TAG));
-    free(SOURCE_VERSION_TAG);
-    SOURCE_VERSION_TAG = NULL;
+	free(SOURCE_VERSION_TAG);
+	SOURCE_VERSION_TAG = NULL;
+
+	if(ARGS_NONREF_NOTATION_NON_REF == args->useUnknownAllele){
+
+		ASSERT(0== bcf_hdr_append(this->hdr,"##ALT=<ID=NON_REF,Description=\"Represents any possible alternative allele at this location\">"));
+	}
+
 
     if (args->addFormatDP) {
         ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[FMT_DP].hdr));
@@ -569,6 +575,8 @@ void simRecord::set_hdr(bcf_hdr_t* in_hdr) {
 
     if (args->addI16) {
         ASSERT(0 == bcf_hdr_append(this->hdr, bcf_tags[I16].hdr));
+    // ASSERT(asprintf(&SOURCE_VERSION_TAG, "##[vcfgl] %s") > 0);
+    ASSERT(0 == bcf_hdr_append(this->hdr, SOURCE_VERSION_TAG));
     }
 
     if (args->addFormatAD) {

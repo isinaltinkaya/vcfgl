@@ -13,6 +13,19 @@
 
 const double NEG_INF = -std::numeric_limits<double>::infinity();
 
+#define ARGS_DEPTH_ISUNDEF -1.0
+#define ARGS_DEPTH_ISFILE -2.0
+#define ARGS_DEPTH_ISINF -3.0
+
+// args->useUnknownAllele
+// notations for representing non-reference unobserved alleles
+// 	ARGS_NONREF_NOTATION_STAR		<*> symbolic alternate allele (used in bcftools)
+// 	ARGS_NONREF_NOTATION_NON_REF	<NON_REF> gVCF NON_REF notation (used in GATK)
+#define ARGS_NONREF_NOTATION_EXPLODE_ACGT 0
+#define ARGS_NONREF_NOTATION_STAR 1
+#define ARGS_NONREF_NOTATION_NON_REF 2
+
+
 // precalculated value for log10(3)
 #define PRE_CALC_LOG10_3 0.47712125471966244
 

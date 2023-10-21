@@ -242,9 +242,9 @@ int simulate_record_values(simRecord* sim) {
 
                 samples_acgt_qs[r_base][sample_i] += args->qScore;
 
-                // if (sample_i == 0) {
-                //     fprintf(stdout, "%d,%ld,%d,%c,%f,%d,%f\n", sample_i, rec->pos + 1, i, "ACGTN"[r_base], args->error_prob_forQs, args->qScore, args->error_prob_forGl);
-                // }
+				// if (sample_i == 0) {
+					// fprintf(stdout, "%d,%ld,%d,%c,%f,%d,%f\n", sample_i, rec->pos + 1, i, "ACGTN"[r_base], args->error_prob_forQs, args->qScore, args->error_prob_forGl);
+				// }
 
 
                 // fprintf(stdout,
@@ -253,8 +253,6 @@ int simulate_record_values(simRecord* sim) {
                 //     r_base, "ACGTN"[r_base], rec->pos + 1, sample_i,
                 //     args->qScore);
 
-                // ind,site,read,base,error_prob_qs,error_prob_gl,qscore
-                // fprintf(stdout,"%d,%ld,%d,%c,%f,%f,%d\n",sample_i,rec->pos+1,i,"ACGTN"[r_base],args->error_prob_forQs,args->error_prob_forGl,qScore);
 
 
             } // read loop
@@ -287,6 +285,7 @@ int simulate_record_values(simRecord* sim) {
         return (0);
     }
 
+
     int acgt_info_ad_arr[4] = { 0 };
     sOffset = 0;
     for (int s = 0; s < nSamples; ++s) {
@@ -301,11 +300,12 @@ int simulate_record_values(simRecord* sim) {
     int nUnobservedBases = 0;
     for (int b = 0; b < 4; ++b) {
         if (0 == acgt_info_ad_arr[b]) {
-            if (1 == args->trimAlts) {
-                int tmpa = sim->acgt2alleles[b];
-                sim->acgt2alleles[b] = -1;
-                sim->alleles2acgt[tmpa] = -1;
-            }
+			//TODO
+			if (1 == args->trimAlts) {
+				int tmpa = sim->acgt2alleles[b];
+				sim->acgt2alleles[b] = -1;
+				sim->alleles2acgt[tmpa] = -1;
+			}
             nUnobservedBases++;
         }
     }
@@ -316,6 +316,10 @@ int simulate_record_values(simRecord* sim) {
             continue;
         }
 
+		if (0!=args->useUnknownAllele){
+			continue;
+		}
+
         kputc("ACGT"[sim->alleles2acgt[a]], &sim->alleles);
         sim->nAlleles++;
         if (a != 3 && -1 != sim->alleles2acgt[a + 1]) {
@@ -323,79 +327,60 @@ int simulate_record_values(simRecord* sim) {
         }
     }
 
-    int nObserved = sim->nAlleles - nUnobservedBases;
+    int nObserved = 0;
+	if (0==args->useUnknownAllele){
+		nObserved = sim->nAlleles - nUnobservedBases;
+	}else{
+		nObserved = 4 - nUnobservedBases;
+	}
 
-    // useUnknownAllele
-    // trimAlts
-    // rmInvarSites
-    //
-    // at a site
-    // if nAlleles == 0
-    // 		observed nothing at all, all individuals are missing
-    // 		if rmInvarSites == 1
-    // 			return -1; //skip site
-    // 		else
-    // 			if trimAlts == 1
-    // 				never; trimAlts 1 cannot be used with
-    // rmInvarSites 1 			else 				set all
-    // requested tags to missing 				set alleles to
-    // REF:A ALT:C,G,T; no need to sort and update gts
-    //
-    // if nAlleles == 1
-    // 		observed only one allele at site
-    //
-    //			if rmInvarSites == 1
-    // 				return -1; // skip site
-    //			else (rmInvarSites==0)
-    ////				if trimAlts == 1
-    ////					trim out the unobserved alleles
-    ////					if useUnknownAllele == 1
-    ////						trimAlts 1 cannot be
-    /// used with useUnknownAllele 1 /
-    /// NEVER;
-    // disable trimalts altogether
-    ////				else (trimAlts==0)
-    //			if useUnknownAllele == 1
-    //				set ALT to <*> (unobserved)
-    //				set nAlleles=2
-    //			else (useUnknownAllele==0)
-    //				populate non-ref bases ({A,C,G,T} - {REF}, e.g.
-    //{C,G,T} for REF=A) 				set nAlleles=4
 
     if (0 == nObserved) {
-        NEVER;
-    } else if (1 == nObserved) {
-        VWARN("Observed only one allele at site %ld.", rec->pos + 1);
+		// case already skipped based on dp; should never be here
+		NEVER;
+	}else if (1 == nObserved) {
+        // VWARN("Observed only one allele at site %ld.", rec->pos + 1);
         if (1 == args->rmInvarSites) {
-            return (-1);
+			// no matter what the useUnknownAllele value is
+            return (-2);
         }
         if (1 == args->trimAlts) {
-            // REF=ALLELE, ALT=<*>
-            // NEVER; //TODO fornow
+			NEVER; //TODO fornow
         }
     }
+	if(args->useUnknownAllele!=0){
+
+		sim->nAlleles=nObserved;
+	}
+
 
     sim->nGenotypes = nAlleles_to_nGenotypes(sim->nAlleles);
 
     int has_unobserved = 0;
 
-    // TODO if nGenotypes == 1, only one allele was observed, then set the alt
-    // to <*> and set nGenotypes to 2
-    if (1 == sim->nGenotypes) {
-        if (1 == args->useUnknownAllele) {
-            // set ALT to <*> (unobserved)
+	if (1 == args->useUnknownAllele) {
+	// set ALT to ALTS+<*> (unobserved)
 
-            kputc(',', &sim->alleles);
-            kputs("<*>", &sim->alleles);
-            sim->nAlleles++;
+		kputc(',', &sim->alleles);
+		kputs("<*>", &sim->alleles);
+		sim->nAlleles++;
 
-            has_unobserved = 1;
+		has_unobserved = 1;
 
-            sim->nGenotypes = nAlleles_to_nGenotypes(sim->nAlleles);
-        } else {
-            NEVER;
-        }
-    }
+		sim->nGenotypes = nAlleles_to_nGenotypes(sim->nAlleles);
+	}else if (2 == args->useUnknownAllele) {
+	// set ALT to ALTS+<NON_REF> (unobserved)
+
+		kputc(',', &sim->alleles);
+		kputs("<NON_REF>", &sim->alleles);
+		sim->nAlleles++;
+
+		has_unobserved = 1;
+
+		sim->nGenotypes = nAlleles_to_nGenotypes(sim->nAlleles);
+	}
+
+	ASSERT(sim->nGenotypes>0);//TODO delme
 
     sim->current_size_bcf_tag_number[FMT_NUMBER_G] = sim->nSamples * sim->nGenotypes;
     sim->current_size_bcf_tag_number[FMT_NUMBER_R] = sim->nSamples * sim->nAlleles;
@@ -891,8 +876,8 @@ int main(int argc, char** argv) {
 
     // /BEGIN/ main sites loop ---------------------------------------------
 
-    if (-999 == args->mps_depth) {
-        // without error, only 3 possible genotypes
+    if (ARGS_DEPTH_ISINF == args->mps_depth) {
+        // mode:inf => without error, only 3 possible genotypes
         // input:
         //	REF	ALT
         //	0	1
@@ -978,8 +963,6 @@ int main(int argc, char** argv) {
                     nSitesSkipped++;
                     // TODO
                     //  nSites++;
-                    // DEVPRINT("nsites %d",nSites);
-                    // DEVPRINT("pos %d",in_rec->pos + pos0);
                     continue;
                 }
 
