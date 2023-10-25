@@ -7,6 +7,20 @@
 
 #include "../shared.h"
 
+#define COUNT_OVERALL 0
+#define HOM_TO_HOM 1
+#define HET_TO_HET 2
+#define HOM_TO_HET 3
+#define HET_TO_HOM 4
+#define N_COUNT_TYPES 5 // 0 1 2 3 4
+#define N_T_TYPES 3 // 0 1 2
+
+// (bcftools/mcall.c)
+// call->GQs[ismpl] = max <= INT8_MAX ? max : INT8_MAX;
+// (stdint.h)
+// INT8_MAX 127 
+#define MAX_GQ 127
+#define GQ_ARR_SIZE 130
 
 // maps a->0,A->0,c->1,C->1,g->2,G->2,t->3,T=>3,n->4,N->5
 int refToInt[256] = {
@@ -35,8 +49,10 @@ void usage(void) {
     fprintf(stderr, "  -t, --truth <file>		truth file\n");
     fprintf(stderr, "  -i, --input <file>		input file, to be compared with truth file, typically a genotype call file\n");
     fprintf(stderr, "  -o, --output <file>		output\n");
-    fprintf(stderr, "  -doGQ 1			print the discordance indicator and GQ scores for each sample at each site to stdout\n");
-    fprintf(stderr, "  -doGQ 2			print the discordance indicator and GQ scores for each sample at each site to stdout, with extra info\n");
+    fprintf(stderr, "  -doGQ 1			print the discordance indicator and GQ scores for each sample at each site\n");
+    fprintf(stderr, "  -doGQ 2			print the discordance indicator and GQ scores for each sample at each site, with extra info\n");
+    fprintf(stderr, "  -doGQ 3			print tidy gq summary\n");
+    fprintf(stderr, "  -doGQ 4			print tidy gq summary with hom/het details\n");
     fprintf(stderr, "  -h, --help			print help\n");
     fprintf(stderr, "\n");
 
@@ -46,14 +62,9 @@ void usage(void) {
 int main(int argc, char** argv)
 {
 
-    // -t/--truth <file>		truth file
-    // -i/--input <file>		input file, to be compared with truth
-    // file, typically a genotype call file
-    // -o/--output <file>		output
-    //
-    char* in_fn=NULL;
-    char* true_fn=NULL;
-    char* out_fn=NULL;
+    char* in_fn = NULL;
+    char* true_fn = NULL;
+    char* out_fn = NULL;
     int doGq = 0;
 
     --argc;++argv;
@@ -75,7 +86,7 @@ int main(int argc, char** argv)
             true_fn = strdup(val);
         } else if ((strcmp("-o", arv) == 0) || (strcmp("--output", arv) == 0)) {
             out_fn = strdup(val);
-        } else if ((strcmp("-doGQ", arv) == 0)) {
+        } else if ((strcasecmp("-doGQ", arv) == 0)) {
             doGq = atoi(val);
         } else {
             ERROR("Unknown arg:%s\n", arv);
@@ -94,14 +105,17 @@ int main(int argc, char** argv)
     if (NULL == out_fn) {
         ERROR("Output file not specified. Please use -o/--output <file>.\n");
     }
-	fprintf(stderr,"%s",out_fn);
+    fprintf(stderr, "%s", out_fn);
 
     if (doGq == 1) {
-        fprintf(stderr, "-doGQ 1. Will print the discordance indicator and GQ scores for each sample at each site to stdout.\n");
-    }else if (doGq == 2) {
-        fprintf(stderr, "-doGQ 2. Will print the discordance indicator, hom/het info and GQ scores for each sample at each site to stdout.\n");
+        fprintf(stderr, "-doGQ 1. Will print the discordance indicator and GQ scores for each sample at each site.\n");
+    } else if (doGq == 2) {
+        fprintf(stderr, "-doGQ 2. Will print the discordance indicator, hom/het info and GQ scores for each sample at each site.\n");
+    } else if (doGq == 3) {
+        fprintf(stderr, "-doGQ 3. Will do gq and attempt to tidy up the output.\n");
+    } else if (doGq == 4) {
+        fprintf(stderr, "-doGQ 4. Will do gq and attempt to tidy up the output and add true/call hom/het status information.\n");
     }
-
 
     htsFile* fTrue = bcf_open(true_fn, "r");
     ASSERT(fTrue != NULL);
@@ -110,7 +124,8 @@ int main(int argc, char** argv)
     ASSERT(fInput != NULL);
 
     // output file
-    FILE* out_fp = fopen(out_fn, "w");
+    FILE* out_fp = NULL;
+    out_fp = fopen(out_fn, "w");
     if (out_fp == NULL) {
         ERROR("Could not open output file %s for writing", out_fn);
     }
@@ -122,8 +137,10 @@ int main(int argc, char** argv)
 
     int nSamples = bcf_hdr_nsamples(hdrTrue);
 
-    int ngt1, * gt_arr1 = NULL, ngt_arr1 = 0;
-    int ngt2, * gt_arr2 = NULL, ngt_arr2 = 0;
+    int32_t ngt1 = 0, * gt_arr1 = NULL, ngt_arr1 = 0;
+    int32_t ngt2 = 0, * gt_arr2 = NULL, ngt_arr2 = 0;
+
+    int32_t ngq = 0, * gq_arr = NULL, ngq_arr = 0;
 
 
     int* nSitesDiscordant = (int*)calloc(nSamples, sizeof(int));
@@ -149,30 +166,30 @@ int main(int argc, char** argv)
     int nSitesfTrueNotInfInput = 0;
 
     // call: correct, truegt=callgt: hom
-	// output id=0
-    int T_Hom = 0; 
+    // output id=0
+    int T_Hom = 0;
 
     // call: correct, truegt=callgt: het
-	// output id=1
+    // output id=1
     int T_Het = 0;
 
     // call: incorrect, truegt: hom, callgt: hom
     // e.g. truegt: A/A, callgt: C/C
-	// output id=2
+    // output id=2
     int F_HomToHom = 0;
 
     // call: incorrect, truegt: hom, callgt: het
-	// output id=3
+    // output id=3
     int F_HomToHet = 0;
 
     // call: incorrect, truegt: het, callgt: hom
-	// output id=4
+    // output id=4
     int F_HetToHom = 0;
 
     // call: incorrect, truegt: het, callgt: het
     // e.g. truegt: A/C, callgt: A/T
     // N.B. unphased therefore A/C == C/A
-	// output id=5
+    // output id=5
     int F_HetToHet = 0;
 
     double T_Hom_rate = 0.0;
@@ -192,6 +209,14 @@ int main(int argc, char** argv)
     int f2_homhet_state = 0;
 
     int is_discordant = 0;
+
+
+    // \def gqDiscordantCounts[i][j] = number of sites type of i with gq score j
+    // e.g. gqDiscordantCounts[HOM_TO_HET][10] = number of discordant sites with truth:hom call:het and gq score 10
+    // e.g. gqConcordant[0][30] = number of concordant sites with gq score 30
+    int gqDiscordantCounts[N_COUNT_TYPES][GQ_ARR_SIZE] = { { 0 } };
+    int gqConcordantCounts[N_T_TYPES][GQ_ARR_SIZE] = { { 0 } };
+
 
     while (bcf_read(fTrue, hdrTrue, recTrue) == 0)
     {
@@ -275,8 +300,7 @@ int main(int argc, char** argv)
             ASSERT(f2b2 <= 3);
 
             // get genotype quality scores from the input/call file
-            int32_t ngq, * gq_arr = NULL, ngq_arr = 0;
-            if (doGq>0) {
+            if (doGq > 0) {
                 ngq = bcf_get_format_int32(hdrInput, recInput, "GQ", &gq_arr, &ngq_arr);
                 if (ngq <= 0) {
                     ERROR("No GQ scores for sample %d\n", i);
@@ -313,55 +337,80 @@ int main(int argc, char** argv)
 
 
 
+            ASSERT(gq_arr[i] < 128);
             if (1 == is_discordant) {
+                if (3 == doGq || 4 == doGq) {
+                    gqDiscordantCounts[COUNT_OVERALL][gq_arr[i]]++;
+                }
                 if (0 == f1_homhet_state) {
                     if (0 == f2_homhet_state) {
-						if (2==doGq){
-							fprintf(stdout, "%d\t%d\t%d\t2\t%d\n", nSites1, i, is_discordant, gq_arr[i]);
-						}
                         F_HomToHom++;
+                        if (2 == doGq) {
+                            fprintf(out_fp, "%d\t%d\t%d\t2\t%d\n", nSites1, i, is_discordant, gq_arr[i]);
+                        }
+                        if (3 == doGq || 4 == doGq) {
+                            gqDiscordantCounts[HOM_TO_HOM][gq_arr[i]]++;
+                        }
                     } else {
-						if (2==doGq){
-							fprintf(stdout, "%d\t%d\t%d\t3\t%d\n", nSites1, i, is_discordant,gq_arr[i]);
-						}
                         F_HomToHet++;
+                        if (2 == doGq) {
+                            fprintf(out_fp, "%d\t%d\t%d\t3\t%d\n", nSites1, i, is_discordant, gq_arr[i]);
+                        }
+                        if (3 == doGq || 4 == doGq) {
+                            gqDiscordantCounts[HOM_TO_HET][gq_arr[i]]++;
+                        }
                     }
                 } else {
                     if (0 == f2_homhet_state) {
-						if (2==doGq){
-							fprintf(stdout, "%d\t%d\t%d\t4\t%d\n", nSites1, i, is_discordant, gq_arr[i]);
-						}
                         F_HetToHom++;
+                        if (2 == doGq) {
+                            fprintf(out_fp, "%d\t%d\t%d\t4\t%d\n", nSites1, i, is_discordant, gq_arr[i]);
+                        }
+                        if (3 == doGq || 4 == doGq) {
+                            gqDiscordantCounts[HET_TO_HOM][gq_arr[i]]++;
+                        }
                     } else {
-						if (2==doGq){
-							fprintf(stdout, "%d\t%d\t%d\t5\t%d\n", nSites1, i, is_discordant,gq_arr[i]);
-						}
                         F_HetToHet++;
+                        if (2 == doGq) {
+                            fprintf(out_fp, "%d\t%d\t%d\t5\t%d\n", nSites1, i, is_discordant, gq_arr[i]);
+                        }
+                        if (3 == doGq || 4 == doGq) {
+                            gqDiscordantCounts[HET_TO_HET][gq_arr[i]]++;
+                        }
                     }
                 }
                 nSitesDiscordant[i]++;
             } else {
+                if (3 == doGq) {
+                    gqConcordantCounts[COUNT_OVERALL][gq_arr[i]]++;
+                }
                 // concordant
-				if(0==f1_homhet_state){
-					if (2==doGq){
-						fprintf(stdout, "%d\t%d\t%d\t0\t%d\n", nSites1, i, is_discordant,gq_arr[i]);
-					}
-					T_Hom++;
-				}else{
-					if (2==doGq){
-						fprintf(stdout, "%d\t%d\t%d\t1\t%d\n", nSites1, i, is_discordant,gq_arr[i]);
-					}
-					T_Het++;
-				}
+                if (0 == f1_homhet_state) {
+                    T_Hom++;
+                    if (2 == doGq) {
+                        fprintf(out_fp, "%d\t%d\t%d\t0\t%d\n", nSites1, i, is_discordant, gq_arr[i]);
+                    }
+                    if (3 == doGq || 4 == doGq) {
+                        gqConcordantCounts[HOM_TO_HOM][gq_arr[i]]++;
+                    }
+                } else {
+                    if (2 == doGq) {
+                        fprintf(out_fp, "%d\t%d\t%d\t1\t%d\n", nSites1, i, is_discordant, gq_arr[i]);
+                    }
+                    T_Het++;
+                    if (3 == doGq || 4 == doGq) {
+                        gqConcordantCounts[HET_TO_HET][gq_arr[i]]++;
+                    }
+                }
             }
 
             // colnames(d)<-c("Site","Ind","isDiscordant","GQ")
             if (1 == doGq) {
-                fprintf(stdout, "%d\t%d\t%d\t%d\n", nSites1, i, is_discordant, gq_arr[i]);
-            // }else if (2==doGq){
-				// colnames(d)<-c("Site","Ind","isDiscordant","fromTo","GQ")
-				// fprintf(stdout, "%d\n", gq_arr[i]);
-			}
+                fprintf(out_fp, "%d\t%d\t%d\t%d\n", nSites1, i, is_discordant, gq_arr[i]);
+                // }else if (2==doGq){
+                    // colnames(d)<-c("Site","Ind","isDiscordant","fromTo","GQ")
+                    // fprintf(out_fp, "%d\n", gq_arr[i]);
+            }
 
         } // samples loop
     }
@@ -374,33 +423,45 @@ int main(int argc, char** argv)
     nSitesRetained = nSites1 - nSitesfTrueNotInfInput;
     ASSERT(nSitesRetained == nSites2);
 
-    for (int i = 0; i < nSamples; i++)
-    {
+    if (3 == doGq) {
+        for (int i = 0;i < GQ_ARR_SIZE;++i) {
+            // colnames(d)<-c("GQ","nDiscordant","nConcordant")
+            fprintf(out_fp, "%d\t%d\t%d\n", i, gqDiscordantCounts[COUNT_OVERALL][i], gqConcordantCounts[COUNT_OVERALL][i]);
+        }
+    } else if (4 == doGq) {
+        for (int i = 0;i < GQ_ARR_SIZE;++i) {
+            fprintf(out_fp, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", i, gqDiscordantCounts[COUNT_OVERALL][i], gqDiscordantCounts[HOM_TO_HOM][i], gqDiscordantCounts[HOM_TO_HET][i], gqDiscordantCounts[HET_TO_HOM][i], gqDiscordantCounts[HET_TO_HET][i], gqConcordantCounts[COUNT_OVERALL][i], gqConcordantCounts[HOM_TO_HOM][i], gqConcordantCounts[HET_TO_HET][i]);
+        }
 
-        // // missingness_rate = (double)nSites_compared_forSample[i] / (double)nSites1;
-        // // 231007 fix
-        missingness_rate = (double)(1.0 - ((double)nSites_compared_forSample[i] / (double)nSites1));
+    } else {
+        for (int i = 0; i < nSamples; i++)
+        {
 
-        discordance_rate = (double)nSitesDiscordant[i] / (double)nSites_compared_forSample[i];
+            missingness_rate = (double)(1.0 - ((double)nSites_compared_forSample[i] / (double)nSites1));
 
-        concordance_rate = (double)(nSites_compared_forSample[i] - nSitesDiscordant[i]) / (double)nSites_compared_forSample[i];
+            discordance_rate = (double)nSitesDiscordant[i] / (double)nSites_compared_forSample[i];
 
-        T_Hom_rate = (double)T_Hom / (double)nSites_compared_forSample[i];
-        T_Het_rate = (double)T_Het / (double)nSites_compared_forSample[i];
-        F_HomToHom_rate = (double)F_HomToHom / (double)nSites_compared_forSample[i];
-        F_HomToHet_rate = (double)F_HomToHet / (double)nSites_compared_forSample[i];
-        F_HetToHom_rate = (double)F_HetToHom / (double)nSites_compared_forSample[i];
-        F_HetToHet_rate = (double)F_HetToHet / (double)nSites_compared_forSample[i];
+            concordance_rate = (double)(nSites_compared_forSample[i] - nSitesDiscordant[i]) / (double)nSites_compared_forSample[i];
 
-        fprintf(out_fp, "%s\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\n", hdrTrue->samples[i], nSites1, nSitesRetained, nSites_compared_forSample[i], nSites_callmis[i], nSitesDiscordant[i], nSites_compared_forSample[i] - nSitesDiscordant[i], missingness_rate, discordance_rate, concordance_rate, T_Hom, T_Het, F_HomToHom, F_HomToHet, F_HetToHom, F_HetToHet, T_Hom_rate, T_Het_rate, F_HomToHom_rate, F_HomToHet_rate, F_HetToHom_rate, F_HetToHet_rate);
+            T_Hom_rate = (double)T_Hom / (double)nSites_compared_forSample[i];
+            T_Het_rate = (double)T_Het / (double)nSites_compared_forSample[i];
+            F_HomToHom_rate = (double)F_HomToHom / (double)nSites_compared_forSample[i];
+            F_HomToHet_rate = (double)F_HomToHet / (double)nSites_compared_forSample[i];
+            F_HetToHom_rate = (double)F_HetToHom / (double)nSites_compared_forSample[i];
+            F_HetToHet_rate = (double)F_HetToHet / (double)nSites_compared_forSample[i];
 
-        // header:
-        // "Sample","nSitesTotal","nSitesRetained","nSitesCompared","nSitesCallMis","nDiscordantSites","nNonDiscordantSites","MissingnessRate","DiscordanceRate","ConcordanceRate","T_Hom","T_Het","F_HomToHom","F_HomToHet","F_HetToHom","F_HetToHet","T_Hom_rate","T_Het_rate","F_HomToHom_rate","F_HomToHet_rate","F_HetToHom_rate","F_HetToHet_rate"
+            fprintf(out_fp, "%s\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\n", hdrTrue->samples[i], nSites1, nSitesRetained, nSites_compared_forSample[i], nSites_callmis[i], nSitesDiscordant[i], nSites_compared_forSample[i] - nSitesDiscordant[i], missingness_rate, discordance_rate, concordance_rate, T_Hom, T_Het, F_HomToHom, F_HomToHet, F_HetToHom, F_HetToHet, T_Hom_rate, T_Het_rate, F_HomToHom_rate, F_HomToHet_rate, F_HetToHom_rate, F_HetToHet_rate);
 
-        // sanity check
-        // nSites_compared_forSample is the number of sites with nonmissing data for sample i
-        ASSERT(nSites_compared_forSample[i] == nSitesRetained - nSites_callmis[i]);
+            // header:
+            // "Sample","nSitesTotal","nSitesRetained","nSitesCompared","nSitesCallMis","nDiscordantSites","nNonDiscordantSites","MissingnessRate","DiscordanceRate","ConcordanceRate","T_Hom","T_Het","F_HomToHom","F_HomToHet","F_HetToHom","F_HetToHet","T_Hom_rate","T_Het_rate","F_HomToHom_rate","F_HomToHet_rate","F_HetToHom_rate","F_HetToHet_rate"
+
+            // sanity check
+            // nSites_compared_forSample is the number of sites with nonmissing data for sample i
+            ASSERT(nSites_compared_forSample[i] == nSitesRetained - nSites_callmis[i]);
+        }
+
     }
+
 
     free(nSitesDiscordant);
     nSitesDiscordant = NULL;
@@ -412,6 +473,10 @@ int main(int argc, char** argv)
     gt_arr1 = NULL;
     free(gt_arr2);
     gt_arr2 = NULL;
+    if (gq_arr != NULL) {
+        free(gq_arr);
+        gq_arr = NULL;
+    }
     bcf_destroy(recTrue);
     bcf_destroy(recInput);
     bcf_hdr_destroy(hdrTrue);
