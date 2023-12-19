@@ -834,7 +834,7 @@ argStruct* args_get(int argc, char** argv) {
     // PRINT ARGUMENTS
 
     ASSERT(asprintf(&args->versionInfo, "vcfgl [version: %s] [build: %s %s] [htslib: %s]\n", VCFGL_VERSION, __DATE__, __TIME__, hts_version()));
-    fprintf(stderr, args->versionInfo);
+    fprintf(stderr,"\n%s\n", args->versionInfo);
     fprintf(args->arg_fp, args->versionInfo);
 
     char depth_val[1024];
