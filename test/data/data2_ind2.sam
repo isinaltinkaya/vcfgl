@@ -1,0 +1,5 @@
+@HD	VN:0	SO:coordinate
+@SQ	SN:ref1	LN:10
+*	0	ref1	2	255	1M	*	0	0	A	5
+*	0	ref1	5	255	2M	*	0	0	CA	55
+*	0	ref1	5	255	2M	*	0	0	AA	55

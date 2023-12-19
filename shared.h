@@ -4,54 +4,166 @@
 #include <stdio.h>   // fprintf
 #include <stdlib.h>  // exit
 #include <limits>    // std::numeric_limits
-
 #include <float.h>  // DBL_MANT_DIG
 
 #include "dev.h"
 
+
 /* -> CONSTANTS --------------------------------------------------------------*/
 
+// --> CONSTANTS:RNG
+
+// source: rand48/rand48.h
+#define VCFGL_RAND48_SEED_0   (0x330e)
+#define VCFGL_RAND48_SEED_1   (0xabcd)
+#define VCFGL_RAND48_SEED_2   (0x1234)
+
+// --> CONSTANTS:MATH
+
+#define PI 3.141592654
+
 const double NEG_INF = -std::numeric_limits<double>::infinity();
-
-#define ARGS_DEPTH_ISUNDEF -1.0
-#define ARGS_DEPTH_ISFILE -2.0
-#define ARGS_DEPTH_ISINF -3.0
-
-// args->useUnknownAllele
-// notations for representing non-reference unobserved alleles
-// 	ARGS_NONREF_NOTATION_STAR		<*> symbolic alternate allele (used in bcftools)
-// 	ARGS_NONREF_NOTATION_NON_REF	<NON_REF> gVCF NON_REF notation (used in GATK)
-#define ARGS_NONREF_NOTATION_EXPLODE_ACGT 0
-#define ARGS_NONREF_NOTATION_STAR 1
-#define ARGS_NONREF_NOTATION_NON_REF 2
-
 
 // precalculated value for log10(3)
 #define PRE_CALC_LOG10_3 0.47712125471966244
 
-#define MAXGL 0
-#define MINGL NEG_INF
+#define QSCORE_PHRED_ENCODING_OFFSET 33
 
-#define MAXPL 255
-#define MINPL 0
+// --> CONSTANTS:BUFFER SIZE
 
-#define MAXGP 1.0
-#define MINGP 0.0
+#define KSTRING_BGZF_WRITE_BUFFER_SIZE 4096
+
+#define BUFSIZE_NBASES 50
+
+
+// --> CONSTANTS:ARGS
+
+#define ARG_DEPTH_UNDEF -1.0
+#define ARG_DEPTH_FILE -2.0
+#define ARG_DEPTH_INF -3.0
+
+#define ARG_ERROR_RATE_UNDEF -1.0
+
+#define ARG_DEPTH_MAXVAL 500.0 
+
+#define ARG_NTHREADS_MAXVAL 50
+
+#define ARG_BETA_VAR_UNDEF -1.0
+
+
+// [args->doUnobserved]
+// notations for representing non-reference unobserved alleles
+
+// trim to include only observed bases
+#define ARG_DOUNOBSERVED_TRIM 0
+
+// use <*> symbolic alternate allele (used in bcftools)
+#define ARG_DOUNOBSERVED_STAR 1
+
+// use <NON_REF> gVCF NON_REF notation (used in GATK)
+#define ARG_DOUNOBSERVED_NONREF 2
+
+// explode to unseen bases
+#define ARG_DOUNOBSERVED_EXPLODE_ACGT 3
+
+// explode and add <*> to the end
+#define ARG_DOUNOBSERVED_EXPLODE_ACGT_STAR 4 
+
+// explode and add <NON_REF> to the end
+#define ARG_DOUNOBSERVED_EXPLODE_ACGT_NONREF 5 
+
+
+// --> CONSTANTS:SIGNALS
+
+// int prepare_gvcf_block()
+// at bcf_utils.cpp
+#define GVCF_NO_WRITE 0
+#define GVCF_FLUSH_BLOCK 1
+#define GVCF_WRITE_SIMREC 2
+
+
+
+/* -> STATEMENTS --------------------------------------------------------------*/
+
+// --> STATEMENTS:PROGRAM WILL
+
+#define PROGRAM_WILL(arg, flag) \
+    ( ((arg) & (1<<(flag))) )
+
+#define PROGRAM_BETA_VAR_IS_UNDEF \
+    ( ((args->beta_variance) == (ARG_BETA_VAR_UNDEF)) )
+
+#define PROGRAM_WILL_EXPLODE_ACGT \
+    (((args->doUnobserved)==ARG_DOUNOBSERVED_EXPLODE_ACGT) || ((args->doUnobserved)==ARG_DOUNOBSERVED_EXPLODE_ACGT_STAR) || ((args->doUnobserved)==ARG_DOUNOBSERVED_EXPLODE_ACGT_NONREF))
+
+#define PROGRAM_WILL_ADD_UNOBSERVED \
+    ( (args->doUnobserved==ARG_DOUNOBSERVED_STAR) || (args->doUnobserved==ARG_DOUNOBSERVED_NONREF) || (args->doUnobserved==ARG_DOUNOBSERVED_EXPLODE_ACGT_STAR) || (args->doUnobserved==ARG_DOUNOBSERVED_EXPLODE_ACGT_NONREF) )
+
+#define PROGRAM_WILL_ADD_STAR \
+    ( (args->doUnobserved==ARG_DOUNOBSERVED_STAR) || (args->doUnobserved==ARG_DOUNOBSERVED_EXPLODE_ACGT_STAR) )
+
+#define PROGRAM_WILL_ADD_NONREF \
+    ( (args->doUnobserved==ARG_DOUNOBSERVED_NONREF) || (args->doUnobserved==ARG_DOUNOBSERVED_EXPLODE_ACGT_NONREF) )
+
+#define PROGRAM_WILL_SAMPLE_STRAND \
+    ( (args->addI16 || args->addFormatADF || args->addFormatADR || args->addInfoADF || args->addInfoADR))
+
+#define PROGRAM_WILL_SKIP_INPUT_HOMOREFGT_SITES \
+    ( ((args->rmInvarSites) & 1) )
+
+#define PROGRAM_WILL_SKIP_INPUT_HOMOALTGT_SITES \
+    ( ((args->rmInvarSites) & 2) )
+
+#define PROGRAM_WILL_SKIP_INPUT_HOMOGT_SITES \
+    ( ((args->rmInvarSites) & 3) )
+
+#define PROGRAM_WILL_SKIP_SIM_INVAR_SITES \
+    ( ((args->rmInvarSites) & 4) )
+
+
+
+
+
+#define BASE_A 0
+#define BASE_C 1
+#define BASE_G 2
+#define BASE_T 3
+#define BASE_NONREF 4
+
+#define MAXGL 0.0 // best
+#define MINGL NEG_INF // worst 
+
+#define MAXPL 255 // worst
+#define MINPL 0 // best
+
+#define MAXGP 1.0 // best
+#define MINGP 0.0 // worst
 
 #define SIM_FORWARD_STRAND 0
 #define SIM_REVERSE_STRAND 1
 
-// maximum number of genotypes to simulate
-#define MAX_NGTS 10  // {AA,AC,CC,AG,CG,GG,AT,CT,GT,TT}
+// maximum number of alleles to consider 
+// | 0 | 1 | 2 | 3 | 4 |
+// | A | C | G | T |<*>|
+#define MAX_NALLELES 5  
 
-// maximum number of alleles to simulate
-#define MAX_NALLELES 4  // {A,C,G,T}
+// maximum number of genotypes to consider
+// depends on: MAX_NALLELES
+//  (MAX_NALLELES * (MAX_NALLELES+1)) / 2
+// |  0  |  1  |  5  |  2  |  6  |  9  |  3  |  7  |  10 |  12 | 4      | 8     | 11    | 13    | 14  		|
+// |  AA |  AC |  CC |  AG |  CG |  GG |  AT |  CT |  GT |  TT | A<*> 	| C<*> 	| G<*> 	| T<*> 	| <*><*> 	|
+// A0A0 A0A1 A1A1 A0A2 A1A2 A2A2 A0A3 A1A3 A2A3 A3A3 A0A4 A1A4 A2A4 A3A4 A4A4
+#define MAX_NGTS 15  
+
+// Old order (vcfgl v<=0.3.3)
+// AA, AC, AG, AT, A<*>, CC, CG, CT, C<*>, GG, GT, G<*>, TT, T<*>, <*><*>
+// AA, AC, AG, AT, CC, CG, CT, GG, GT, TT
 
 // assume diploid samples
 #define SIM_PLOIDY 2
 
-// source: bcftools/bam2bcf.c L41
-#define CAP_DIST 25
+// source: bcftools/bam2bcf.c L41 CAP_DIST
+#define CAP_TAIL_DIST 25
 
 // source: bcftools/bam2bcf.c L381
 #define CAP_BASEQ 63
@@ -59,38 +171,48 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define BCF_GT_PHASED_0 3  // bcf_gt_phased(0)
 #define BCF_GT_PHASED_1 5  // bcf_gt_phased(1)
 
+
 /* -> FUNCTION-LIKE MACROS ---------------------------------------------------*/
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-/*
- * Macro:[DBL_MAX_DIG_TOPRINT]
- * 	maximum number of digits needed to print a double
- *
- * 	longest number == smalles negative number
- * 		-pow(2, DBL_MIN_EXP - DBL_MANT_DIG)
- * 	-pow(2,-N) needs 3+N digits
- * 		to represent (sign, decimal point, N digits)
- * 		'-0.<N digits>'
- *
- * @requires <float.h>
- */
+
+#define FLUSH_BGZF_KSTRING_BUFFER(fp, buffer) \
+    do {                                               \
+        if ( (((buffer)->l) > KSTRING_BGZF_WRITE_BUFFER_SIZE) ) { \
+            write_BGZF(fp, (buffer)->s, (buffer)->l);  \
+            (buffer)->l = 0;                           \
+        } \
+    } while (0);
+
+    /*
+     * Macro:[DBL_MAX_DIG_TOPRINT]
+     * 	maximum number of digits needed to print a double
+     *
+     * 	longest number == smalles negative number
+     * 		-pow(2, DBL_MIN_EXP - DBL_MANT_DIG)
+     * 	-pow(2,-N) needs 3+N digits
+     * 		to represent (sign, decimal point, N digits)
+     * 		'-0.<N digits>'
+     *
+     * @requires <float.h>
+     */
 #define DBL_MAX_DIG_TOPRINT 3 + DBL_MANT_DIG - DBL_MIN_EXP
 
 #define DBL_MAXDIG10 (2 + (DBL_MANT_DIG * 30103UL) / 100000UL)
-/*
- * Macro:[AT]
- * inject the file and line info as string
- */
+     /*
+      * Macro:[AT]
+      * inject the file and line info as string
+      */
 #define STRINGIFY(x) #x
 #define ASSTR(x) STRINGIFY(x)
 #define AT __FILE__ ":" ASSTR(__LINE__)
 
-/*
- * Macro:[ERROR]
- * print a custom error message and exit the program
- */
+      /*
+       * Macro:[ERROR]
+       * print a custom error message and exit the program
+       */
 #define ERROR(...)                                                           \
     do {                                                                     \
         fprintf(stderr, "\n\n*******\n[ERROR](%s)<%s:%d>\n\t", __FUNCTION__, \
@@ -100,10 +222,10 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
         exit(1);                                                             \
     } while (0);
 
-/*
- * Macro:[NEVER]
- * indicates that a point in the code should never be reached
- */
+       /*
+        * Macro:[NEVER]
+        * indicates that a point in the code should never be reached
+        */
 #define NEVER                                                               \
     do {                                                                    \
         ERROR(                                                              \
@@ -111,26 +233,27 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
             "the developers.")                                              \
     } while (0);
 
-/*
- * Macro:[ASSERT]
- * evaluate an expression, works the same way as the C-macro assert
- * except that DEBUG does not affect it (it is always active)
- * also prints the file and line info and exits the program
- * if the expression evaluates to false
- */
+        /*
+         * Macro:[ASSERT]
+         * evaluate an expression, works the same way as the C-macro assert
+         * except that DEBUG does not affect it (it is always active)
+         * also prints the file and line info and exits the program
+         * if the expression evaluates to false
+         */
+#define ASSERT_EXPAND(x) x
 #define ASSERT(expr)                                                        \
     do {                                                                    \
-        if (!((expr))) {                                                    \
+        if (!(ASSERT_EXPAND(expr))){ \
             fprintf(stderr, "\n\n*******\n[ERROR](%s/%s:%d) %s\n*******\n", \
                     __FILE__, __FUNCTION__, __LINE__, #expr);               \
             exit(1);                                                        \
         }                                                                   \
     } while (0);
 
-/*
- * Macro:[WARN]
- * print a custom warning message
- */
+         /*
+          * Macro:[WARN]
+          * print a custom warning message
+          */
 #define WARN(...)                                                            \
     do {                                                                     \
         fprintf(stderr, "\n\n[WARNING](%s/%s:%d): ", __FILE__, __FUNCTION__, \
@@ -139,10 +262,10 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
         fprintf(stderr, "\n");                                               \
     } while (0);
 
-/*
- * Macro:[VWARN]
- * print a custom warning message if verbose is set
- */
+          /*
+           * Macro:[VWARN]
+           * print a custom warning message if verbose is set
+           */
 #define VWARN(...)                                                 \
     do {                                                           \
         if (0 != args->verbose) {                                  \
@@ -153,9 +276,38 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
         }                                                          \
     } while (0);
 
-/* LOOKUP TABLES & LOOKUP FUNCTIONS ------------------------------------------*/
 
-// @brief lut_qs_to_qs2 - map quality score to squared quality score
+#define CHECK_ARG_INTERVAL_INT(argval, minval, maxval, argstr) \
+do { \
+    if (((argval) < (minval)) || ((argval) > (maxval)) ) { \
+        \
+            ERROR("[Bad argument value: '%s %d'] Allowed range is [%d,%d]", (argstr), (argval), (minval), (maxval)); \
+    } \
+} while (0);
+
+
+#define CHECK_ARG_INTERVAL_DBL(argval, minval, maxval, argstr) \
+do { \
+    if (((argval) < (minval)) || ((argval) > (maxval)) ) { \
+        \
+            ERROR("[Bad argument value: '%s %f'] Allowed range is [%f,%f]", (argstr), (argval), (minval), (maxval)); \
+    } \
+} while (0);
+
+#define CHECK_ARG_INTERVAL_01(argval, argstr) \
+do { \
+    if ( ((argval)!=0) && ((argval)!=1) ) { \
+        \
+            ERROR("Argument %s with value %d is out of range. Allowed values are 0 (for on/enable) and 1 (for off/disable)", (argstr), (argval)); \
+    } \
+} while (0);
+
+
+
+
+           /* LOOKUP TABLES & LOOKUP FUNCTIONS ------------------------------------------*/
+
+           // @brief lut_qs_to_qs2 - map quality score to squared quality score
 extern const int lut_qs_to_qs2[64];
 
 // [R]
@@ -163,9 +315,40 @@ extern const int lut_qs_to_qs2[64];
 // CAP_BASEQ=63
 // arrSize=CAP_BASEQ+1
 // paste0("qScore_to_errorProb[",arrSize,"]={",paste(unlist(format(lapply(0:CAP_BASEQ,FUN=qToP),scientific=F)),collapse=","),"};")
-// [1]
-// "qScore_to_errorProb[64]={1,0.7943282,0.6309573,0.5011872,0.3981072,0.3162278,0.2511886,0.1995262,0.1584893,0.1258925,0.1,0.07943282,0.06309573,0.05011872,0.03981072,0.03162278,0.02511886,0.01995262,0.01584893,0.01258925,0.01,0.007943282,0.006309573,0.005011872,0.003981072,0.003162278,0.002511886,0.001995262,0.001584893,0.001258925,0.001,0.0007943282,0.0006309573,0.0005011872,0.0003981072,0.0003162278,0.0002511886,0.0001995262,0.0001584893,0.0001258925,0.0001,0.00007943282,0.00006309573,0.00005011872,0.00003981072,0.00003162278,0.00002511886,0.00001995262,0.00001584893,0.00001258925,0.00001,0.000007943282,0.000006309573,0.000005011872,0.000003981072,0.000003162278,0.000002511886,0.000001995262,0.000001584893,0.000001258925,0.000001,0.0000007943282,0.0000006309573,0.0000005011872};"
 extern const double qScore_to_errorProb[64];
+
+
+// [R]
+// qToP <- function(q) { 10 ^ (-q / 10) }
+// CAP_BASEQ = 256
+// arrSize = CAP_BASEQ + 1
+// generate_likelihoods_homhit_ln <- function(i) { p = 1 - qToP(i);ret = log((p * 0.5) + (p * 0.5));return(ret); }
+// generate_likelihoods_hethit_ln <- function(i) { p = 1 - qToP(i);p3 = (1 - p) / 3.0;ret = log((p * 0.5) + (p3 * 0.5));return(ret); }
+// generate_likelihoods_homnonhit_ln <- function(i) { p = 1 - qToP(i);p3 = (1 - p) / 3.0;ret = log((0.5 * p3) + (0.5 * p3));return(ret); }
+// fn = generate_likelihoods_homhit_ln
+// x1 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+// fn = generate_likelihoods_hethit_ln
+// x2 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+// fn = generate_likelihoods_homnonhit_ln
+// x3 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+// print(gsub("-Inf", "NEG_INF", paste0("qScore_to_ln_gl[3][", arrSize, "]=", "{", paste(x1, x2, x3, sep = ","), "};")))
+extern const double qScore_to_ln_gl[3][257];
+
+// [R]
+// qToP <- function(q) { 10 ^ (-q / 10) }
+// CAP_BASEQ = 256
+// arrSize = CAP_BASEQ + 1
+// generate_likelihoods_homhit_log10 <- function(i) { p = qToP(i);ret = log10(1 - p);return(ret); }
+// generate_likelihoods_hethit_log10 <- function(i) { p = qToP(i);ret = log10((1 - p) / 2 + p / 6);return(ret); }
+// generate_likelihoods_homnonhit_log10 <- function(i) { p = qToP(i);ret = log10(p) - log10(3);return(ret); }
+// fn = generate_likelihoods_homhit_log10
+// x1 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+// fn = generate_likelihoods_hethit_log10
+// x2 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+// fn = generate_likelihoods_homnonhit_log10
+// x3 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+// print(gsub("-Inf", "NEG_INF", paste0("qScore_to_log10_gl[3][", arrSize, "]=", "{", paste(x1, x2, x3, sep = ","), "};")))
+extern const double qScore_to_log10_gl[3][257];
 
 // qScore	phred-scaled quality score
 // 			qScore = -10 * log10(error_probability)
@@ -193,61 +376,7 @@ inline int qs_to_qs2(const int q) {
     }
 }
 
-// @brief lut_myGtIdx_to_vcfGtIdx
-//      map internal representation order to vcf genotype order
-// 		for 4 alleles {A,C,G,T}
-//
-// FROM: Internal representation
-//
-// | 0 | 1 | 2 | 3 |
-// | A | C | G | T |
-//
-// | 0  | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 8  | 9  |
-// | AA | AC | AG | AT | CC | CG | GG | CT | GT | TT |
-//
-// TO: VCF genotype order
-//
-// for P=ploidy and N=number of alternate alleles;
-// [pseudocode] for a_p in 0:N; for a_p-1 in 0:a_p; print(a1,a2);
-//
-// For P=2 N=3
-//
-// | 0  | 1  | 4  | 2  | 5  | 7  | 3  | 6  | 8   | 9   |
-// | AA | AC | CC | AG | CG | GG | AT | CT | GT  | TT  |
-//
-extern const int lut_myGtIdx_to_vcfGtIdx[10];
-
-// @brief myGtIdx_to_vcfGtIdx - get vcf genotype index from internal
-// representation genotype index
-// @param 	gti (int) - genotype index in internal representation order
-// (0-9:AA,AC,AG,AT,CC,CG,GG,CT,GT,TT)
-// @return	    (int) - genotype index in vcf order
-// (0-9:AA,AC,CC,AG,CG,GG,AT,CT,GT,TT)
-inline int myGtIdx_to_vcfGtIdx(const int gti) {
-    ASSERT(gti >= 0 && gti < 10);
-    return (lut_myGtIdx_to_vcfGtIdx[gti]);
-}
-
-// @brief myAllele_to_vcfGtIdx - get vcf genotype index from internal
-// representation alleles
-// @param 	a1 (int) - allele 1 in internal representation order
-// (0-3:A,C,G,T)
-// @param 	a2 (int) - allele 2 in internal representation order
-// (0-3:A,C,G,T)
-// @return	   (int) - genotype index in vcf order
-// (0-9:AA,AC,CC,AG,CG,GG,AT,CT,GT,TT)
-inline int myAllele_to_vcfGtIdx(const int a1, const int a2) {
-    if (a1 > a2)
-        return (lut_myGtIdx_to_vcfGtIdx[a2 * 4 + a1]);
-    // else ---> if (a1 <= a2)
-    return (lut_myGtIdx_to_vcfGtIdx[a1 * 4 + a2]);
-}
-
-// @brief nAlleles_to_nGenotypes - map number of alleles to number of genotypes
-// @details
-//      for (i=0;i<5;++i)
-//          nAlleles_to_nGenotypes[i] == nAlleles2nGenotypes(i) == i*(i+1)/2
-extern const int lut_nAlleles_to_nGenotypes[6];
+/* -> SHARED INLINE FUNCTIONS ------------------------------------------------*/
 
 // @brief nAlleles_to_nGenotypes - get number of genotypes from number of
 // alleles
@@ -255,26 +384,14 @@ extern const int lut_nAlleles_to_nGenotypes[6];
 // @return	  (int) - number of unique unordered genotypes expected for n
 // alleles
 //                    e.g. A, C -> AA AC CC -> 3
+extern const int lut_nAlleles_to_nGenotypes[6];
 inline int nAlleles_to_nGenotypes(const int n) {
-    ASSERT(n > 0 && n < 6);
+    DEVASSERT(n > 0 && n < 6);
     return (lut_nAlleles_to_nGenotypes[n]);
 }
 
-// @brief lut_acgt_offsets - map alleles to genotype offsets (internal
-// representation)
-// @details
-//
-// | 0  | 1  | 2  | 3  | 4  | 5  | 6  | 7  | 8  | 9  |
-// | AA | AC | AG | AT | CC | CG | GG | CT | GT | TT |
-//
-// Matrix format
-// |    | 0  | 1  | 2  | 3  |		| 4  | 5  | 6  | 7  | 8  | 9  |
-// |----|----|----|----|----|		|----|----|----|----|----|----|
-// | 0  | AA | AC | AG | AT |		| CC | CG | GG | CT | GT | TT |
-// | 1  | CC | AC | CG | CT |		| AA | AG | AT | GG | GT | TT |
-// | 2  | GG | AG | CG | GT |		| AA | AC | AT | CC | CT | TT |
-// | 3  | TT | AT | CT | GT | 		| AA | AC | AG | CC | CG | GG |
-//
-extern const int lut_acgt_offsets[4][10];
+
+
+extern float bcf_float_missing_union_f;
 
 #endif  // __SHARED__

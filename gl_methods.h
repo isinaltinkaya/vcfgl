@@ -1,19 +1,21 @@
 #ifndef __GL_METHODS__
 #define __GL_METHODS__
 
-#include <math.h>
+#include "bcf_utils.h"
 
-#include "shared.h"
+typedef struct glModel1Struct glModel1Struct;
 
-void calc_gl_log10_method1(int base, double e, double* acgt_gls);
-void calc_gl_log10_method1_precalc(int base, double e, double* acgt_gls);
+struct glModel1Struct {
+    errmod_t* errmod;
+};
+extern glModel1Struct* glModel1;
+glModel1Struct* glModel1_init(void);
+void glModel1_destroy(glModel1Struct* glModel1);
 
-void gl_log10(int base, double error_rate, double* like);
-void gl_ln(int base, double error_rate, double* like);
-
-void rescale_likelihood_ratio(double* like);
-void rescale_likelihood_ratio(float* like);
-
-void rescale_likelihood_ratio(float* like, const int size);
+void alleles_calculate_gls_log10_glModel2_fixedQScore(simRecord* sim);
+void alleles_calculate_gls_log10_glModel2_precise0(simRecord* sim);
+void alleles_calculate_gls_log10_glModel2_precise1(simRecord* sim);
+void alleles_calculate_gls_log10_glModel1_fixedQScore(simRecord* sim);
+void alleles_calculate_gls_log10_glModel1(simRecord* sim);
 
 #endif  // __GL_METHODS__

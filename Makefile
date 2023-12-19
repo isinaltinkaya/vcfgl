@@ -1,97 +1,327 @@
+###################################################################################################
+# vcfgl Makefile
+####################################################################################################
+
+default: all
+
+PROGRAM = vcfgl
+
+# Compiler specs
 CXX ?= g++
 
 
-ifeq ($(DEV),1)
-$(info Compiling in developer mode)
-COMPILEMODE = -DDEV=1
-# TODO disable clean and replace with ngsAMOVA style checks
-all: clean
-CXXFLAGS := -g -Wall -O0
-else
-$(info Compiling in release mode; will enable optimizaton (-O3))
-COMPILEMODE = -DDEV=0
-# TODO disable clean and replace with ngsAMOVA style checks
-all: clean
-CXXFLAGS := -O3
-endif
+# No-compile targets
+NO_COMPILE = clean test help
 
-LIBS = -lz -lm -lbz2 -llzma -lcurl -lpthread
 
+VAL_ADD_CRYPTOLIB = -lcrypto
+VAL_NOTADD_CRYPTOLIB =
+
+####################################################################################################
+# [BLOCK START]
+# ony run if make will try compiling, i.e. not NO_COMPILE
+
+ifeq (,$(filter $(NO_COMPILE),$(MAKECMDGOALS))) #1
+
+$(info ________________________________________________________________________________)
+$(info )
+$(info [INFO]    Checking for library availability)
+$(info )
+
+
+## -> [cryptolib availability check]
+CRYPTO_TRY = $(shell echo 'int main(){}'|$(CXX) -x c++ - -lcrypto 2>/dev/null -o /dev/null; echo $$?)
+
+ifeq "$(CRYPTO_TRY)" "0" #1_1
+
+$(info [INFO]    -> Crypto library is available to link)
+THIS_CRYPTOLIB = $(VAL_ADD_CRYPTOLIB)
+
+else  #1_1
+
+# CRYPTO_TRY != 0
+
+THIS_CRYPTOLIB = $(VAL_NOTADD_CRYPTOLIB)
+
+$(info [INFO]    -> Crypto library is not available to link)
+endif #1_1
+
+## -> [htslib source check]
 
 #if htslib source is defined
-ifdef HTSSRC
+ifdef HTSSRC #1_2
 
 #if hts source is set to systemwide
-ifeq ($(HTSSRC),systemwide)
-$(info HTSSRC set to systemwide; assuming systemwide installation)
-LIBHTS := -lhts
+ifeq ($(HTSSRC),systemwide) #1_2_1
 
-else
+$(info [INFO]    -> HTSSRC set to systemwide; assuming systemwide installation)
+THIS_LIBHTS := -lhts
+
+else #1_2_1
 
 #if hts source path is given
 # Adjust $(HTSSRC) to point to your top-level htslib directory
-$(info HTSSRC defined: $(HTSSRC))
-CXXFLAGS += -I"$(realpath $(HTSSRC))"
-LIBHTS := $(realpath $(HTSSRC))/libhts.a
+$(info [INFO]    -> HTSSRC is defined as $(HTSSRC))
+CPPFLAGS := -I$(realpath $(HTSSRC))
+THIS_LIBHTS := $(realpath $(HTSSRC))/libhts.a
 
-endif
+endif #1_2_1
 
 #if htssrc not defined
-else
+else #1_2
 
-$(info HTSSRC not defined; using htslib submodule)
-$(info Use `make HTSSRC=/path/to/htslib` to build using a local htslib installation)
-$(info Use `make HTSSRC=systemwide` to build using the systemwide htslib installation)
+$(info [INFO]    -> HTSSRC is not defined; using htslib submodule)
 
 HTSSRC := $(realpath $(CURDIR)/htslib)
-CXXFLAGS += -I"$(HTSSRC)"
-LIBHTS := $(HTSSRC)/libhts.a
-
+CPPFLAGS := -I$(HTSSRC)
+THIS_LIBHTS := $(HTSSRC)/libhts.a
 
 all: .activate_module
 
-endif
+endif #1_2
 
-.PHONY: .activate_module test 
+DEV_FLAGS = -g -Wall 
+OPTIM_OFF = -O0
+OPTIM_ON = -O3
 
-.activate_module:
-	git submodule update --init --recursive
-	$(MAKE) -C $(HTSSRC)
-
-
-VERSION = v0.3.3
+PREV_BUILD_MODE := $(shell grep -oP 'define DEV \K\d' dev.h)
 
 
-ifneq "$(wildcard .git)" ""
-	VERSION += $(shell git describe --always --dirty)
-endif
+ifeq (dev,$(filter dev,$(MAKECMDGOALS))) #1_3
+
+THIS_BUILD_MODE := 1
+
+ifeq (1,$(PREV_BUILD_MODE)) #1_3_1
+
+# PREV_BUILD_MODE is 1
+BUILD_MODE_CHANGED := 0
+
+else #1_3_1
+
+# PREV_BUILD_MODE is 0
+BUILD_MODE_CHANGED := 1
+
+endif #1_3_1
+else #1_3
+
+THIS_BUILD_MODE := 0
+
+ifeq (1,$(PREV_BUILD_MODE)) #1_3_2
+# PREV_BUILD_MODE is 1
+
+BUILD_MODE_CHANGED := 1
+
+else #1_3_2
+# PREV_BUILD_MODE is 0
+
+BUILD_MODE_CHANGED := 0
+
+endif #1_3_2
+endif #1_3
 
 
-version.h:
-	echo '#define VCFGL_VERSION "$(VERSION)"' > $@
+
+
+ifeq (1,$(BUILD_MODE_CHANGED)) #1_4
+$(info [INFO]    -> Build mode has been changed)
+$(info [INFO]    -> Updating dev.h)
+$(shell sed -i 's/define DEV $(PREV_BUILD_MODE)/define DEV $(THIS_BUILD_MODE)/' dev.h)
+endif #1_4
 
 
 
-PROGRAM = vcfgl
+ifeq (dev,$(filter dev,$(MAKECMDGOALS))) #1_5
+
+$(info )
+$(info ________________________________________________________________________________)
+$(info )
+$(info [INFO]    Compiling in developer mode)
+$(info )
+
+
+OPTIM_FLAGS := $(OPTIM_OFF)
+THIS_MODE_FLAGS := $(DEV_FLAGS) $(OPTIM_FLAGS)
+
+
+else #1_5
+
+$(info )
+$(info ________________________________________________________________________________)
+$(info )
+$(info [INFO]    Compiling in release mode)
+$(info )
+
+OPTIM_FLAGS := $(OPTIM_ON)
+THIS_MODE_FLAGS := $(OPTIM_FLAGS)
+
+endif #1_5
+
+
+$(info [INFO]    -> CXXFLAGS was "$(CXXFLAGS)")
+CXXFLAGS += $(THIS_MODE_FLAGS)
+$(info [INFO]    -> Updated CXXFLAGS to "$(CXXFLAGS)")
+
+
+$(info [INFO]    -> LIBS was "$(LIBS)")
+LIBS := -lz -lm -lbz2 -llzma -lcurl -lpthread $(THIS_LIBHTS) $(THIS_CRYPTOLIB)
+$(info [INFO]    -> Updated LIBS to "$(LIBS)")
+
+$(info )
+$(info ________________________________________________________________________________)
+$(info )
+
+endif #1
+
+# [BLOCK END]
+####################################################################################################
+
+
+####################################################################################################
+
+
+dev: all
+
 all: $(PROGRAM)
 
-CXXSRC = $(wildcard *.cpp)
-OBJ = $(CXXSRC:.cpp=.o)
+CXXSRC := $(wildcard *.cpp)
 
--include $(OBJ:.o=.d)
+# Preprocessed C++ files
+PREP := $(CXXSRC:.cpp=.ii)
 
-%.o: %.cpp
-	$(CXX) -c  $(CXXFLAGS) $(COMPILEMODE) $*.cpp
-	$(CXX) -MM $(CXXFLAGS) $(COMPILEMODE) $*.cpp >$*.d
+# Assembly source files
+ASM := $(CXXSRC:.cpp=.s)
+
+# Object files
+OBJ := $(CXXSRC:.cpp=.o)
+
+# Dependency files
+DEP := $(OBJ:.o=.d)
+
+-include $(DEP)
+
+
+FLAGS := $(CPPFLAGS) $(CXXFLAGS)
+
+
+# Versioning
+VERSION = v0.4
+
+ifneq ($(wildcard .git),)
+VERSION := $(VERSION)-$(shell git describe --always)
+endif
+
+VERSIONH = version.h
+
+$(VERSIONH):
+	$(if $(wildcards version.h),$(if $(findstring "$(VERSION)",$(shell cat version.h)),,$(shell echo '#define VCFGL_VERSION "$(VERSION)"' > version.h)), $(shell echo '#define VCFGL_VERSION "$(VERSION)"' > version.h))
+
+
+# Build info
+BUILDH = build.h
+
+$(BUILDH): 
+	$(info [INFO]    Writing build info to build.h)
+	$(shell echo '#define VCFGL_MAKE_CXX ("$(CXX)")' > build.h)
+	$(shell echo '#define VCFGL_MAKE_LIBS ("$(LIBS)")' >> build.h)
+	$(shell echo '#define VCFGL_MAKE_FLAGS ("$(FLAGS)")' >> build.h)
+	$(shell echo '#define VCFGL_MAKE_HTSSRC ("$(HTSSRC)")' >> build.h)
+	$(shell echo '#define VCFGL_MAKE_CXXFLAGS ("$(CXXFLAGS)")' >> build.h)
+	$(shell echo '#define VCFGL_MAKE_CPPFLAGS ("$(CPPFLAGS)")' >> build.h)
+
+
+$(PROGRAM): $(OBJ) 
+	@echo "________________________________________________________________________________"
+	@echo ""
+	@echo "[INFO]    -> Finishing up"
+	$(CXX) -o $@ $^ $(LIBS) 
+	@echo "________________________________________________________________________________"
+	@echo ""
+	@echo "[FINISHED]    $(PROGRAM) is now ready to use!"
+	@echo "              Full path to the program: $(CURDIR)/$(PROGRAM)"
+	@echo ""
+	@echo "              To get started, run:"
+	@echo "              $(CURDIR)/$(PROGRAM) -h"
+	@echo "              or:"
+	@echo "              ./$(PROGRAM) -h"
+	@echo ""
+
+%.o: %.cpp $(VERSIONH) $(BUILDH) 
+	@echo ""
+	@echo "________________________________________________________________________________"
+	@echo ""
+	@echo "[INFO]    -> Compiling $*.cpp"
+	$(CXX) -c  $(FLAGS) $*.cpp
+	$(CXX) -MM $(FLAGS) $*.cpp >$*.d
 
 
 
-$(PROGRAM): version.h $(OBJ) 
-	$(CXX) -o $(PROGRAM) *.o $(LIBHTS) $(LIBS) 
+####################################################################################################
+## [clean]
+# - clean up the directory
 
+.PHONY: clean
 clean:
-	$(RM) *.o *.d $(PROGRAM) version.h
+	$(RM) $(OBJ) $(DEP) $(PREP) $(ASM) $(VERSIONH) $(BUILDH) $(PROGRAM)
 
-test: 
+####################################################################################################
+## [test]
+# - run unit tests
+
+.PHONY: test
+test:
 	bash test/runTests.sh
 
+####################################################################################################
+## [.activate_module]
+
+.PHONY: .activate_module
+
+.activate_module:
+	@echo "________________________________________________________________________________"
+	@echo ""
+	@echo "[INFO]	Activating HTSlib submodule"
+	@echo ""
+	git submodule update --init --recursive
+	$(MAKE) -C $(HTSSRC)
+	@echo "[INFO]	-> HTSlib submodule is now activated"
+	@echo ""
+	@echo "________________________________________________________________________________"
+	
+
+####################################################################################################
+## [help]
+
+.PHONY: help
+help:
+	@echo ""
+	@echo "----------------------------------------"
+	@echo " Program: $(PROGRAM)"
+	@echo " Version: $(VERSION)"
+	@echo " License: GNU GPLv3.0"
+	@echo "----------------------------------------"
+	@echo ""
+	@echo " Usage:"
+	@echo "   make [target] [FLAG=value...]"
+	@echo ""
+	@echo " Targets:"
+	@echo "   help    - Print this help message"
+	@echo "   dev     - Compile in developer/debug mode (activates flags: -g -Wall -O0)"
+	@echo "   clean   - Clean up the directory"
+	@echo "   test    - Run unit tests"
+	@echo ""
+	@echo " Flags:"
+	@echo "   HTSSRC  - Specifies the source of HTSlib."
+	@echo "       Values:"
+	@echo "       (empty)          - Use the HTSlib submodule [default]"
+	@echo "       systemwide       - Use the systemwide HTSlib installation"
+	@echo "       /path/to/htslib  - Use the HTSlib installation at /path/to/htslib"
+	@echo ""
+	@echo " Examples:"
+	@echo "   make                         - Compile in release mode using HTSlib submodule"
+	@echo "   make HTSSRC=/path/to/htslib  - Compile in release mode using /path/to/htslib"
+	@echo "   make dev HTSSRC=systemwide   - Compile in developer mode using the systemwide HTSlib installation"
+	@echo ""
+	@echo " Note: If no values are provided for HTSSRC, CXX, CXXFLAGS, or LIBS, defaults will be used."
+	@echo ""
+
+####################################################################################################

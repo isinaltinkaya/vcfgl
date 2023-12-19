@@ -1,0 +1,17 @@
+@HD	VN:0	SO:coordinate
+@SQ	SN:ref1	LN:10
+*	0	ref1	1	255	10M	*	0	0	AAACAAAAAA	??????????
+*	0	ref1	1	255	3M	*	0	0	AAA	???
+*	0	ref1	1	255	3M	*	0	0	AAA	???
+*	0	ref1	2	255	2M	*	0	0	AA	??
+*	0	ref1	2	255	2M	*	0	0	AA	??
+*	0	ref1	5	255	6M	*	0	0	AAAAAA	??????
+*	0	ref1	5	255	6M	*	0	0	CAAAAA	??????
+*	0	ref1	7	255	4M	*	0	0	AAAA	????
+*	0	ref1	7	255	1M	*	0	0	A	?
+*	0	ref1	7	255	1M	*	0	0	A	?
+*	0	ref1	7	255	1M	*	0	0	A	?
+*	0	ref1	7	255	1M	*	0	0	A	?
+*	0	ref1	9	255	2M	*	0	0	AA	??
+*	0	ref1	9	255	1M	*	0	0	A	?
+*	0	ref1	9	255	1M	*	0	0	A	?

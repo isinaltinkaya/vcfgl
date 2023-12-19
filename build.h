@@ -1,0 +1,6 @@
+#define VCFGL_MAKE_CXX ("g++")
+#define VCFGL_MAKE_LIBS ("-lz -lm -lbz2 -llzma -lcurl -lpthread /home/isin/Projects/VCFGL/vcfgl/htslib/libhts.a -lcrypto")
+#define VCFGL_MAKE_FLAGS ("-I/home/isin/Projects/VCFGL/vcfgl/htslib -O3")
+#define VCFGL_MAKE_HTSSRC ("/home/isin/Projects/VCFGL/vcfgl/htslib")
+#define VCFGL_MAKE_CXXFLAGS ("-O3")
+#define VCFGL_MAKE_CPPFLAGS ("-I/home/isin/Projects/VCFGL/vcfgl/htslib")

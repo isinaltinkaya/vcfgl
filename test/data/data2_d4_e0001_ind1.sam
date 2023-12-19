@@ -1,0 +1,15 @@
+@HD	VN:0	SO:coordinate
+@SQ	SN:ref1	LN:10
+*	0	ref1	1	255	8M	*	0	0	AAAACCAA	????????
+*	0	ref1	1	255	8M	*	0	0	AAACCCAA	????????
+*	0	ref1	1	255	2M	*	0	0	AA	??
+*	0	ref1	2	255	1M	*	0	0	A	?
+*	0	ref1	2	255	1M	*	0	0	A	?
+*	0	ref1	2	255	1M	*	0	0	A	?
+*	0	ref1	2	255	1M	*	0	0	A	?
+*	0	ref1	4	255	4M	*	0	0	CCCA	????
+*	0	ref1	4	255	1M	*	0	0	A	?
+*	0	ref1	4	255	1M	*	0	0	C	?
+*	0	ref1	7	255	1M	*	0	0	A	?
+*	0	ref1	7	255	1M	*	0	0	A	?
+*	0	ref1	10	255	1M	*	0	0	A	?

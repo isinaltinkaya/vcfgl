@@ -1,0 +1,29 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##source=tskit 0.4.1
+##contig=<ID=ref1,length=10>
+##fileDate=Sat Dec 16 16:24:39 2023
+##source=vcfgl [version: v0.4 bb8df2d-dirty] [build: Dec 16 2023 16:17:17] [htslib: 1.15.1-20-g46c56fc]
+##source=Command: vcfgl --verbose 0 --threads 1 --seed 42 --input /home/isin/Projects/VCFGL/vcfgl/test/data/data1.vcf --output test7 --output-mode v --depth 1.000000 --error-rate 0.200000 --error-qs 0 --beta-variance -1.000000e+00 --gl-model 1 --gl1-theta 0.830000 --platform 0 --precise-gl 0 --i16-mapq 20 --gvcf-dps 1 -explode 1 --rm-invar-sites 0 --rm-empty-sites 1 -doUnobserved 2 -doGVCF 1 -doPileup 1 -doTruth 1 -addGL 1 -addGP 1 -addPL 1 -addI16 0 -addQS 1 -addFormatDP 1 -addInfoDP 1 -addFormatAD 1 -addInfoAD 1 -addFormatADF 1 -addInfoADF 1 -addFormatADR 1 -addInfoADR 1
+##ALT=<ID=NON_REF,Description="Represents any possible alternative allele at this location">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of this non-variant block">
+##INFO=<ID=MinDP,Number=1,Type=Integer,Description="Minimum per-sample depth in this gVCF block">
+##INFO=<ID=MIN_DP,Number=1,Type=Integer,Description="Minimum DP observed within the GVCF block">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Simulated per-sample read depth">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total read depth">
+##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihood in log10 likelihood ratio format">
+##FORMAT=<ID=PL,Number=G,Type=Integer,Description="Phred-scaled genotype likelihoods">
+##FORMAT=<ID=GP,Number=G,Type=Float,Description="Genotype probabilities">
+##INFO=<ID=QS,Number=R,Type=Float,Description="Normalized phred-score allele quality sum. Auxiliary bcf tag used for calling">
+##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the REF and ALT alleles">
+##FORMAT=<ID=ADF,Number=R,Type=Integer,Description="Allelic depths on the forward strand for the REF and ALT alleles">
+##FORMAT=<ID=ADR,Number=R,Type=Integer,Description="Allelic depths on the reverse strand for the REF and ALT alleles">
+##INFO=<ID=AD,Number=R,Type=Integer,Description="Total allelic depths for the REF and ALT alleles">
+##INFO=<ID=ADF,Number=R,Type=Integer,Description="Total allelic depths on the forward strand for the REF and ALT alleles">
+##INFO=<ID=ADR,Number=R,Type=Integer,Description="Total allelic depths on the reverse strand for the REF and ALT alleles">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind1
+ref1	1	.	A	<NON_REF>	.	.	END=3;MIN_DP=1;QS=1,0	PL:DP	0,3,6:1
+ref1	4	.	A	C,<NON_REF>	.	PASS	DP=2;QS=0.5,0.5,0;AD=1,1,0;ADF=1,0,0;ADR=0,1,0	DP:GL:PL:GP:AD:ADF:ADR	2:-0.0562232,0,-0.0562232,-0.357257,-0.357257,-0.41348:1,0,1,4,4,4:0.878571,1,0.878571,0.439282,0.439282,0.38594:1,1,0:1,0,0:0,1,0
+ref1	5	.	A	C,T,<NON_REF>	.	PASS	DP=3;QS=0.333333,0.333333,0.333333,0;AD=1,1,1,0;ADF=0,1,0,0;ADR=1,0,1,0	DP:GL:PL:GP:AD:ADF:ADR	3:0,-0.0645574,0,-0.0645574,-0.0645574,0,-0.301034,-0.301034,-0.301034,-0.236476:0,1,0,1,1,0,3,3,3,2:1,0.861872,1,0.861872,0.861872,1,0.499996,0.499996,0.499996,0.580128:1,1,1,0:0,1,0,0:1,0,1,0
+ref1	7	.	A	<NON_REF>	.	.	END=8;MIN_DP=1;QS=1,0	PL:DP	0,3,6:1
+ref1	10	.	A	<NON_REF>	.	.	MIN_DP=1;QS=1,0	PL:DP	0,3,6:1

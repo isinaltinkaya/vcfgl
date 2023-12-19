@@ -1,0 +1,31 @@
+@HD	VN:0	SO:coordinate
+@SQ	SN:ref1	LN:10
+*	0	ref1	1	255	10M	*	0	0	AAAACAAAAA	IIIIIIIIII
+*	0	ref1	1	255	10M	*	0	0	AAACCAAAAA	IIIIIIIIII
+*	0	ref1	1	255	10M	*	0	0	AAAAAAAAAA	IIIIIIIIII
+*	0	ref1	1	255	10M	*	0	0	AAACCAAAAA	IIIIIIIIII
+*	0	ref1	1	255	10M	*	0	0	AAACAAAAAA	IIIIIIIIII
+*	0	ref1	1	255	1M	*	0	0	A	I
+*	0	ref1	1	255	1M	*	0	0	A	I
+*	0	ref1	1	255	1M	*	0	0	A	I
+*	0	ref1	1	255	1M	*	0	0	A	I
+*	0	ref1	1	255	1M	*	0	0	A	I
+*	0	ref1	3	255	4M	*	0	0	ACCA	IIII
+*	0	ref1	3	255	1M	*	0	0	A	I
+*	0	ref1	4	255	2M	*	0	0	CC	II
+*	0	ref1	4	255	2M	*	0	0	CC	II
+*	0	ref1	4	255	1M	*	0	0	A	I
+*	0	ref1	5	255	1M	*	0	0	C	I
+*	0	ref1	5	255	1M	*	0	0	C	I
+*	0	ref1	5	255	1M	*	0	0	C	I
+*	0	ref1	5	255	1M	*	0	0	C	I
+*	0	ref1	5	255	1M	*	0	0	C	I
+*	0	ref1	5	255	1M	*	0	0	A	I
+*	0	ref1	6	255	1M	*	0	0	A	I
+*	0	ref1	8	255	3M	*	0	0	AAA	III
+*	0	ref1	8	255	3M	*	0	0	AAA	III
+*	0	ref1	8	255	3M	*	0	0	AAA	III
+*	0	ref1	9	255	2M	*	0	0	AA	II
+*	0	ref1	9	255	2M	*	0	0	AA	II
+*	0	ref1	9	255	1M	*	0	0	A	I
+*	0	ref1	9	255	1M	*	0	0	A	I

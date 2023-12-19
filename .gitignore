@@ -12,6 +12,7 @@ version.h
 vgcore*
 
 .vscode/
+*code-workspace
 
 COMMIT_CHANGES
 

@@ -1,0 +1,31 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##source=tskit 0.4.1
+##contig=<ID=ref1,length=10>
+##fileDate=Sat Dec 16 18:18:38 2023
+##source=vcfgl [version: v0.4 bb8df2d-dirty] [build: Dec 16 2023 18:18:35] [htslib: 1.15.1-20-g46c56fc]
+##source=Command: vcfgl --verbose 0 --threads 1 --seed 42 --input /home/isin/Projects/VCFGL/vcfgl/test/data/data2.vcf --output /home/isin/Projects/VCFGL/vcfgl/test/testwd/test8 --output-mode v --depth 4.000000 --error-rate 0.001000 --error-qs 0 --beta-variance -1.000000e+00 --gl-model 2 --gl1-theta 0.830000 --platform 0 --precise-gl 0 --i16-mapq 20 --gvcf-dps 1 -explode 1 --rm-invar-sites 0 --rm-empty-sites 1 -doUnobserved 2 -doGVCF 1 -doPileup 0 -doTruth 0 -addGL 1 -addGP 1 -addPL 1 -addI16 0 -addQS 1 -addFormatDP 1 -addInfoDP 1 -addFormatAD 1 -addInfoAD 1 -addFormatADF 1 -addInfoADF 1 -addFormatADR 1 -addInfoADR 1
+##ALT=<ID=NON_REF,Description="Represents any possible alternative allele at this location">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of this non-variant block">
+##INFO=<ID=MinDP,Number=1,Type=Integer,Description="Minimum per-sample depth in this gVCF block">
+##INFO=<ID=MIN_DP,Number=1,Type=Integer,Description="Minimum DP observed within the GVCF block">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Simulated per-sample read depth">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total read depth">
+##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihood in log10 likelihood ratio format">
+##FORMAT=<ID=PL,Number=G,Type=Integer,Description="Phred-scaled genotype likelihoods">
+##FORMAT=<ID=GP,Number=G,Type=Float,Description="Genotype probabilities">
+##INFO=<ID=QS,Number=R,Type=Float,Description="Normalized phred-score allele quality sum. Auxiliary bcf tag used for calling">
+##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the REF and ALT alleles">
+##FORMAT=<ID=ADF,Number=R,Type=Integer,Description="Allelic depths on the forward strand for the REF and ALT alleles">
+##FORMAT=<ID=ADR,Number=R,Type=Integer,Description="Allelic depths on the reverse strand for the REF and ALT alleles">
+##INFO=<ID=AD,Number=R,Type=Integer,Description="Total allelic depths for the REF and ALT alleles">
+##INFO=<ID=ADF,Number=R,Type=Integer,Description="Total allelic depths on the forward strand for the REF and ALT alleles">
+##INFO=<ID=ADR,Number=R,Type=Integer,Description="Total allelic depths on the reverse strand for the REF and ALT alleles">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind1	ind2
+ref1	1	.	A	<NON_REF>	.	.	END=3;MIN_DP=2;QS=2,0	PL:DP	0,6,70:2	0,9,104:3
+ref1	4	.	C	A,<NON_REF>	.	PASS	DP=6;QS=1.6,0.4,0;AD=4,2,0;ADF=2,1,0;ADR=2,1,0	DP:GL:PL:GP:AD:ADF:ADR	5:-5.44895,0,-8.92563,-6.3516,-9.5274,-15.879:54,0,89,64,95,159:3.55674e-06,1,1.18677e-09,4.45038e-07,2.9689e-10,1.32127e-16:3,2,0:1,1,0:2,1,0	1:0,-0.300885,-3.47669,-0.300885,-3.47669,-3.47669:0,3,35,3,35,35:1,0.500167,0.000333667,0.500167,0.000333667,0.000333667:1,0,0:1,0,0:0,0,0
+ref1	5	.	C	A,<NON_REF>	.	PASS	DP=6;QS=1.33333,0.666667,0;AD=4,2,0;ADF=2,0,0;ADR=2,2,0	DP:GL:PL:GP:AD:ADF:ADR	3:0,-0.902655,-10.4301,-0.902655,-10.4301,-10.4301:0,9,104,9,104,104:1,0.125125,3.71484e-11,0.125125,3.71484e-11,3.71484e-11:3,0,0:2,0,0:1,0,0	3:-6.05072,0,-2.57403,-6.3516,-3.1758,-9.5274:61,0,26,64,32,95:8.89778e-07,1,0.00266667,4.45037e-07,0.000667112,2.9689e-10:1,2,0:0,0,0:1,2,0
+ref1	6	.	A	C,<NON_REF>	.	PASS	DP=6;QS=1,1,0;AD=3,3,0;ADF=2,2,0;ADR=1,1,0	DP:GL:PL:GP:AD:ADF:ADR	3:-10.4301,-0.902655,0,-10.4301,-0.902655,-10.4301:104,9,0,104,9,104:3.71484e-11,0.125125,1,3.71484e-11,0.125125,3.71484e-11:0,3,0:0,2,0:0,1,0	3:0,-0.902655,-10.4301,-0.902655,-10.4301,-10.4301:0,9,104,9,104,104:1,0.125125,3.71484e-11,0.125125,3.71484e-11,3.71484e-11:3,0,0:2,0,0:1,0,0
+ref1	7	.	A	<NON_REF>	.	.	END=8;MIN_DP=2;QS=2,0	PL:DP	0,6,70:2	0,12,139:4
+ref1	9	.	A	<NON_REF>	.	PASS	DP=8;QS=1,0;AD=8,0;ADF=6,0;ADR=2,0	DP:GL:PL:GP:AD:ADF:ADR	0:.,.,.:.,.,.:.,.,.:0,0:0,0:0,0	8:0,-2.40708,-27.8135:0,24,255:1,0.00391669,1.53641e-28:8,0:6,0:2,0
+ref1	10	.	A	<NON_REF>	.	.	MIN_DP=1;QS=2,0	PL:DP	0,3,35:1	0,15,174:5

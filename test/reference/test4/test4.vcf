@@ -1,0 +1,22 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##source=tskit 0.4.1
+##contig=<ID=ref1,length=10>
+##fileDate=Tue Dec 19 11:59:59 2023
+##source=vcfgl [version: v0.4-bb8df2d] [build: Dec 19 2023 11:57:09] [htslib: 1.15.1-20-g46c56fc]
+##source=Command: vcfgl --verbose 0 --threads 1 --seed 42 --input /home/isin/Projects/VCFGL/vcfgl/test/data/data3.vcf --output /home/isin/Projects/VCFGL/vcfgl/test/testwd/test4 --output-mode v --depth inf --error-rate 0.000000 --error-qs 0 --beta-variance -1.000000e+00 --gl-model 1 --gl1-theta 0.830000 --platform 0 --precise-gl 0 --i16-mapq 20  -explode 1 --rm-invar-sites 0 --rm-empty-sites 1 -doUnobserved 4 -doGVCF 0 -printPileup 0 -printTruth 1 -addGL 1 -addGP 1 -addPL 1 -addI16 0 -addQS 0 -addFormatDP 0 -addInfoDP 0 -addFormatAD 0 -addInfoAD 0 -addFormatADF 0 -addInfoADF 0 -addFormatADR 0 -addInfoADR 0
+##ALT=<ID=*,Description="Symbolic alternate allele representing any possible alternative allele at this location">
+##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihood in log10 likelihood ratio format">
+##FORMAT=<ID=PL,Number=G,Type=Integer,Description="Phred-scaled genotype likelihoods">
+##FORMAT=<ID=GP,Number=G,Type=Float,Description="Genotype probabilities">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind1	ind2
+ref1	1	.	A	<*>	.	PASS	.	GL:GP:PL	0,-inf,-inf:1,0,0:255,0,0	0,-inf,-inf:1,0,0:255,0,0
+ref1	2	.	A	<*>	.	PASS	.	GL:GP:PL	0,-inf,-inf:1,0,0:255,0,0	0,-inf,-inf:1,0,0:255,0,0
+ref1	3	.	A	<*>	.	PASS	.	GL:GP:PL	0,-inf,-inf:1,0,0:255,0,0	0,-inf,-inf:1,0,0:255,0,0
+ref1	4	.	A	C,<*>	.	PASS	.	GL:GP:PL	-inf,0,-inf,-inf,-inf,-inf:0,1,0,0,0,0:0,255,0,0,0,0	-inf,0,-inf,-inf,-inf,-inf:0,1,0,0,0,0:0,255,0,0,0,0
+ref1	5	.	A	C,<*>	.	PASS	.	GL:GP:PL	-inf,0,-inf,-inf,-inf,-inf:0,1,0,0,0,0:0,255,0,0,0,0	-inf,0,-inf,-inf,-inf,-inf:0,1,0,0,0,0:0,255,0,0,0,0
+ref1	6	.	C	<*>	.	PASS	.	GL:GP:PL	-inf,-inf,0:0,0,1:0,0,255	-inf,-inf,0:0,0,1:0,0,255
+ref1	7	.	A	<*>	.	PASS	.	GL:GP:PL	0,-inf,-inf:1,0,0:255,0,0	0,-inf,-inf:1,0,0:255,0,0
+ref1	8	.	A	<*>	.	PASS	.	GL:GP:PL	0,-inf,-inf:1,0,0:255,0,0	0,-inf,-inf:1,0,0:255,0,0
+ref1	9	.	A	<*>	.	PASS	.	GL:GP:PL	0,-inf,-inf:1,0,0:255,0,0	0,-inf,-inf:1,0,0:255,0,0
+ref1	10	.	A	<*>	.	PASS	.	GL:GP:PL	0,-inf,-inf:1,0,0:255,0,0	0,-inf,-inf:1,0,0:255,0,0

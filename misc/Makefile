@@ -8,11 +8,10 @@ COMPILEMODE = -DDEV=1
 all: clean
 CXXFLAGS := -g -Wall -O0
 else
-$(info Compiling in release mode; will enable optimizaton (-O3))
+$(info Compiling in release mode)
 COMPILEMODE = -DDEV=0
 # TODO disable clean and replace with ngsAMOVA style checks
 all: clean
-CXXFLAGS := -O3
 endif
 
 LIBS = -lz -lm -lbz2 -llzma -lcurl -lpthread
@@ -78,4 +77,4 @@ test:
 	mkdir -pv testwd;
 	$(info Test 1)
 	./$(PROGRAM) -i data/call.vcf -t data/truth.vcf -o testwd/out_test.tsv;
-	diff -s testwd/out_test.tsv reference/test1.tsv
+	diff -s testwd/out_test.tsv reference/test_doGq0.tsv

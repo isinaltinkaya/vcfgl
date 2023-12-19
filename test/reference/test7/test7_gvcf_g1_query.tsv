@@ -1,0 +1,5 @@
+test/data/data1.sam	ref1,1,A,<*>	END=3	MIN_DP=1	PL=0,3,6	DP=1
+test/data/data1.sam	ref1,4,A,C,<*>	END=4	MIN_DP=.	PL=1,0,1,4,4,4	DP=2
+test/data/data1.sam	ref1,5,A,T,C,<*>	END=5	MIN_DP=.	PL=0,1,0,1,1,0,3,3,3,2	DP=3
+test/data/data1.sam	ref1,7,A,<*>	END=8	MIN_DP=1	PL=0,3,6	DP=1
+test/data/data1.sam	ref1,10,A,<*>	END=10	MIN_DP=1	PL=0,3,6	DP=1

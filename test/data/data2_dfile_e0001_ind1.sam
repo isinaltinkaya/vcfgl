@@ -1,0 +1,9 @@
+@HD	VN:0	SO:coordinate
+@SQ	SN:ref1	LN:10
+*	0	ref1	1	255	10M	*	0	0	AAAAACAAAA	IIIIIIIIII
+*	0	ref1	1	255	10M	*	0	0	AAAACCAAAA	IIIIIIIIII
+*	0	ref1	3	255	3M	*	0	0	ACA	III
+*	0	ref1	3	255	2M	*	0	0	AA	II
+*	0	ref1	7	255	4M	*	0	0	AAAA	IIII
+*	0	ref1	8	255	2M	*	0	0	AA	II
+*	0	ref1	8	255	1M	*	0	0	A	I
