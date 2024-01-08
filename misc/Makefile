@@ -1,19 +1,5 @@
 CXX ?= g++
 
-
-ifeq ($(DEV),1)
-$(info Compiling in developer mode)
-COMPILEMODE = -DDEV=1
-# TODO disable clean and replace with ngsAMOVA style checks
-all: clean
-CXXFLAGS := -g -Wall -O0
-else
-$(info Compiling in release mode)
-COMPILEMODE = -DDEV=0
-# TODO disable clean and replace with ngsAMOVA style checks
-all: clean
-endif
-
 LIBS = -lz -lm -lbz2 -llzma -lcurl -lpthread
 
 
