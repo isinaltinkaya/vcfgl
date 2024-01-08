@@ -2,10 +2,10 @@
 ##FILTER=<ID=PASS,Description="All filters passed">
 ##source=tskit 0.4.1
 ##contig=<ID=ref1,length=10>
-##fileDate=Sat Dec  9 20:11:28 2023
-##source=vcfgl [version: v0.3.3 bb8df2d-dirty] [build: Dec  9 2023 20:11:25] [htslib: 1.15.1-20-g46c56fc]
+##fileDate=Mon Jan  8 18:01:29 2024
+##source=vcfgl [version: v0.4.2-a4eb562] [build: Jan  8 2024 18:00:27] [htslib: 1.15.1-20-g46c56fcc]
 ##source=[vcfgl] I16 tag simulation is still under development. Please use with caution and report any issues
-##source=Command: vcfgl --verbose 0 --threads 1 --seed 42 --input /home/isin/Projects/VCFGL/vcfgl/test/data/data1.vcf --output /home/isin/Projects/VCFGL/vcfgl/test/testwd/test1 --output-mode v --depth 1.000000 --error-rate 0.200000 --error-qs 0 --beta-variance -1.000000e+00 --gl-model 1 --gl1-theta 0.830000 --platform 0 --precise-gl 0 --i16-mapq 20 -explode 1 --rm-invar-sites 0 --rm-empty-sites 0 -doUnobserved 1 -doGVCF 0 -doPileup 1 -doTruth 1 -addGL 1 -addGP 1 -addPL 1 -addI16 1 -addQS 1 -addFormatDP 1 -addInfoDP 1 -addFormatAD 1 -addInfoAD 1 -addFormatADF 1 -addInfoADF 1 -addFormatADR 1 -addInfoADR 1
+##source=Command: vcfgl --verbose 0 --threads 1 --seed 42 --input /home/isin/Projects/VCFGL/vcfgl/test/data/data1.vcf --output /home/isin/Projects/VCFGL/vcfgl/test/testwd/test1 --output-mode v --depth 1.000000 --error-rate 0.200000 --error-qs 0 --beta-variance -1.000000e+00 --gl-model 1 --gl1-theta 0.830000 --platform 0 --precise-gl 0 --i16-mapq 20  -explode 1 --rm-invar-sites 0 --rm-empty-sites 0 -doUnobserved 1 -doGVCF 0 -printPileup 1 -printTruth 1  -printBasePickError 0 -printQsError 0 -printGlError 0 -printQScores 0 -addGL 1 -addGP 1 -addPL 1 -addI16 1 -addQS 1 -addFormatDP 1 -addInfoDP 1 -addFormatAD 1 -addInfoAD 1 -addFormatADF 1 -addInfoADF 1 -addFormatADR 1 -addInfoADR 1
 ##ALT=<ID=*,Description="Symbolic alternate allele representing any possible alternative allele at this location">
 ##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Simulated per-sample read depth">
 ##INFO=<ID=DP,Number=1,Type=Integer,Description="Total read depth">
@@ -21,13 +21,13 @@
 ##INFO=<ID=ADF,Number=R,Type=Integer,Description="Total allelic depths on the forward strand for the REF and ALT alleles">
 ##INFO=<ID=ADR,Number=R,Type=Integer,Description="Total allelic depths on the reverse strand for the REF and ALT alleles">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind1
-ref1	1	.	A	<*>	.	PASS	DP=1;QS=1,0;I16=1,0,0,0,6,36,0,0,20,400,0,0,25,625,0,0;AD=1,0;ADF=1,0;ADR=0,0	DP:GL:PL:GP:AD:ADF:ADR	1:0,-0.301034,-0.6:0,3,6:1,0.499996,0.251189:1,0:1,0:0,0
-ref1	2	.	C	<*>	.	PASS	DP=1;QS=1,0;I16=1,0,0,0,6,36,0,0,20,400,0,0,20,400,0,0;AD=1,0;ADF=1,0;ADR=0,0	DP:GL:PL:GP:AD:ADF:ADR	1:0,-0.301034,-0.6:0,3,6:1,0.499996,0.251189:1,0:1,0:0,0
-ref1	3	.	A	<*>	.	PASS	DP=1;QS=1,0;I16=1,0,0,0,6,36,0,0,20,400,0,0,25,625,0,0;AD=1,0;ADF=1,0;ADR=0,0	DP:GL:PL:GP:AD:ADF:ADR	1:0,-0.301034,-0.6:0,3,6:1,0.499996,0.251189:1,0:1,0:0,0
-ref1	4	.	A	C,<*>	.	PASS	DP=2;QS=0.5,0.5,0;I16=1,0,0,1,6,36,6,36,20,400,20,400,50,1250,0,0;AD=1,1,0;ADF=1,0,0;ADR=0,1,0	DP:GL:PL:GP:AD:ADF:ADR	2:-0.0562232,0,-0.0562232,-0.357257,-0.357257,-0.41348:1,0,1,4,4,4:0.878571,1,0.878571,0.439282,0.439282,0.38594:1,1,0:1,0,0:0,1,0
-ref1	5	.	A	C,T,<*>	.	PASS	DP=3;QS=0.333333,0.333333,0.333333,0;I16=0,1,1,1,6,36,12,72,20,400,40,800,0,0,52,1014;AD=1,1,1,0;ADF=0,1,0,0;ADR=1,0,1,0	DP:GL:PL:GP:AD:ADF:ADR	3:0,-0.0645574,0,-0.0645574,-0.0645574,0,-0.301034,-0.301034,-0.301034,-0.236476:0,1,0,1,1,0,3,3,3,2:1,0.861872,1,0.861872,0.861872,1,0.499996,0.499996,0.499996,0.580128:1,1,1,0:0,1,0,0:1,0,1,0
+ref1	1	.	A	<*>	.	PASS	DP=1;QS=1,0;I16=1,0,0,0,7,49,0,0,20,400,0,0,25,625,0,0;AD=1,0;ADF=1,0;ADR=0,0	DP:GL:PL:GP:AD:ADF:ADR	1:0,-0.301034,-0.7:0,3,7:1,0.499996,0.199526:1,0:1,0:0,0
+ref1	2	.	C	<*>	.	PASS	DP=1;QS=1,0;I16=1,0,0,0,7,49,0,0,20,400,0,0,20,400,0,0;AD=1,0;ADF=1,0;ADR=0,0	DP:GL:PL:GP:AD:ADF:ADR	1:0,-0.301034,-0.7:0,3,7:1,0.499996,0.199526:1,0:1,0:0,0
+ref1	3	.	A	<*>	.	PASS	DP=1;QS=1,0;I16=1,0,0,0,7,49,0,0,20,400,0,0,25,625,0,0;AD=1,0;ADF=1,0;ADR=0,0	DP:GL:PL:GP:AD:ADF:ADR	1:0,-0.301034,-0.7:0,3,7:1,0.499996,0.199526:1,0:1,0:0,0
+ref1	4	.	A	C,<*>	.	PASS	DP=2;QS=0.5,0.5,0;I16=1,0,0,1,7,49,7,49,20,400,20,400,50,1250,0,0;AD=1,1,0;ADF=1,0,0;ADR=0,1,0	DP:GL:PL:GP:AD:ADF:ADR	2:-0.143579,0,-0.143579,-0.444613,-0.444613,-0.588193:1,0,1,4,4,6:0.71849,1,0.71849,0.359242,0.359242,0.258112:1,1,0:1,0,0:0,1,0
+ref1	5	.	A	C,T,<*>	.	PASS	DP=3;QS=0.333333,0.333333,0.333333,0;I16=0,1,1,1,7,49,14,98,20,400,40,800,0,0,52,1014;AD=1,1,1,0;ADF=0,1,0,0;ADR=1,0,1,0	DP:GL:PL:GP:AD:ADF:ADR	3:-0.0113571,0,-0.0113571,0,0,-0.0113571,-0.312391,-0.312391,-0.312391,-0.323748:0,0,0,0,0,0,3,3,3,3:0.974188,1,0.974188,1,1,0.974188,0.48709,0.48709,0.48709,0.474517:1,1,1,0:0,1,0,0:1,0,1,0
 ref1	6	.	<*>	.	.	PASS	DP=0;QS=0;I16=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0;AD=0;ADF=0;ADR=0	DP:GL:PL:GP:AD:ADF:ADR	0:.:.:.:0:0:0
-ref1	7	.	A	<*>	.	PASS	DP=1;QS=1,0;I16=1,0,0,0,6,36,0,0,20,400,0,0,14,196,0,0;AD=1,0;ADF=1,0;ADR=0,0	DP:GL:PL:GP:AD:ADF:ADR	1:0,-0.301034,-0.6:0,3,6:1,0.499996,0.251189:1,0:1,0:0,0
-ref1	8	.	A	<*>	.	PASS	DP=2;QS=1,0;I16=2,0,0,0,12,72,0,0,40,800,0,0,49,1201,0,0;AD=2,0;ADF=2,0;ADR=0,0	DP:GL:PL:GP:AD:ADF:ADR	2:0,-0.602068,-1.06103:0,6,11:1,0.249996,0.0868897:2,0:2,0:0,0
+ref1	7	.	A	<*>	.	PASS	DP=1;QS=1,0;I16=1,0,0,0,7,49,0,0,20,400,0,0,14,196,0,0;AD=1,0;ADF=1,0;ADR=0,0	DP:GL:PL:GP:AD:ADF:ADR	1:0,-0.301034,-0.7:0,3,7:1,0.499996,0.199526:1,0:1,0:0,0
+ref1	8	.	A	<*>	.	PASS	DP=2;QS=1,0;I16=2,0,0,0,14,98,0,0,40,800,0,0,49,1201,0,0;AD=2,0;ADF=2,0;ADR=0,0	DP:GL:PL:GP:AD:ADF:ADR	2:0,-0.602068,-1.24246:0,6,12:1,0.249996,0.0572194:2,0:2,0:0,0
 ref1	9	.	<*>	.	.	PASS	DP=0;QS=0;I16=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0;AD=0;ADF=0;ADR=0	DP:GL:PL:GP:AD:ADF:ADR	0:.:.:.:0:0:0
-ref1	10	.	A	<*>	.	PASS	DP=1;QS=1,0;I16=0,1,0,0,6,36,0,0,20,400,0,0,25,625,0,0;AD=1,0;ADF=0,0;ADR=1,0	DP:GL:PL:GP:AD:ADF:ADR	1:0,-0.301034,-0.6:0,3,6:1,0.499996,0.251189:1,0:0,0:1,0
+ref1	10	.	A	<*>	.	PASS	DP=1;QS=1,0;I16=0,1,0,0,7,49,0,0,20,400,0,0,25,625,0,0;AD=1,0;ADF=0,0;ADR=1,0	DP:GL:PL:GP:AD:ADF:ADR	1:0,-0.301034,-0.7:0,3,7:1,0.499996,0.199526:1,0:0,0:1,0

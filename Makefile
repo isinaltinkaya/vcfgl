@@ -204,7 +204,7 @@ FLAGS := $(CPPFLAGS) $(CXXFLAGS)
 
 
 # Versioning
-VERSION = v0.4.1
+VERSION = v0.4.3
 
 ifneq ($(wildcard .git),)
 VERSION := $(VERSION)-$(shell git describe --always)
@@ -267,9 +267,12 @@ clean:
 ## [test]
 # - run unit tests
 
-.PHONY: test
+.PHONY: test test-%
 test:
 	bash test/runTests.sh
+
+test-%:
+	bash test/runTests.sh $*
 
 ####################################################################################################
 ## [.activate_module]

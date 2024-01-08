@@ -117,8 +117,6 @@ typedef struct simRecord {
     // current sizes in use for enum INFO/FORMAT<Number=bcf_tag_number>
     int* current_size_bcf_tag_number = NULL;
 
-    double* mps_depths = NULL;
-
     // ---
     // always created, only added if addTYPE==1
     int32_t* fmt_dp_arr = NULL;

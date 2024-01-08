@@ -17,8 +17,42 @@
 argStruct* args;
 glModel1Struct* glModel1;
 
-double (*sample_uniform)(void);
 const char* nonref_str;
+
+inline int get_qScore(const double error_prob_forQs) {
+
+    int qScore = -1;
+
+    DEVASSERT(error_prob_forQs >= 0.0);
+    DEVASSERT(error_prob_forQs <= 1.0);
+
+
+    if (0.0 == error_prob_forQs) {
+        qScore = CAP_BASEQ;
+    } else if (error_prob_forQs > 0.0 && error_prob_forQs < 1.0) {
+        qScore = (int)-10 * log10(error_prob_forQs) + 0.499;
+        if (qScore > CAP_BASEQ) {
+            qScore = CAP_BASEQ;
+        }
+    } else {
+        NEVER;
+    }
+
+    if (1 == args->platform) {
+
+        if (qScore <= 2) {
+            qScore = 2;
+        } else if (qScore <= 14) {
+            qScore = 12;
+        } else if (qScore <= 30) {
+            qScore = 23;
+        } else {
+            qScore = 37;
+        }
+    }
+
+    return(qScore);
+}
 
 inline void write_record_values(htsFile* out_fp, simRecord* sim) {
 
@@ -67,42 +101,16 @@ inline void write_record_values(htsFile* out_fp, simRecord* sim) {
 // isolates poisson distribution RNG from other RNGs
 // to be able to sample depths from poisson the same way given the same seed
 // regardless of --error-qs beta sampling being on or off
-unsigned short int rng1_seeder[3] = { VCFGL_RAND48_SEED_0, VCFGL_RAND48_SEED_1, VCFGL_RAND48_SEED_2 };
-unsigned short int rng1_seeder_save[3] = { VCFGL_RAND48_SEED_0, VCFGL_RAND48_SEED_1, VCFGL_RAND48_SEED_2 };
+unsigned short int rng1_seeder[3] = SEEDER_INIT;
+unsigned short int rng1_seeder_save[3] = SEEDER_INIT;
 
-double (*sample_depth)(double xm);
+// rng2_seeder: seed for beta distribution
+unsigned short int rng2_seeder[3] = SEEDER_INIT;
+unsigned short int rng2_seeder_save[3] = SEEDER_INIT;
+
+
 void(*calculate_gls)(simRecord* sim);
 
-inline int get_qScore(const double error_prob_forQs) {
-
-    int qScore = -1;
-
-    if (0.0 == error_prob_forQs) {
-        qScore = CAP_BASEQ;
-    } else if (error_prob_forQs > 0.0) {
-        qScore = (int)-10 * log10(error_prob_forQs);
-        if (qScore > CAP_BASEQ) {
-            qScore = CAP_BASEQ;
-        }
-    } else {
-        NEVER;
-    }
-
-    if (1 == args->platform) {
-
-        if (qScore <= 2) {
-            qScore = 2;
-        } else if (qScore <= 14) {
-            qScore = 12;
-        } else if (qScore <= 30) {
-            qScore = 23;
-        } else {
-            qScore = 37;
-        }
-    }
-
-    return(qScore);
-}
 
 /// @brief simulate a site with no reads for any of the individuals
 /// @param sim 
@@ -292,13 +300,22 @@ inline int simulate_record_values(simRecord* sim) {
 
     // -------------------------------------------- //
     // simulate read depths
+
+    int n_sim_reads_arr[nSamples];
+    if (args->mps_depths != NULL) {
+        for (s = 0; s < nSamples; s++) {
+            n_sim_reads_arr[s] = args->poissonSampler[s]->sample();
+        }
+    } else {
+        for (s = 0; s < nSamples; s++) {
+            n_sim_reads_arr[s] = args->poissonSampler[0]->sample();
+        }
+    }
+
     for (s = 0; s < nSamples; s++) {
 
-        if (sim->mps_depths != NULL) {
-            n_sim_reads = sample_depth(sim->mps_depths[s]);
-        } else {
-            n_sim_reads = sample_depth(args->mps_depth);
-        }
+        n_sim_reads = n_sim_reads_arr[s];
+
         sim->fmt_dp_arr[s] = n_sim_reads;
         sim->info_dp_arr[0] += n_sim_reads;
 
@@ -341,12 +358,15 @@ inline int simulate_record_values(simRecord* sim) {
     if (1 == args->error_qs) {
         // if error_qs 1, args->base_pick_error_prob initted to -1.0
         base_pick_error_prob = args->betaSampler->sample();
-        // contig, site, base_pick_error_prob
 
-        // prints per-site errors to stdout
-        DEVRUN(
-            fprintf(stdout, "%s\t%ld\t%f\n", sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1, base_pick_error_prob);
-        );
+
+        if (args->printBasePickError) {
+            // TSV: type, sample_id, contig, site, read_index, base_pick_error_prob
+            for (s = 0; s < nSamples; s++) {
+                fprintf(stdout, "base_pick_error_prob\t%s\t%s\t%ld\tNA\t%f\n", sim->hdr->samples[s], sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1, base_pick_error_prob);
+            }
+        }
+
     }
 
 
@@ -401,10 +421,33 @@ inline int simulate_record_values(simRecord* sim) {
                 if (2 == args->error_qs) {
                     error_prob_forQs_i = args->betaSampler->sample();
                     qScore_i = get_qScore(error_prob_forQs_i);
+                    DEVASSERT(qScore_i >= 0);
                     sim->base_qScores[s][read_i] = qScore_i;
-                    if ((2 == args->GL) && (args->usePreciseGlError)) {
-                        sim->base_error_probs[s][read_i] = error_prob_forQs_i;
+
+
+                    if (args->printQsError) {
+                        // TSV: type, sample_id, contig, site, read_index, error_prob
+                        fprintf(stdout, "qs_error_prob\t%s\t%s\t%ld\t%d\t%f\n", sim->hdr->samples[s], sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1, read_i, error_prob_forQs_i);
                     }
+
+                    if (args->printQScores) {
+                        // TSV: type, sample_id, contig, site, read_index, qScore
+                        fprintf(stdout, "qs\t%s\t%s\t%ld\t%d\t%d\n", sim->hdr->samples[s], sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1, read_i, qScore_i);
+                    }
+
+                    if (args->usePreciseGlError) {
+                        sim->base_error_probs[s][read_i] = error_prob_forQs_i;
+                        if (args->printGlError) {
+                            // TSV: type, sample_id, contig, site, read_index, error_prob
+                            fprintf(stdout, "gl_error_prob\t%s\t%s\t%ld\t%d\t%f\n", sim->hdr->samples[s], sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1, read_i, error_prob_forQs_i);
+                        }
+                    } else {
+                        if (args->printGlError) {
+                            // TSV: type, sample_id, contig, site, read_index, error_prob
+                            fprintf(stdout, "gl_error_prob\t%s\t%s\t%ld\t%d\t%f\n", sim->hdr->samples[s], sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1, read_i, qScore_to_errorProb[qScore_i]);
+                        }
+                    }
+
                     sample_acgt_fmt_qsum_arr[r_base] += qScore_i;
                     sample_acgt_fmt_qsum_sq_arr[r_base] += qs_to_qs2(qScore_i);
                 } else {
@@ -495,7 +538,7 @@ inline int simulate_record_values(simRecord* sim) {
             n_sim_reads = sim->fmt_dp_arr[s];
             if (0 != n_sim_reads) {
                 for (int read_i = 0; read_i < n_sim_reads; read_i++) {
-                    tail_dist = sample_from_range_rng2(1, 50);
+                    tail_dist = sample_from_range_rng_rand(1, 50);
                     if (tail_dist > CAP_TAIL_DIST) {
                         tail_dist = CAP_TAIL_DIST;
                     }
@@ -1137,19 +1180,8 @@ inline int simulate_record_true_values(simRecord* sim) {
 
     // remove genotypes from main output file
     bcf_update_genotypes(sim->hdr, sim->rec, NULL, 0);
-
-    int nObservedBases = 0;
-    for (int base = 0; base < 4; ++base)
-    {
-        DEVASSERT(sim->acgt_info_ad_arr != NULL);
-        if (sim->acgt_info_ad_arr[base] > 0)
-        {
-            nObservedBases++;
-        }
-    }
-
-
     // -------------------------------------------- //
+
 
     if (1 == args->addGL) {
         ASSERT(0 == (bcf_update_format_float(
@@ -1289,6 +1321,11 @@ inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
         nSites++;
         nSitesTotal++;
     }
+
+
+    // last write for flushing the gvcf block if any
+    bcf_destroy(sim->rec); // first destroy the old rec
+    sim->rec = NULL;
 
 
     // /END/ main sites loop -----------------------------------------------
@@ -1445,7 +1482,47 @@ inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
 
 int main(int argc, char** argv) {
 
+
     args = args_get(--argc, ++argv);
+
+    if ((0 == args->error_qs) || (1 == args->error_qs)) {
+        args->preCalc = new preCalcStruct();
+        args->preCalc->error_prob_forQs = args->error_rate;
+        args->preCalc->qScore = get_qScore(args->preCalc->error_prob_forQs);
+        args->preCalc->q5 = args->preCalc->qScore << 5;
+        if (1 == args->GL) {
+            glModel1 = glModel1_init();
+            calculate_gls = alleles_calculate_gls_log10_glModel1_fixedQScore;
+        } else if (2 == args->GL) {
+            args->preCalc->prepare_gls_preCalc();
+            calculate_gls = alleles_calculate_gls_log10_glModel2_fixedQScore;
+        }
+
+        if (args->printGlError) {
+            fprintf(stdout, "gl_error_prob\tNA\tNA\tNA\tNA\t%f\n", args->preCalc->error_prob_forGl);
+        }
+
+        if (args->printQsError) {
+            fprintf(stdout, "qs_error_prob\tNA\tNA\tNA\tNA\t%f\n", args->preCalc->error_prob_forQs);
+        }
+
+        if (args->printQScores) {
+            fprintf(stdout, "qs\tNA\tNA\tNA\tNA\t%d\n", args->preCalc->qScore);
+        }
+
+    } else if (2 == args->error_qs) {
+        if (1 == args->GL) {
+            glModel1 = glModel1_init();
+            calculate_gls = alleles_calculate_gls_log10_glModel1;
+        } else if (2 == args->GL) {
+            if (args->usePreciseGlError) {
+                calculate_gls = alleles_calculate_gls_log10_glModel2_precise1;
+            } else {
+                calculate_gls = alleles_calculate_gls_log10_glModel2_precise0;
+            }
+        }
+    }
+
 
     args->in_fp = open_htsFile(args->in_fn, "r");
 

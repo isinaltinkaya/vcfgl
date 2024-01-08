@@ -5,44 +5,14 @@
 #include <time.h> // asctime
 #include <sys/stat.h> // stat()
 
-extern double (*sample_depth)(double xm);
-extern double (*sample_uniform)(void);
+
 extern void(*calculate_gls)(simRecord* sim);
 extern unsigned short int rng1_seeder[3];
 extern unsigned short int rng1_seeder_save[3];
+extern unsigned short int rng2_seeder[3];
+extern unsigned short int rng2_seeder_save[3];
 extern const char* nonref_str;
 
-
-inline int get_qScore(const double error_prob_forQs) {
-
-    int qScore = -1;
-
-    if (0.0 == error_prob_forQs) {
-        qScore = CAP_BASEQ;
-    } else if (error_prob_forQs > 0.0) {
-        qScore = (int)-10 * log10(error_prob_forQs);
-        if (qScore > CAP_BASEQ) {
-            qScore = CAP_BASEQ;
-        }
-    } else {
-        NEVER;
-    }
-
-    if (1 == args->platform) {
-
-        if (qScore <= 2) {
-            qScore = 2;
-        } else if (qScore <= 14) {
-            qScore = 12;
-        } else if (qScore <= 30) {
-            qScore = 23;
-        } else {
-            qScore = 37;
-        }
-    }
-
-    return(qScore);
-}
 
 preCalcStruct::preCalcStruct() {
     this->homT = -1.0;
@@ -238,6 +208,18 @@ void help_page() {
     fprintf(stderr, "         -doGVCF [0]|1                0: Disabled, 1: Output in gVCF format (requires: --rm-invar-sites 0, -doUnobserved 2, -addPL 1 and --gvcf-dps INT)\n");
     fprintf(stderr, "         -printPileup [0]|1           0: Disabled, 1: Also output in pileup format (<output_prefix>.pileup.gz)\n");
     fprintf(stderr, "         -printTruth [0]|1            0: Disabled, 1: Also output the VCF file containing the true genotypes (named <output_prefix>.truth.vcf)\n");
+    fprintf(stderr, "         -printBasePickError [0]|1    0: Disabled, 1: Print the base picking error probability to stdout.\n");
+    fprintf(stderr, "                                      If --error-qs 1 is used, writes per-read base picking error probabilities to stdout.\n");
+    fprintf(stderr, "                                      If --error-qs 0 or 2 is used, writes a single value which is used for all samples and sites.\n");
+    fprintf(stderr, "         -printQsError [0]|1          0: Disabled, 1: Print the error probability used in quality score calculations to stdout.\n");
+    fprintf(stderr, "                                      If --error-qs 2 is used, writes per-read quality score error probabilities to stdout.\n");
+    fprintf(stderr, "                                      If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.\n");
+    fprintf(stderr, "         -printGlError [0]|1          0: Disabled, 1: Print the error probability used in genotype likelihood calculations to stdout. (requires: -GL 2)\n");
+    fprintf(stderr, "                                      Since -GL 1 works directly with quality scores, this option is only available when -GL 2 is used.\n");
+    fprintf(stderr, "                                      If --error-qs 2 is used, writes per-read error probabilities to stdout.\n");
+    fprintf(stderr, "                                      If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.\n");
+    fprintf(stderr, "                                      If --precise-gl 1 is used, the printed values are the same as those printed by -printQsError.\n");
+    fprintf(stderr, "         -printQScores [0]|1               0: Disabled, 1: Print the quality scores to stdout.\n");
 
     fprintf(stderr, "\n");
     fprintf(stderr, "Output VCF/BCF tags:                  0: Do not add, 1: Add\n");
@@ -300,6 +282,10 @@ argStruct* args_init() {
     args->doGVCF = 0;
     args->printPileup = 0;
     args->printTruth = 0;
+    args->printBasePickError = 0;
+    args->printQsError = 0;
+    args->printGlError = 0;
+    args->printQScores = 0;
 
     args->addGL = 1;
     args->addGP = 0;
@@ -334,10 +320,13 @@ argStruct* args_init() {
     args->command = NULL;
     args->versionInfo = NULL;
 
-    args->betaSampler = NULL;
-
     // -------------------------------------------- //
     // for internal use
+
+    args->mps_depths = NULL;
+    args->n_mps_depths = 1;
+    args->betaSampler = NULL;
+    args->poissonSampler = NULL;
 
     args->base_pick_error_prob = -1.0;
 
@@ -486,6 +475,22 @@ argStruct* args_get(int argc, char** argv) {
 
         else if (strcasecmp("-printTruth", arv) == 0) {
             args->printTruth = atoi(val);
+        }
+
+        else if (strcasecmp("-printBasePickError", arv) == 0) {
+            args->printBasePickError = atoi(val);
+        }
+
+        else if (strcasecmp("-printQsError", arv) == 0) {
+            args->printQsError = atoi(val);
+        }
+
+        else if (strcasecmp("-printGlError", arv) == 0) {
+            args->printGlError = atoi(val);
+        }
+
+        else if (strcasecmp("-printQScores", arv) == 0) {
+            args->printQScores = atoi(val);
         }
 
         else if ((strcasecmp("-addGL", arv) == 0) || (strcasecmp("-addFormatGL", arv) == 0)) {
@@ -658,7 +663,11 @@ argStruct* args_get(int argc, char** argv) {
     CHECK_ARG_INTERVAL_INT(args->doUnobserved, 0, 5, "-doUnobserved");
     CHECK_ARG_INTERVAL_01(args->doGVCF, "-doGVCF");
     CHECK_ARG_INTERVAL_01(args->printPileup, "-printPileup");
-    CHECK_ARG_INTERVAL_INT(args->printTruth, 0, 1, "-printTruth");
+    CHECK_ARG_INTERVAL_01(args->printTruth, "-printTruth");
+    CHECK_ARG_INTERVAL_01(args->printBasePickError, "-printBasePickError");
+    CHECK_ARG_INTERVAL_01(args->printQsError, "-printQsError");
+    CHECK_ARG_INTERVAL_01(args->printGlError, "-printGlError");
+    CHECK_ARG_INTERVAL_01(args->printQScores, "-printQScores");
 
     CHECK_ARG_INTERVAL_01(args->addGL, "-addGL");
     CHECK_ARG_INTERVAL_01(args->addGP, "-addGP");
@@ -722,12 +731,20 @@ argStruct* args_get(int argc, char** argv) {
             ERROR("\n-> [-doGVCF 1] Adding unobserved alleles is required for gVCF output. Please set -doUnobserved to %d or %d and rerun.", ARG_DOUNOBSERVED_STAR, ARG_DOUNOBSERVED_NONREF);
         }
 
+        if (ARG_DEPTH_INF == args->mps_depth) {
+            ERROR("\n-> [-doGVCF 1] --depth inf is not supported with gVCF output. Please set --depth to a finite value and rerun.");
+        }
+
     } else {
         if (args->gvcf_dps_str != NULL) {
             ERROR("\n-> [--gvcf-dps] --gvcf-dps requires -doGVCF 1. Please set -doGVCF 1 and rerun.");
         }
     }
 
+
+    if (args->printGlError && (1 == args->GL)) {
+        ERROR("\n-> [-printGlError 1] Printing the error probability used in genotype likelihood calculations (-printGlError 1) is not supported with genotype likelihood model 1 (--gl-model 1).");
+    }
 
 
     // ---------------------------------------------------------------------- //
@@ -754,13 +771,21 @@ argStruct* args_get(int argc, char** argv) {
         }
     }
 
+    if (ARG_DEPTH_FILE == args->mps_depth) {
+        args->mps_depths = args->read_depthsFile();
+    }
 
     args->arg_fp = open_FILE(args->out_fnprefix, ".arg");
 
     args->datetime = strdup(get_time());
 
     if (args->error_qs != 0) {
+
+#if __USE_STD_BETA__ == 1
         args->betaSampler = new BetaSampler(args->error_rate, args->beta_variance, args->seed);
+#else
+        args->betaSampler = BetaSampler_init(args->error_rate, args->beta_variance, args->seed);
+#endif
     }
 
     // -> SEED
@@ -778,63 +803,94 @@ argStruct* args_get(int argc, char** argv) {
     rng1_seeder[1] = (unsigned short)((long)args->seed);
     rng1_seeder[2] = (unsigned short)(((long)args->seed) >> 16);
 
-    if (0 == args->error_qs) {
-        sample_depth = &sample_Poisson_rng1;
-        sample_uniform = &sample_uniform_rng1;
+    rng2_seeder[1] = (unsigned short)((long)args->seed);
+    rng2_seeder[2] = (unsigned short)(((long)args->seed) >> 16);
 
-        // [N.B. error_qs 0]
-        // for full rng sync with msToGlf, use the below instead:
-        // sample_uniform = &sample_uniform_rng0;
-        // sample_depth = &sample_Poisson_rng0;
-
-    } else if (1 == args->error_qs) {
-        sample_uniform = &sample_uniform_rng1;
-        sample_depth = &sample_Poisson_rng1;
-    } else if (2 == args->error_qs) {
-        sample_uniform = &sample_uniform_rng1;
-        sample_depth = &sample_Poisson_rng1;
-    }
-
-
-    if (0 == args->error_qs) {
-        args->base_pick_error_prob = args->error_rate;
-    } else if (1 == args->error_qs) {
-        args->base_pick_error_prob = -1.0; // sampled
-    } else if (2 == args->error_qs) {
-        args->base_pick_error_prob = args->error_rate;
-    }
-
-
-    if ((0 == args->error_qs) || (1 == args->error_qs)) {
-        args->preCalc = new preCalcStruct();
-        args->preCalc->error_prob_forQs = args->error_rate;
-        args->preCalc->qScore = get_qScore(args->preCalc->error_prob_forQs);
-        args->preCalc->q5 = args->preCalc->qScore << 5;
-        if (1 == args->GL) {
-            glModel1 = glModel1_init();
-            calculate_gls = alleles_calculate_gls_log10_glModel1_fixedQScore;
-        } else if (2 == args->GL) {
-            args->preCalc->prepare_gls_preCalc();
-            calculate_gls = alleles_calculate_gls_log10_glModel2_fixedQScore;
-        }
-    } else if (2 == args->error_qs) {
-        if (1 == args->GL) {
-            glModel1 = glModel1_init();
-            calculate_gls = alleles_calculate_gls_log10_glModel1;
-        } else if (2 == args->GL) {
-            if (args->usePreciseGlError) {
-                calculate_gls = alleles_calculate_gls_log10_glModel2_precise1;
-            } else {
-                calculate_gls = alleles_calculate_gls_log10_glModel2_precise0;
+    if (ARG_DEPTH_INF != args->mps_depth) {
+        if (1 == args->n_mps_depths) {
+            args->poissonSampler = (PoissonSampler**)malloc(sizeof(PoissonSampler*));
+            args->poissonSampler[0] = PoissonSampler_init(args->mps_depth);
+        } else {
+            //array of poisson samplers
+            args->poissonSampler = (PoissonSampler**)malloc(args->n_mps_depths * sizeof(PoissonSampler*));
+            for (int i = 0; i < args->n_mps_depths; ++i) {
+                args->poissonSampler[i] = PoissonSampler_init(args->mps_depths[i]);
             }
         }
     }
 
+
+    if (args->printBasePickError) {
+        fprintf(stderr, "[-printBasePickError 1] Program will print the base picking error probability to stdout.\n");
+    }
+
+    if (args->printGlError) {
+        fprintf(stderr, "[-printGlError 1] Program will print the error probability used in genotype likelihood calculations to stdout.\n");
+    }
+
+    if (args->printQScores) {
+        fprintf(stderr, "[-printQScores 1] Program will print the quality scores to stdout.\n");
+    }
+
+    if (0 == args->error_qs) {
+        args->base_pick_error_prob = args->error_rate;
+        if (args->printBasePickError) {
+            fprintf(stdout, "base_pick_error_prob\tNA\tNA\tNA\tNA\t%f\n", args->base_pick_error_prob);
+        }
+    } else if (1 == args->error_qs) {
+        args->base_pick_error_prob = -1.0; // sampled
+    } else if (2 == args->error_qs) {
+        args->base_pick_error_prob = args->error_rate;
+        if (args->printBasePickError) {
+            fprintf(stdout, "base_pick_error_prob\tNA\tNA\tNA\tNA\t%f\n", args->base_pick_error_prob);
+        }
+    }
+
+
+    // if ((0 == args->error_qs) || (1 == args->error_qs)) {
+        // args->preCalc = new preCalcStruct();
+        // args->preCalc->error_prob_forQs = args->error_rate;
+        // args->preCalc->qScore = get_qScore(args->preCalc->error_prob_forQs);
+        // args->preCalc->q5 = args->preCalc->qScore << 5;
+        // if (1 == args->GL) {
+            // glModel1 = glModel1_init();
+            // calculate_gls = alleles_calculate_gls_log10_glModel1_fixedQScore;
+        // } else if (2 == args->GL) {
+            // args->preCalc->prepare_gls_preCalc();
+            // calculate_gls = alleles_calculate_gls_log10_glModel2_fixedQScore;
+        // }
+//
+        // if (args->printGlError) {
+            // fprintf(stdout, "gl_error_prob\tNA\tNA\tNA\tNA\t%f\n", args->preCalc->error_prob_forGl);
+        // }
+//
+        // if (args->printQsError) {
+            // fprintf(stdout, "qs_error_prob\tNA\tNA\tNA\tNA\t%f\n", args->preCalc->error_prob_forQs);
+        // }
+//
+        // if (args->printQScores) {
+            // fprintf(stdout, "qs\tNA\tNA\tNA\tNA\t%d\n", args->preCalc->qScore);
+        // }
+//
+    // } else if (2 == args->error_qs) {
+        // if (1 == args->GL) {
+            // glModel1 = glModel1_init();
+            // calculate_gls = alleles_calculate_gls_log10_glModel1;
+        // } else if (2 == args->GL) {
+            // if (args->usePreciseGlError) {
+                // calculate_gls = alleles_calculate_gls_log10_glModel2_precise1;
+            // } else {
+                // calculate_gls = alleles_calculate_gls_log10_glModel2_precise0;
+            // }
+        // }
+    // }
+//
+//
     // ---------------------------------------------------------------------- //
     // PRINT ARGUMENTS
 
     ASSERT(asprintf(&args->versionInfo, "vcfgl [version: %s] [build: %s %s] [htslib: %s]\n", VCFGL_VERSION, __DATE__, __TIME__, hts_version()));
-    fprintf(stderr,"\n%s\n", args->versionInfo);
+    fprintf(stderr, "\n%s\n", args->versionInfo);
     fprintf(args->arg_fp, args->versionInfo);
 
     char depth_val[1024];
@@ -856,7 +912,7 @@ argStruct* args_get(int argc, char** argv) {
 
     ASSERT(asprintf(
         &args->command,
-        "Command: vcfgl --verbose %d --threads %d --seed %d --input %s --output %s --output-mode %s %s --error-rate %f --error-qs %d --beta-variance %e --gl-model %d --gl1-theta %f --platform %d --precise-gl %d --i16-mapq %d %s -explode %d --rm-invar-sites %d --rm-empty-sites %d -doUnobserved %d -doGVCF %d -printPileup %d -printTruth %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d -addFormatDP %d -addInfoDP %d -addFormatAD %d -addInfoAD %d -addFormatADF %d -addInfoADF %d -addFormatADR %d -addInfoADR %d",
+        "Command: vcfgl --verbose %d --threads %d --seed %d --input %s --output %s --output-mode %s %s --error-rate %f --error-qs %d --beta-variance %e --gl-model %d --gl1-theta %f --platform %d --precise-gl %d --i16-mapq %d %s -explode %d --rm-invar-sites %d --rm-empty-sites %d -doUnobserved %d -doGVCF %d -printPileup %d -printTruth %d  -printBasePickError %d -printQsError %d -printGlError %d -printQScores %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d -addFormatDP %d -addInfoDP %d -addFormatAD %d -addInfoAD %d -addFormatADF %d -addInfoADF %d -addFormatADR %d -addInfoADR %d",
         args->verbose,
         args->n_threads,
         args->seed,
@@ -880,6 +936,10 @@ argStruct* args_get(int argc, char** argv) {
         args->doGVCF,
         args->printPileup,
         args->printTruth,
+        args->printBasePickError,
+        args->printQsError,
+        args->printGlError,
+        args->printQScores,
         args->addGL,
         args->addGP,
         args->addPL,
@@ -1063,11 +1123,30 @@ void args_destroy(argStruct* args) {
 
     // -------------------------------------------- //
     // for internal use
+    if (NULL != args->mps_depths) {
+        free(args->mps_depths);
+        args->mps_depths = NULL;
+    }
 
-    delete args->betaSampler;
+    if (args->betaSampler != NULL) {
+
+#if __USE_STD_BETA__==1
+        delete (args->betaSampler);
+#else
+        BetaSampler_destroy(args->betaSampler);
+#endif
+    }
+    if (args->poissonSampler != NULL) {
+        for (int i = 0;i < args->n_mps_depths;++i) {
+            free(args->poissonSampler[i]);
+            args->poissonSampler[i] = NULL;
+        }
+        free(args->poissonSampler);
+        args->poissonSampler = NULL;
+    }
 
     if (args->preCalc != NULL) {
-        delete args->preCalc;
+        delete (args->preCalc);
     }
 
     free(args);
@@ -1080,43 +1159,65 @@ size_t fsize(const char* fname) {
     return st.st_size;
 }
 
-// modified from msToGlf.c
-double* read_depthsFile(const char* fname, int len) {
-    if (args->verbose > 0) {
-        fprintf(stderr, "Reading depths file: %s for %d samples\n", fname, len);
+
+/// @brief read depths file args->mps_depths_fn into args->mps_depths array and set args->n_mps_depths with array size
+double* argStruct::read_depthsFile(void) {
+
+    if (this->verbose > 0) {
+        fprintf(stderr, "-> Reading depths file: %s\n", this->mps_depths_fn);
     }
 
     FILE* fp = NULL;
-    if ((fp = fopen(fname, "r")) == NULL) {
-        fprintf(stderr, "Problem opening file: %s\n", fname);
-        exit(0);
+    if ((fp = fopen(this->mps_depths_fn, "r")) == NULL) {
+        ERROR("Could not open file: %s\n", this->mps_depths_fn);
     }
 
-    char buf[1024] = { '\0' };
-    double* ret = (double*)malloc(len * sizeof(double));
-    if (fsize(fname) != fread(buf, sizeof(char), fsize(fname), fp)) {
-        fprintf(stderr, "Problem reading file=%s\n", fname);
-        exit(0);
-    }
-    int posi = 0;
+    double val;
+    char* lineend;
 
-    ret[posi++] = atof(strtok(buf, "\n\t "));
-    if (len > 1) {
-        char* tok = NULL;
-        while ((tok = strtok(NULL, "\n\t ")))
-            ret[posi++] = atof(tok);
+    int n = 0;
+    char buf[255] = { '\0' };
+    int ntmp = BUFSIZE_NINDS;
+    double* ret = (double*)malloc(ntmp * sizeof(double));
+
+    while (fgets(buf, 255, fp)) {
+
+        val = strtod(buf, &lineend);
+        ASSERT(lineend != buf);
+
+        if (n == ntmp) {
+            ntmp *= 2;
+            ret = (double*)realloc(ret, ntmp * sizeof(double));
+        }
+
+        ret[n] = val;
+        ++n;
+
     }
 
-
-    DEVRUN(
-        fprintf(stderr, "\n-> Read %d values from depths file: %s\n", posi, fname);
-    fprintf(stderr, "\t-> Values: ");
-    for (int i = 0; i < posi; ++i) {
-        fprintf(stderr, "%f ", ret[i]);
+    if (n == 0) {
+        ERROR("Could not read any values from depths file: %s\n", this->mps_depths_fn);
     }
-    fprintf(stderr, "\n");
-    );
+
+    if (n != ntmp) {
+        ret = (double*)realloc(ret, n * sizeof(double));
+    }
+    this->n_mps_depths = n;
+
+    if (this->verbose > 0) {
+        fprintf(stderr, "\n-> Read %d values from depths file: %s\n", n, this->mps_depths_fn);
+
+        if (this->verbose > 1) {
+            fprintf(stderr, "\t-> Values: ");
+            for (int i = 0; i < n; ++i) {
+                fprintf(stderr, "%f ", ret[i]);
+            }
+            fprintf(stderr, "\n");
+        }
+    }
 
     fclose(fp);
-    return ret;
+    return(ret);
 }
+
+

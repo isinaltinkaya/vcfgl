@@ -205,18 +205,9 @@ simRecord::simRecord(bcf_hdr_t* in_hdr) {
 
     this->set_hdr(in_hdr);
 
-    if (args->mps_depths_fn != NULL) {
-        this->mps_depths = read_depthsFile(args->mps_depths_fn, this->nSamples);
-
-        fprintf(stderr, "\n");
-        if (args->verbose > 0) {
-            for (int s = 0; s < this->nSamples; s++) {
-                fprintf(stderr,
-                    "Individual \'%s\' (index:%d) mean per-site depth is "
-                    "set to %f\n",
-                    bcf_hdr_int2id(this->hdr, BCF_DT_SAMPLE, s),
-                    s, this->mps_depths[s]);
-            }
+    if (args->mps_depths != NULL) {
+        if (args->n_mps_depths != this->nSamples) {
+            ERROR("Number of depths provided in the depths file (%d) does not match the number of samples (%d) in the input VCF file.", args->n_mps_depths, this->nSamples);
         }
     }
 
@@ -409,11 +400,6 @@ simRecord::~simRecord() {
 
     free(this->current_size_bcf_tag_number);
     this->current_size_bcf_tag_number = NULL;
-
-    if (NULL != this->mps_depths) {
-        free(this->mps_depths);
-        this->mps_depths = NULL;
-    }
 
     free(this->alleles2acgt);
     this->alleles2acgt = NULL;

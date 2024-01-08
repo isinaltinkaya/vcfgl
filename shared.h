@@ -18,6 +18,18 @@
 #define VCFGL_RAND48_SEED_1   (0xabcd)
 #define VCFGL_RAND48_SEED_2   (0x1234)
 
+// init to { VCFGL_RAND48_SEED_0, VCFGL_RAND48_SEED_1, VCFGL_RAND48_SEED_2 };
+#define SEEDER_INIT { 0x330e, 0xabcd, 0x1234 }
+
+
+#ifndef __USE_PRECISE_GAMMA__
+#define __USE_PRECISE_GAMMA__ 0
+#endif
+
+#ifndef __USE_STD_BETA__
+#define __USE_STD_BETA__ 1
+#endif
+
 // --> CONSTANTS:MATH
 
 #define PI 3.141592654
@@ -34,6 +46,8 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define KSTRING_BGZF_WRITE_BUFFER_SIZE 4096
 
 #define BUFSIZE_NBASES 50
+
+#define BUFSIZE_NINDS 100
 
 
 // --> CONSTANTS:ARGS

@@ -184,8 +184,8 @@ void alleles_calculate_gls_log10_glModel2_precise1(simRecord* sim) {
 
                 bo = sim->bases[s][read_i];
 
-
                 e = sim->base_error_probs[s][read_i];
+
                 if (0.0 == e) {
                     homT = 0.0;
                     het = -0.30103;

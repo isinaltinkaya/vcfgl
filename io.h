@@ -5,7 +5,7 @@
 #include <htslib/bgzf.h> // bgzf
 #include <htslib/hts.h>  // hts_version()
 
-#include "random_generator.h" // BetaSampler
+#include "random_generator.h" // BetaSampler, PoissonSampler
 
 
 FILE* get_FILE(const char* fname, const char* mode);
@@ -14,6 +14,8 @@ htsFile* open_htsFile(const char* fn, const char* mode);
 BGZF* open_BGZF(const char* fn, const char* mode);
 void write_BGZF(BGZF* fp, const void* data, const int size);
 void write_BGZF_kstring_buffer(BGZF* fp, kstring_t* buffer);
+
+int get_qScore(const double error_prob_forQs);
 
 typedef struct preCalcStruct preCalcStruct;
 
@@ -78,6 +80,10 @@ struct argStruct {
     int doGVCF;
     int printPileup;
     int printTruth;
+    int printBasePickError;
+    int printQsError;
+    int printGlError;
+    int printQScores;
 
     int addGL;
     int addGP;
@@ -112,10 +118,14 @@ struct argStruct {
     char* command;
     char* versionInfo;
 
-
     // -------------------------------------------- //
     // for internal use
-    BetaSampler* betaSampler = NULL;
+
+    double* mps_depths;
+
+    int n_mps_depths; // 1 if mps_depths_fn == NULL, otherwise n_mps_depths = n_samples
+    BetaSampler* betaSampler;
+    PoissonSampler** poissonSampler;
 
     double base_pick_error_prob;
 
@@ -125,13 +135,15 @@ struct argStruct {
     // if error_qs == 2, then preCalc ==NULL
     preCalcStruct* preCalc;
 
+    // functions:
+    double* read_depthsFile(void);
+
+
 };
 
 argStruct* args_init();
 
 argStruct* args_get(int argc, char** argv);
-
-double* read_depthsFile(const char* fname, int len);
 
 void args_destroy(argStruct* args);
 
