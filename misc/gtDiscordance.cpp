@@ -1,4 +1,4 @@
-// v3
+// v4
 // isinaltinkaya
 
 
@@ -65,6 +65,7 @@ void usage(void) {
 	fprintf(stderr, "  -doGQ 4			print tidy gq summary with hom/het details\n");
 	fprintf(stderr, "  -doGQ 5			per-sample doGQ 3\n");
 	fprintf(stderr, "  -doGQ 6			per-sample doGQ 4\n");
+	fprintf(stderr, "  -doGQ 7			per-sample doGQ 4, for the sites with missing GQ assume highest GQ value\n");
 	fprintf(stderr, "  -h, --help			print help\n");
 	fprintf(stderr, "\n");
 
@@ -132,6 +133,8 @@ int main(int argc, char** argv)
 		fprintf(stderr, "-doGQ 5. Will do gq and attempt to tidy up the output for each sample.\n");
 	} else if (doGq == 6) {
 		fprintf(stderr, "-doGQ 6. Will do gq and attempt to tidy up the output for each sample and add true/call hom/het status information.\n");
+	} else if (doGq == 7) {
+		fprintf(stderr, "-doGQ 7. Will do gq and attempt to tidy up the output for each sample and add true/call hom/het status information. For the sites with missing GQ assume highest GQ value.\n");
 	} else {
 		ERROR("Unknown doGq:%d\n", doGq);
 	}
@@ -255,9 +258,9 @@ int main(int argc, char** argv)
 		gt_arr2 = NULL;
 		ngq = 0;
 		ngq_arr = 0;
-		if(gq_arr!=NULL){
-		free(gq_arr);
-		gq_arr = NULL;
+		if (gq_arr != NULL) {
+			free(gq_arr);
+			gq_arr = NULL;
 		}
 
 
@@ -276,8 +279,24 @@ int main(int argc, char** argv)
 		// get genotype quality scores from the input/call file
 		if (doGq > 0) {
 			ngq = bcf_get_format_int32(hdrInput, recInput, "GQ", &gq_arr, &ngq_arr);
-			ASSERT(ngq > 0);
-			ASSERT(ngq==nSamples);
+
+			if (doGq == 7) {
+
+				if (gq_arr == NULL) {
+					// if GQ is missing, assume highest GQ value
+					gq_arr = (int32_t*)malloc(nSamples * sizeof(int32_t));
+					for (int i = 0; i < nSamples; i++)
+					{
+						gq_arr[i] = MAX_GQ;
+					}
+				}
+
+
+			} else {
+				ASSERT(ngq > 0);
+				ASSERT(ngq == nSamples);
+
+			}
 		}
 
 
@@ -476,6 +495,30 @@ int main(int argc, char** argv)
 	} else if (6 == doGq) {
 
 		// per-sample doGq 4
+		for (int i = 0; i < nSamples; i++)
+		{
+			// colnames(d)<-c("Sample","GQ","nDiscordant","nHomToHomDiscordant","nHomToHetDiscordant","nHetToHomDiscordant","nHetToHetDiscordant","nConcordant","nHomToHomConcordant","nHetToHetConcordant","nSitesComparedForSample")
+			// N.B. nOverall == nSitesComparedForSample == nSitesInTotal - nSitesDP0forSample
+			for (int k = 1;k < GQ_ARR_SIZE;++k) {
+				fprintf(out_fp, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+					i,
+					k,
+					gqCounts[i][COUNT_OVERALL][k][T_DISCORDANT],
+					gqCounts[i][HOM_TO_HOM][k][T_DISCORDANT],
+					gqCounts[i][HOM_TO_HET][k][T_DISCORDANT],
+					gqCounts[i][HET_TO_HOM][k][T_DISCORDANT],
+					gqCounts[i][HET_TO_HET][k][T_DISCORDANT],
+					gqCounts[i][COUNT_OVERALL][k][T_CONCORDANT],
+					gqCounts[i][HOM_TO_HOM][k][T_CONCORDANT],
+					gqCounts[i][HET_TO_HET][k][T_CONCORDANT],
+					nSites_compared_forSample[i]
+				);
+			}
+		}
+
+	} else if (7 == doGq) {
+
+		// per-sample doGq 4 with missing GQ assumed to be highest GQ
 		for (int i = 0; i < nSamples; i++)
 		{
 			// colnames(d)<-c("Sample","GQ","nDiscordant","nHomToHomDiscordant","nHomToHetDiscordant","nHetToHomDiscordant","nHetToHetDiscordant","nConcordant","nHomToHomConcordant","nHetToHetConcordant","nSitesComparedForSample")

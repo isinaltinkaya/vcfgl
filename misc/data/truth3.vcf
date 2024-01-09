@@ -1,0 +1,13 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##contig=<ID=chr22,length=10>
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##fileDate=Tue Dec 19 11:21:41 2023
+##source=manually created by isinaltinkaya 240109
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	popYRI_ind1	popYRI_ind2
+chr22	2	.	A	C	515.208	PASS	.	GT	0/1	1/1
+chr22	4	.	A	C	515.208	PASS	.	GT	0/0	0/1
+chr22	5	.	A	C	515.208	PASS	.	GT	0/0	0/1
+chr22	6	.	A	C	515.208	PASS	.	GT	1/1	0/0
+chr22	8	.	A	C	515.208	PASS	.	GT	0/0	0/0
+chr22	9	.	A	C	515.208	PASS	.	GT	1/0	1/1

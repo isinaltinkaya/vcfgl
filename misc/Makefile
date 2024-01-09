@@ -44,11 +44,13 @@ all: $(PROGRAM)
 CXXSRC = $(wildcard *.cpp)
 OBJ = $(CXXSRC:.cpp=.o)
 
+FLAGS := $(FLAGS) $(CXXFLAGS)
+
 -include $(OBJ:.o=.d)
 
 %.o: %.cpp
-	$(CXX) -c  $(CXXFLAGS) $(COMPILEMODE) $*.cpp
-	$(CXX) -MM $(CXXFLAGS) $(COMPILEMODE) $*.cpp >$*.d
+	$(CXX) -c  $(FLAGS) $*.cpp
+	$(CXX) -MM $(FLAGS) $*.cpp >$*.d
 
 
 
@@ -64,3 +66,6 @@ test:
 	$(info Test 1)
 	./$(PROGRAM) -i data/call.vcf -t data/truth.vcf -o testwd/out_test.tsv;
 	diff -s testwd/out_test.tsv reference/test_doGq0.tsv
+	./$(PROGRAM) -i data/call3.vcf -t data/truth3.vcf -o testwd/out_test3.tsv -doGQ 7;
+	diff -s testwd/out_test3.tsv reference/test3_doGq7.tsv
+

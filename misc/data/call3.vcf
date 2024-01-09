@@ -1,6 +1,6 @@
 ##fileformat=VCFv4.2
 ##FILTER=<ID=PASS,Description="All filters passed">
-##contig=<ID=chr22,length=51304566>
+##contig=<ID=chr22,length=10>
 ##fileDate=Tue Dec 19 11:21:41 2023
 ##ALT=<ID=*,Description="Symbolic alternate allele representing any possible alternative allele at this location">
 ##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Simulated per-sample read depth">
@@ -16,6 +16,11 @@
 ##INFO=<ID=DP4,Number=4,Type=Integer,Description="Number of high-quality ref-forward , ref-reverse, alt-forward and alt-reverse bases">
 ##INFO=<ID=MQ,Number=1,Type=Integer,Description="Average mapping quality">
 ##INFO=<ID=PV4,Number=4,Type=Float,Description="P-values for strand bias, baseQ bias, mapQ bias and tail distance bias">
+##source=manually created by isinaltinkaya 240109
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	popYRI_ind1	popYRI_ind2
-chr22	42	.	A	C,T	515.208	PASS	.	GT:DP:GQ	./.:0:0	1/1:2:7
-chr22	44	.	A	T	515.208	PASS	.	GT:DP:GQ	0/1:0:127	0/0:2:16
+chr22	2	.	A	.	515.208	PASS	.	GT	0/0	0/0
+chr22	4	.	C	A,T	515.208	PASS	.	GT:DP:GQ	./.:0:0	1/1:2:7
+chr22	5	.	A	C	515.208	PASS	.	GT:DP:GQ	0/0:10:10	1/0:10:5
+chr22	6	.	C	.	515.208	PASS	.	GT	0/0	0/0
+chr22	8	.	A	.	515.208	PASS	.	GT	./.	0/0
+chr22	9	.	A	T	515.208	PASS	.	GT:DP:GQ	0/1:10:127	1/1:2:26

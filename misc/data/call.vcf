@@ -1,18 +1,13 @@
 ##fileformat=VCFv4.2
 ##FILTER=<ID=PASS,Description="All filters passed">
-##source=tskit 0.4.1
 ##contig=<ID=chr22,length=51304566>
 ##fileDate=Thu Oct 12 22:39:39 2023
-##source=vcfgl --input sim/sim_vcfgl_2310/model_OutOfAfrica_3G09/contig_chr22/vcf/sim_vcfgl_2310-OutOfAfrica_3G09-chr22-rep0.vcf --output sim/sim_vcfgl_2310/model_OutOfAfrica_3G09/contig_chr22/vcfgl/sim_vcfgl_2310-OutOfAfrica_3G09-chr22-rep0-d1-e0.002-qs1_betavar7 --output-mode b --error-rate 0.002000 --depth 1.000000 --depths-file (null) --pos0 0 --seed 1 --error-qs 1 --beta-variance 1.000000e-07 --rm-invar-sites 0 --trim-alt-alleles 0 --platform 0 -explode 0 -addGL 1 -addGP 1 -addPL 1 -addI16 0 -addQS 1  -addFormatDP 1 -addFormatAD 1 -addFormatADF 0 -addFormatADR 0 -addInfoDP 0 -addInfoAD 1 -addInfoADF 0 -addInfoADR 0
-##source=vcfgl version: v0.3.2 71cd0a9-dirty
 ##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Simulated per-sample read depth">
 ##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihood in log10 likelihood ratio format">
 ##FORMAT=<ID=PL,Number=G,Type=Integer,Description="Phred-scaled genotype likelihoods">
 ##FORMAT=<ID=GP,Number=G,Type=Float,Description="Genotype probabilities">
 ##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the REF and ALT alleles">
 ##INFO=<ID=AD,Number=R,Type=Integer,Description="Total allelic depths for the REF and ALT alleles">
-##bcftools_annotateVersion=1.18+htslib-1.18
-##bcftools_annotateCommand=annotate -x FORMAT/GT -O b -o sim/sim_vcfgl_2310/model_OutOfAfrica_3G09/contig_chr22/vcfgl/nogt/sim_vcfgl_2310-OutOfAfrica_3G09-chr22-rep0-d1-e0.002-qs1_betavar7.bcf sim/sim_vcfgl_2310/model_OutOfAfrica_3G09/contig_chr22/vcfgl/sim_vcfgl_2310-OutOfAfrica_3G09-chr22-rep0-d1-e0.002-qs1_betavar7.bcf; Date=Fri Oct 13 17:03:36 2023
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Phred-scaled Genotype Quality">
 ##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes for each ALT allele, in the same order as listed">
@@ -20,10 +15,6 @@
 ##INFO=<ID=DP4,Number=4,Type=Integer,Description="Number of high-quality ref-forward , ref-reverse, alt-forward and alt-reverse bases">
 ##INFO=<ID=MQ,Number=1,Type=Integer,Description="Average mapping quality">
 ##INFO=<ID=PV4,Number=4,Type=Float,Description="P-values for strand bias, baseQ bias, mapQ bias and tail distance bias">
-##bcftools_callVersion=1.18+htslib-1.18
-##bcftools_callCommand=call --keep-alts --annotate FORMAT/GQ,FORMAT/GP,INFO/PV4 -mv --prior 0.0011 -O b -o sim/sim_vcfgl_2310/model_OutOfAfrica_3G09/contig_chr22/genotype_calling/sim_vcfgl_2310-OutOfAfrica_3G09-chr22-rep0-d1-e0.002-qs1_betavar7-snp.bcf sim/sim_vcfgl_2310/model_OutOfAfrica_3G09/contig_chr22/vcfgl/nogt/sim_vcfgl_2310-OutOfAfrica_3G09-chr22-rep0-d1-e0.002-qs1_betavar7.bcf; Date=Fri Oct 13 17:05:57 2023
-##bcftools_viewVersion=1.18-6-gc7cbe0b3+htslib-1.18-7-gac70212
-##bcftools_viewCommand=view -s popYRI_ind1 ../../../simulation/sim/sim_vcfgl_2310/model_OutOfAfrica_3G09/contig_chr22/genotype_calling/sim_vcfgl_2310-OutOfAfrica_3G09-chr22-rep0-d1-e0.002-qs1_betavar7-snp.bcf; Date=Thu Nov  9 11:29:14 2023
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	popYRI_ind1
 chr22	1	.	C	A,T,G	71.1385	PASS	AD=83,6,0,0;AC=0,0,0;AN=2	GT:DP:GL:PL:GP:AD:GQ	1/1:2:0,-0.601541,-6.45269,-0.601541,-6.45269,-6.45269,-0.601541,-6.45269,-6.45269,-6.45269:0,6,65,6,65,65,6,65,65,65:0.97304,0.0269597,9.35923e-10,0,0,0,0,0,0,0:2,0,0,0:15
 chr22	10	.	A	C	527.955	PASS	AD=88,24,0,0;AC=0,0,0;AN=2	GT:DP:GL:PL:GP:AD:GQ	0/1:1:0,-0.3008,-3.27643,-0.3008,-3.27643,-3.27643,-0.3008,-3.27643,-3.27643,-3.27643:0,3,33,3,33,33,3,33,33,33:0.784909,0.215061,2.93931e-05,0,0,0,0,0,0,0:1,0,0,0:6
