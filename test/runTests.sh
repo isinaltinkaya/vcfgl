@@ -584,7 +584,7 @@ ARGS="
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
-runTestDiff ${ID} ${TESTWD}/${ID}.pileup.gz ${SCRIPTDIR}/reference/${ID}/${ID}.pileup.gz
+diff -s <(zcat ${ID} ${TESTWD}/${ID}.pileup.gz) <(zcat ${SCRIPTDIR}/reference/${ID}/${ID}.pileup.gz)
 
 
 ################################################################################
