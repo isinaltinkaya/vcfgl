@@ -69,7 +69,7 @@ inline double gamma_ln(const double xx) {
 
 #endif
 
-	}
+}
 
 
 // @summary Generate normal deviates using Ratio-of-Uniforms method
@@ -77,7 +77,20 @@ inline double gamma_ln(const double xx) {
 struct NormalSampler {
 	double mu;
 	double sigma;
-	double sample();
+	double sample(void) {
+
+		double u, v, x, y, q;
+		do {
+			u = sample_uniform_rng2();
+			v = 1.7156 * (sample_uniform_rng2() - 0.5);
+			x = u - 0.449871;
+			y = abs(v) + 0.386595;
+			q = (x * x) + y * (0.19600 * y - 0.25472 * x);
+		} while ((q > 0.27597) && (q > 0.27846 || (v * v) > -4.0 * log(u) * (u * u)));
+
+		return(this->mu + this->sigma * v / u);
+	}
+
 };
 
 NormalSampler* NormalSampler_init(const double mu, const double sigma);
@@ -139,7 +152,74 @@ struct PoissonSampler {
 
 PoissonSampler* PoissonSampler_init(const double lambda);
 
+inline void poissonSampler_sample_depths_same_mean(PoissonSampler* pois, int* n_sim_reads_arr, const int nSamples) {
+	double em;
+	double t;
+	if (pois->st12) {
 
+		for (int i = 0;i < nSamples;++i) {
+			em = -1.0;
+			t = 1.0;
+			do {
+				++em;
+				t *= erand48(rng1_seeder);
+			} while (t > (pois->g));
+			n_sim_reads_arr[i] = em;
+		}
+
+	} else {
+		double y;
+		for (int i = 0;i < nSamples;++i) {
+			do {
+				do {
+					y = tan(PI * erand48(rng1_seeder));
+					em = (pois->sq) * y + (pois->lm);
+				} while (em < 0.0);
+				em = floor(em);
+				t = 0.9 * (1.0 + y * y) * exp(em * (pois->alxm) - gamma_ln(em + 1.0) - (pois->g));
+			} while (erand48(rng1_seeder) > t);
+
+			n_sim_reads_arr[i] = em;
+		}
+
+	}
+	return;
+}
+
+inline void poissonSampler_sample_depths_perSample_means(PoissonSampler** multipois, int* n_sim_reads_arr, const int nSamples) {
+	double em;
+	double t;
+	PoissonSampler* pois = NULL;
+
+	for (int i = 0;i < nSamples;++i) {
+		pois = multipois[i];
+
+		if (pois->st12) {
+			em = -1.0;
+			t = 1.0;
+			do {
+				++em;
+				t *= erand48(rng1_seeder);
+			} while (t > (pois->g));
+			n_sim_reads_arr[i] = em;
+
+		} else {
+			double y;
+			do {
+				do {
+					y = tan(PI * erand48(rng1_seeder));
+					em = (pois->sq) * y + (pois->lm);
+				} while (em < 0.0);
+				em = floor(em);
+				t = 0.9 * (1.0 + y * y) * exp(em * (pois->alxm) - gamma_ln(em + 1.0) - (pois->g));
+			} while (erand48(rng1_seeder) > t);
+
+			n_sim_reads_arr[i] = em;
+
+		}
+	}
+	return;
+}
 
 #if __USE_STD_BETA__==1
 struct BetaSampler {

@@ -28,7 +28,7 @@ void preCalcStruct::prepare_gls_preCalc(void) {
 
     if (0 == args->usePreciseGlError) {
 
-        this->error_prob_forGl = qScore_to_errorProb[this->qScore];
+        this->error_prob_forGl = QS_TO_ERRPROB(this->qScore);
         this->homT = qScore_to_log10_gl[0][qScore];
         this->het = qScore_to_log10_gl[1][qScore];
         this->homF = qScore_to_log10_gl[2][qScore];
@@ -134,12 +134,12 @@ void help_page() {
     fprintf(stderr, "Usage: vcfgl -i <input> [options]\n");
 
     fprintf(stderr, "\n");
-    fprintf(stderr, "    -h, --help                        Print this help message and exit\n");
-    fprintf(stderr, "    -v, --version                     Print version and build information and exit\n");
+    fprintf(stderr, "    -h, --help _____________________  Print this help message and exit\n");
+    fprintf(stderr, "    -v, --version __________________  Print version and build information and exit\n");
     fprintf(stderr, "\n");
 
     fprintf(stderr, "Option descriptions:\n");
-    fprintf(stderr, "     -s, --long-option TYPE [X]       Description\n");
+    fprintf(stderr, "     -s, --long-option TYPE [X] _____ Description\n");
     fprintf(stderr, "     -s                               Short option (if any)\n");
     fprintf(stderr, "         --long-option                Long option\n");
 
@@ -151,91 +151,94 @@ void help_page() {
     fprintf(stderr, "                                        - FILE (filename)\n");
     fprintf(stderr, "                                        - x|y|z (one of the listed values x, y or z)\n");
     fprintf(stderr, "                            [X]       Default argument value (if any)\n");
+    fprintf(stderr, "                                _____ Connector to the option description for better readability\n");
     fprintf(stderr, "\n");
 
     fprintf(stderr, "\n");
     fprintf(stderr, "General options:\n");
-    fprintf(stderr, "    -V, --verbose INT [0]             Verbosity level\n");
-    fprintf(stderr, "    -@, --threads INT [1]             Number of threads\n");
-    fprintf(stderr, "    -s, --seed INT [time]             Random seed for initializing the random number generator\n");
+    fprintf(stderr, "    -V, --verbose INT [0] ___________ Verbosity level\n");
+    fprintf(stderr, "    -@, --threads INT [1] ___________ Number of threads\n");
+    fprintf(stderr, "    -s, --seed INT [time] ___________ Random seed for initializing the random number generator\n");
     fprintf(stderr, "\n");
 
     fprintf(stderr, "Input/Output:\n");
-    fprintf(stderr, "    -i, --input FILE                  Input file\n");
-    fprintf(stderr, "    -o, --output STRING ['output']    Output filename prefix\n");
-    fprintf(stderr, "    -O, --output-mode [b]|u|z|v       b: Compressed BCF (.bcf), u: uncompressed BCF (.bcf), z: compressed VCF (.vcf.gz), v: uncompressed VCF (.vcf)\n");
+    fprintf(stderr, "    -i, --input FILE ________________ Input VCF/BCF file\n");
+    fprintf(stderr, "        --source [0]|1 ______________ 0: Input REF/ALT alleles are in binary format (REF=0, ALT=1; typically outputted from msprime BinaryMutationModel)\n");
+    fprintf(stderr, "                                      1: Input REF/ALT alleles are in VCF format (REF=i, ALT=j(,k..); i, j and k from {A,C,G,T}; i.e. the regular VCF format)\n");
+    fprintf(stderr, "    -o, --output STRING ['output'] __ Output filename prefix\n");
+    fprintf(stderr, "    -O, --output-mode [b]|u|z|v _____ b: Compressed BCF (.bcf), u: uncompressed BCF (.bcf), z: compressed VCF (.vcf.gz), v: uncompressed VCF (.vcf)\n");
     fprintf(stderr, "\n");
 
     fprintf(stderr, "Simulation parameters:\n");
-    fprintf(stderr, "    -d, --depth FLOAT|'inf'           Mean per-site read depth\n");
+    fprintf(stderr, "    -d, --depth FLOAT|'inf' _________ Mean per-site read depth\n");
     fprintf(stderr, "                                      ('inf') Simulate true values (requires: -addFormatDP 0 -addInfoDP 0)\n");
-    fprintf(stderr, "   -df, --depths-file FILE            File containing mean per-site read depth values for each sample. One value per line.\n");
-    fprintf(stderr, "    -e, --error-rate FLOAT            Base-calling error probability\n");
-    fprintf(stderr, "   -eq, --error-qs [0]|1|2            0: Do not simulate errors in quality scores. Assumes all quality score assignments are correct\n");
+    fprintf(stderr, "   -df, --depths-file FILE __________ File containing mean per-site read depth values for each sample. One value per line.\n");
+    fprintf(stderr, "    -e, --error-rate FLOAT __________ Base-calling error probability\n");
+    fprintf(stderr, "   -eq, --error-qs [0]|1|2 __________ 0: Do not simulate errors in quality scores. Assumes all quality score assignments are correct\n");
     fprintf(stderr, "                                      1: Simulate site-specific errors in the probability of wrong base calls (requires: -bv FLOAT)\n");
     fprintf(stderr, "                                      2: Simulate the errors in the reported quality scores and genotype likelihoods (requires: -bv FLOAT)\n");
-    fprintf(stderr, "   -bv, --beta-variance FLOAT         Designated variance for the beta distribution\n");
-    fprintf(stderr, "   -GL, --gl-model 1|[2]              Genotype likelihood model to be used in simulation\n");
+    fprintf(stderr, "   -bv, --beta-variance FLOAT _______ Designated variance for the beta distribution\n");
+    fprintf(stderr, "   -GL, --gl-model 1|[2] ____________ Genotype likelihood model to be used in simulation\n");
     fprintf(stderr, "                                      1: Genotype likelihood model with correlated errors (a.k.a. samtools model, angsd -GL 1)\n");
     fprintf(stderr, "                                      2: Canonical genotype likelihood model with independent errors (a.k.a. GATK model, angsd -GL 2)\n");
-    fprintf(stderr, "         --gl1-theta FLOAT [0.83]     Theta parameter for the genotype likelihood model 1 (requires: -GL 1)\n");
-    fprintf(stderr, "         --platform [0]|1             0: Do not use platform specification\n");
+    fprintf(stderr, "         --gl1-theta FLOAT [0.83] ___ Theta parameter for the genotype likelihood model 1 (requires: -GL 1)\n");
+    fprintf(stderr, "         --platform [0]|1 ___________ 0: Do not use platform specification\n");
     fprintf(stderr, "                                      1: NovaSeq 6000 (qualities are binned into 4 values: 2, 12, 23 and 37)\n");
 
-    fprintf(stderr, "         --precise-gl [0]|1           0: Use the discrete phred-scaled error probabilities in the genotype likelihood calculation\n");
+    fprintf(stderr, "         --precise-gl [0]|1 _________ 0: Use the discrete phred-scaled error probabilities in the genotype likelihood calculation\n");
     fprintf(stderr, "                                      1: Use precise error probabilities in the genotype likelihood calculation (requires: -GL 2)\n");
-    fprintf(stderr, "         --i16-mapq INT [20]          Mapping quality score for I16 tag (requires: -addI16 1)\n");
-    fprintf(stderr, "         --gvcf-dps INT(,INT..)       Minimum per-sample read depth range(s) for constructing gVCF blocks (requires: -doGVCF 1)\n");
+    fprintf(stderr, "         --i16-mapq INT [20] ________ Mapping quality score for I16 tag (requires: -addI16 1)\n");
+    fprintf(stderr, "         --gvcf-dps INT(,INT..) _____ Minimum per-sample read depth range(s) for constructing gVCF blocks (requires: -doGVCF 1)\n");
     fprintf(stderr, "                                      Example: `--gvcf-dps 5,10,20` will group invariable sites into three types of gVCF blocks: [5,10), [10,20) and [20,inf).\n");
     fprintf(stderr, "                                      Sites with minimum depth < 5 will be printed as regular VCF records.\n");
-    fprintf(stderr, "         -explode [0]|1               1: Explode to sites that are not in input file.\n");
+    fprintf(stderr, "         -explode [0]|1 _____________ 1: Explode to sites that are not in input file.\n");
     fprintf(stderr, "                                      Useful for simulating invariable sites when the input file only contains variable sites.\n");
     fprintf(stderr, "                                      Sets all genotypes in exploded sites to homozygous reference.\n");
-    fprintf(stderr, "         --rm-invar-sites INT+        0: Do not remove invariable sites\n");
+    fprintf(stderr, "         --rm-invar-sites INT+ ______ 0: Do not remove invariable sites\n");
     fprintf(stderr, "                                      1: Remove sites where all individuals' true genotypes in the input file are homozygous reference\n");
     fprintf(stderr, "                                      2: Remove sites where all individuals' true genotypes in the input file are homozygous alternative\n");
     fprintf(stderr, "                                      4: Remove sites where the all simulated reads among all individuals are the same base\n");
     fprintf(stderr, "                                      Example: '--rm-invar-sites 3' (1+2) will do both 1 and 2 (i.e. remove all homozygous sites)\n");
-    fprintf(stderr, "         --rm-empty-sites [0]|1       0: Do not remove empty sites\n");
+    fprintf(stderr, "         --rm-empty-sites [0]|1 _____ 0: Do not remove empty sites\n");
     fprintf(stderr, "                                      1: Remove empty sites (i.e. sites where no reads were simulated)\n");
-    fprintf(stderr, "         -doUnobserved INT [1]        0: Trim unobserved alleles. Only alleles that are observed will be listed in REF and ALT fields\n");
+    fprintf(stderr, "         -doUnobserved INT [1] ______ 0: Trim unobserved alleles. Only alleles that are observed will be listed in REF and ALT fields\n");
     fprintf(stderr, "                                      1: Use '<*>' notation to represent unobserved alleles\n");
     fprintf(stderr, "                                      2: Use '<NON_REF>' notation to represent unobserved alleles (a.k.a. GATK notation)\n");
     fprintf(stderr, "                                      3: Explode unobserved bases from {A,C,G,T} list\n");
     fprintf(stderr, "                                      4: Use '<*>' notation to represent unobserved alleles and explode unobserved bases from {A,C,G,T} list\n");
     fprintf(stderr, "                                      5: Use '<NON_REF>' notation to represent unobserved alleles and explode unobserved bases from {A,C,G,T} list\n");
 
-    fprintf(stderr, "         -doGVCF [0]|1                0: Disabled, 1: Output in gVCF format (requires: --rm-invar-sites 0, -doUnobserved 2, -addPL 1 and --gvcf-dps INT)\n");
-    fprintf(stderr, "         -printPileup [0]|1           0: Disabled, 1: Also output in pileup format (<output_prefix>.pileup.gz)\n");
-    fprintf(stderr, "         -printTruth [0]|1            0: Disabled, 1: Also output the VCF file containing the true genotypes (named <output_prefix>.truth.vcf)\n");
-    fprintf(stderr, "         -printBasePickError [0]|1    0: Disabled, 1: Print the base picking error probability to stdout.\n");
+    fprintf(stderr, "         -doGVCF [0]|1 ______________ 0: Disabled, 1: Output in gVCF format (requires: --rm-invar-sites 0, -doUnobserved 2, -addPL 1 and --gvcf-dps INT)\n");
+    fprintf(stderr, "         -printPileup [0]|1 _________ 0: Disabled, 1: Also output in pileup format (<output_prefix>.pileup.gz)\n");
+    fprintf(stderr, "         -printTruth [0]|1 __________ 0: Disabled, 1: Also output the VCF file containing the true genotypes (named <output_prefix>.truth.vcf)\n");
+    fprintf(stderr, "         -printBasePickError [0]|1 __ 0: Disabled, 1: Print the base picking error probability to stdout.\n");
     fprintf(stderr, "                                      If --error-qs 1 is used, writes per-read base picking error probabilities to stdout.\n");
     fprintf(stderr, "                                      If --error-qs 0 or 2 is used, writes a single value which is used for all samples and sites.\n");
-    fprintf(stderr, "         -printQsError [0]|1          0: Disabled, 1: Print the error probability used in quality score calculations to stdout.\n");
+    fprintf(stderr, "         -printQsError [0]|1 ________ 0: Disabled, 1: Print the error probability used in quality score calculations to stdout.\n");
     fprintf(stderr, "                                      If --error-qs 2 is used, writes per-read quality score error probabilities to stdout.\n");
     fprintf(stderr, "                                      If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.\n");
-    fprintf(stderr, "         -printGlError [0]|1          0: Disabled, 1: Print the error probability used in genotype likelihood calculations to stdout. (requires: -GL 2)\n");
+    fprintf(stderr, "         -printGlError [0]|1 ________ 0: Disabled, 1: Print the error probability used in genotype likelihood calculations to stdout. (requires: -GL 2)\n");
     fprintf(stderr, "                                      Since -GL 1 works directly with quality scores, this option is only available when -GL 2 is used.\n");
     fprintf(stderr, "                                      If --error-qs 2 is used, writes per-read error probabilities to stdout.\n");
     fprintf(stderr, "                                      If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.\n");
     fprintf(stderr, "                                      If --precise-gl 1 is used, the printed values are the same as those printed by -printQsError.\n");
-    fprintf(stderr, "         -printQScores [0]|1               0: Disabled, 1: Print the quality scores to stdout.\n");
+    fprintf(stderr, "         -printQScores [0]|1 ________ 0: Disabled, 1: Print the quality scores to stdout.\n");
 
     fprintf(stderr, "\n");
     fprintf(stderr, "Output VCF/BCF tags:                  0: Do not add, 1: Add\n");
-    fprintf(stderr, "         -addGL 0|[1]                 Genotype likelihoods (GL) tag\n");
-    fprintf(stderr, "         -addGP [0]|1                 Genotype probabilities (GP) tag\n");
-    fprintf(stderr, "         -addPL [0]|1                 Phred-scaled genotype likelihoods (PL) tag\n");
-    fprintf(stderr, "         -addI16 [0]|1                I16 tag\n");
-    fprintf(stderr, "         -addQS [0]|1                 Quality score sum (QS) tag\n");
-    fprintf(stderr, "         -addFormatDP [1]|0           Per-sample read depth (FORMAT/DP) tag\n");
-    fprintf(stderr, "         -addFormatAD [0]|1           Per-sample allelic read depth (FORMAT/AD) tag\n");
-    fprintf(stderr, "         -addFormatADF [0]|1          Per-sample forward-strand allelic read depth (FORMAT/ADF) tag\n");
-    fprintf(stderr, "         -addFormatADR [0]|1          Per-sample reverse-strand allelic read depth (FORMAT/ADR) tag\n");
-    fprintf(stderr, "         -addInfoDP [0]|1             Total read depth (INFO/DP) tag\n");
-    fprintf(stderr, "         -addInfoAD [0]|1             Total allelic read depth (INFO/AD) tag\n");
-    fprintf(stderr, "         -addInfoADF [0]|1            Total forward-strand allelic read depth (INFO/ADF) tag\n");
-    fprintf(stderr, "         -addInfoADR [0]|1            Total reverse-strand allelic read depth (INFO/ADR) tag\n");
+    fprintf(stderr, "         -addGL 0|[1] _______________ Genotype likelihoods (GL) tag\n");
+    fprintf(stderr, "         -addGP [0]|1 _______________ Genotype probabilities (GP) tag\n");
+    fprintf(stderr, "         -addPL [0]|1 _______________ Phred-scaled genotype likelihoods (PL) tag\n");
+    fprintf(stderr, "         -addI16 [0]|1 ______________ I16 tag\n");
+    fprintf(stderr, "         -addQS [0]|1 _______________ Quality score sum (QS) tag\n");
+    fprintf(stderr, "         -addFormatDP [1]|0 _________ Per-sample read depth (FORMAT/DP) tag\n");
+    fprintf(stderr, "         -addFormatAD [0]|1 _________ Per-sample allelic read depth (FORMAT/AD) tag\n");
+    fprintf(stderr, "         -addFormatADF [0]|1 ________ Per-sample forward-strand allelic read depth (FORMAT/ADF) tag\n");
+    fprintf(stderr, "         -addFormatADR [0]|1 ________ Per-sample reverse-strand allelic read depth (FORMAT/ADR) tag\n");
+    fprintf(stderr, "         -addInfoDP [0]|1 ___________ Total read depth (INFO/DP) tag\n");
+    fprintf(stderr, "         -addInfoAD [0]|1 ___________ Total allelic read depth (INFO/AD) tag\n");
+    fprintf(stderr, "         -addInfoADF [0]|1 __________ Total forward-strand allelic read depth (INFO/ADF) tag\n");
+    fprintf(stderr, "         -addInfoADR [0]|1 __________ Total reverse-strand allelic read depth (INFO/ADR) tag\n");
 
 
     fprintf(stderr, "\n");
@@ -258,6 +261,7 @@ argStruct* args_init() {
     // --> Input/Output
 
     args->in_fn = NULL;
+    args->gtSource = ARG_GTSOURCE_BINARY;
     args->out_fnprefix = NULL;
     args->output_mode = NULL;
 
@@ -272,7 +276,7 @@ argStruct* args_init() {
     args->glModel1_theta = 0.83;
     args->platform = 0;
     args->usePreciseGlError = 0;
-    args->i16_mapq = 20;
+    args->i16_mapq = ARG_I16_MAPQ_DEFAULT;
     args->gvcf_dps_str = NULL;
 
     args->explode = 0;
@@ -373,6 +377,10 @@ argStruct* args_get(int argc, char** argv) {
 
         else if ((strcmp("--input", arv) == 0) || (strcmp("-i", arv) == 0)) {
             args->in_fn = strdup(val);
+        }
+
+        else if ((strcmp("--source", arv) == 0)) {
+            args->gtSource = atoi(val);
         }
 
         else if ((strcmp("--output", arv) == 0) || (strcmp("-o", arv) == 0)) {
@@ -551,6 +559,8 @@ argStruct* args_get(int argc, char** argv) {
             "specify the input file.");
     }
 
+    CHECK_ARG_INTERVAL_INT(args->gtSource, 0, 1, "--source");
+
     if (NULL == args->output_mode) {
         args->output_mode = strdup("b");
     }
@@ -643,7 +653,7 @@ argStruct* args_get(int argc, char** argv) {
     if (args->error_rate == ARG_ERROR_RATE_UNDEF) {
         ERROR("Error rate is not specified. Please use --error-rate option to specify the error rate. Allowed range: [0.0, 1.0]");
     }
-    CHECK_ARG_INTERVAL_DBL(args->error_rate, 0.0, 1.0, "--error-rate");
+    CHECK_ARG_INTERVAL_IE_DBL(args->error_rate, 0.0, 1.0, "--error-rate");
 
     CHECK_ARG_INTERVAL_INT(args->error_qs, 0, 2, "--error-qs");
 
@@ -746,6 +756,10 @@ argStruct* args_get(int argc, char** argv) {
         ERROR("\n-> [-printGlError 1] Printing the error probability used in genotype likelihood calculations (-printGlError 1) is not supported with genotype likelihood model 1 (--gl-model 1).");
     }
 
+
+    if ((0 == args->addI16) && (ARG_I16_MAPQ_DEFAULT != args->i16_mapq)) {
+        ERROR("\n-> [--i16-mapq] --i16-mapq is set, but printing I16 tag is disabled. Please set -addI16 to 1, or remove --i16-mapq and rerun.");
+    }
 
     // ---------------------------------------------------------------------- //
     // SET ARGUMENT VARIABLES
@@ -910,21 +924,42 @@ argStruct* args_get(int argc, char** argv) {
         sprintf(gvcf_dps_val, "--gvcf-dps %s", args->gvcf_dps_str);
     }
 
+    char gl_model_str[256];
+    if (1 == args->GL) {
+        sprintf(gl_model_str, "--gl-model %d --gl1-theta %f", args->GL, args->glModel1_theta);
+    } else {
+        sprintf(gl_model_str, "--gl-model %d", args->GL);
+    }
+
+    char beta_variance_str[256];
+    if (args->beta_variance >= 0) {
+        sprintf(beta_variance_str, "--beta-variance %e", args->beta_variance);
+    } else {
+        beta_variance_str[0] = '\0';
+    }
+
+    char i16_mapq_str[256];
+    if (args->addI16 == 1) {
+        sprintf(i16_mapq_str, "--i16-mapq %d", args->i16_mapq);
+    } else {
+        i16_mapq_str[0] = '\0';
+    }
+
     ASSERT(asprintf(
         &args->command,
-        "Command: vcfgl --verbose %d --threads %d --seed %d --input %s --output %s --output-mode %s %s --error-rate %f --error-qs %d --beta-variance %e --gl-model %d --gl1-theta %f --platform %d --precise-gl %d --i16-mapq %d %s -explode %d --rm-invar-sites %d --rm-empty-sites %d -doUnobserved %d -doGVCF %d -printPileup %d -printTruth %d  -printBasePickError %d -printQsError %d -printGlError %d -printQScores %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d -addFormatDP %d -addInfoDP %d -addFormatAD %d -addInfoAD %d -addFormatADF %d -addInfoADF %d -addFormatADR %d -addInfoADR %d",
+        "Command: vcfgl --verbose %d --threads %d --seed %d --input %s --source %d --output %s --output-mode %s %s --error-rate %f --error-qs %d %s %s --platform %d --precise-gl %d --i16-mapq %d %s -explode %d --rm-invar-sites %d --rm-empty-sites %d -doUnobserved %d -doGVCF %d -printPileup %d -printTruth %d  -printBasePickError %d -printQsError %d -printGlError %d -printQScores %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d -addFormatDP %d -addInfoDP %d -addFormatAD %d -addInfoAD %d -addFormatADF %d -addInfoADF %d -addFormatADR %d -addInfoADR %d",
         args->verbose,
         args->n_threads,
         args->seed,
         args->in_fn,
+        args->gtSource,
         args->out_fnprefix,
         args->output_mode,
         depth_val,
         args->error_rate,
         args->error_qs,
-        args->beta_variance,
-        args->GL,
-        args->glModel1_theta,
+        beta_variance_str,
+        gl_model_str,
         args->platform,
         args->usePreciseGlError,
         args->i16_mapq,

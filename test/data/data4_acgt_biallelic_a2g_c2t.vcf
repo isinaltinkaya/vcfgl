@@ -1,0 +1,12 @@
+##fileformat=VCFv4.2
+##source=manual edit by isinaltinkaya
+##FILTER=<ID=PASS,Description="All filters passed">
+##contig=<ID=chr22,length=10>
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	popYRI_ind1	popYRI_ind2	popYRI_ind3	popYRI_ind4
+chr22	2	.	G	T	.	PASS	.	GT	0|0	0|0	0|0	0|0
+chr22	3	.	G	T	.	PASS	.	GT	0|0	0|0	0|0	1|0
+chr22	4	.	G	T	.	PASS	.	GT	0|0	0|0	0|0	0|0
+chr22	5	.	G	T	.	PASS	.	GT	0|0	0|0	0|0	0|0
+chr22	6	.	G	T	.	PASS	.	GT	1|1	1|1	1|1	1|1
+chr22	10	.	G	T	.	PASS	.	GT	0|0	0|0	0|0	0|0

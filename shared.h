@@ -1,24 +1,24 @@
 #ifndef __SHARED__
 #define __SHARED__
 
-#include <stdio.h>   // fprintf
-#include <stdlib.h>  // exit
-#include <limits>    // std::numeric_limits
-#include <float.h>  // DBL_MANT_DIG
+#include <stdio.h>   /// fprintf
+#include <stdlib.h>  /// exit
+#include <limits>    /// std::numeric_limits
+#include <float.h>  /// DBL_MANT_DIG
 
 #include "dev.h"
 
 
 /* -> CONSTANTS --------------------------------------------------------------*/
 
-// --> CONSTANTS:RNG
+/// --> CONSTANTS:RNG
 
-// source: rand48/rand48.h
+/// source: rand48/rand48.h
 #define VCFGL_RAND48_SEED_0   (0x330e)
 #define VCFGL_RAND48_SEED_1   (0xabcd)
 #define VCFGL_RAND48_SEED_2   (0x1234)
 
-// init to { VCFGL_RAND48_SEED_0, VCFGL_RAND48_SEED_1, VCFGL_RAND48_SEED_2 };
+/// init to { VCFGL_RAND48_SEED_0, VCFGL_RAND48_SEED_1, VCFGL_RAND48_SEED_2 };
 #define SEEDER_INIT { 0x330e, 0xabcd, 0x1234 }
 
 
@@ -30,18 +30,18 @@
 #define __USE_STD_BETA__ 1
 #endif
 
-// --> CONSTANTS:MATH
+/// --> CONSTANTS:MATH
 
 #define PI 3.141592654
 
 const double NEG_INF = -std::numeric_limits<double>::infinity();
 
-// precalculated value for log10(3)
+/// precalculated value for log10(3)
 #define PRE_CALC_LOG10_3 0.47712125471966244
 
 #define QSCORE_PHRED_ENCODING_OFFSET 33
 
-// --> CONSTANTS:BUFFER SIZE
+/// --> CONSTANTS:BUFFER SIZE
 
 #define KSTRING_BGZF_WRITE_BUFFER_SIZE 4096
 
@@ -50,7 +50,7 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define BUFSIZE_NINDS 100
 
 
-// --> CONSTANTS:ARGS
+/// --> CONSTANTS:ARGS
 
 #define ARG_DEPTH_UNDEF -1.0
 #define ARG_DEPTH_FILE -2.0
@@ -65,32 +65,43 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define ARG_BETA_VAR_UNDEF -1.0
 
 
-// [args->doUnobserved]
-// notations for representing non-reference unobserved alleles
+/// [args->doUnobserved]
+/// notations for representing non-reference unobserved alleles
 
-// trim to include only observed bases
+/// trim to include only observed bases
 #define ARG_DOUNOBSERVED_TRIM 0
 
-// use <*> symbolic alternate allele (used in bcftools)
+/// use <*> symbolic alternate allele (used in bcftools)
 #define ARG_DOUNOBSERVED_STAR 1
 
-// use <NON_REF> gVCF NON_REF notation (used in GATK)
+/// use <NON_REF> gVCF NON_REF notation (used in GATK)
 #define ARG_DOUNOBSERVED_NONREF 2
 
-// explode to unseen bases
+/// explode to unseen bases
 #define ARG_DOUNOBSERVED_EXPLODE_ACGT 3
 
-// explode and add <*> to the end
+/// explode and add <*> to the end
 #define ARG_DOUNOBSERVED_EXPLODE_ACGT_STAR 4 
 
-// explode and add <NON_REF> to the end
+/// explode and add <NON_REF> to the end
 #define ARG_DOUNOBSERVED_EXPLODE_ACGT_NONREF 5 
 
+/// define the type of simulation source GT tag to use
+/// REF     ALT    GT
+/// 0       1      0/1
+/// output from msprime BinaryMutationModel
+#define ARG_GTSOURCE_BINARY 0
 
-// --> CONSTANTS:SIGNALS
+/// REF     ALT    GT
+/// C       T,G      0/1
+#define ARG_GTSOURCE_ACGT 1
 
-// int prepare_gvcf_block()
-// at bcf_utils.cpp
+#define ARG_I16_MAPQ_DEFAULT 20
+
+/// --> CONSTANTS:SIGNALS
+
+/// int prepare_gvcf_block()
+/// at bcf_utils.cpp
 #define GVCF_NO_WRITE 0
 #define GVCF_FLUSH_BLOCK 1
 #define GVCF_WRITE_SIMREC 2
@@ -99,7 +110,7 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 
 /* -> STATEMENTS --------------------------------------------------------------*/
 
-// --> STATEMENTS:PROGRAM WILL
+/// --> STATEMENTS:PROGRAM WILL
 
 #define PROGRAM_WILL(arg, flag) \
     ( ((arg) & (1<<(flag))) )
@@ -134,9 +145,11 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define PROGRAM_WILL_SKIP_SIM_INVAR_SITES \
     ( ((args->rmInvarSites) & 4) )
 
+#define PROGRAM_WILL_USE_BINARY_GTSOURCE \
+    ( ((args->gtSource)==ARG_GTSOURCE_BINARY) )
 
-
-
+#define PROGRAM_WILL_USE_ACGT_GTSOURCE \
+    ( ((args->gtSource)==ARG_GTSOURCE_ACGT) )
 
 #define BASE_A 0
 #define BASE_C 1
@@ -144,46 +157,46 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define BASE_T 3
 #define BASE_NONREF 4
 
-#define MAXGL 0.0 // best
-#define MINGL NEG_INF // worst 
+#define MAXGL 0.0 /// best
+#define MINGL NEG_INF /// worst 
 
-#define MAXPL 255 // worst
-#define MINPL 0 // best
+#define MAXPL 255 /// worst
+#define MINPL 0 /// best
 
-#define MAXGP 1.0 // best
-#define MINGP 0.0 // worst
+#define MAXGP 1.0 /// best
+#define MINGP 0.0 /// worst
 
 #define SIM_FORWARD_STRAND 0
 #define SIM_REVERSE_STRAND 1
 
-// maximum number of alleles to consider 
-// | 0 | 1 | 2 | 3 | 4 |
-// | A | C | G | T |<*>|
+/// maximum number of alleles to consider 
+/// | 0 | 1 | 2 | 3 | 4 |
+/// | A | C | G | T |<*>|
 #define MAX_NALLELES 5  
 
-// maximum number of genotypes to consider
-// depends on: MAX_NALLELES
-//  (MAX_NALLELES * (MAX_NALLELES+1)) / 2
-// |  0  |  1  |  5  |  2  |  6  |  9  |  3  |  7  |  10 |  12 | 4      | 8     | 11    | 13    | 14  		|
-// |  AA |  AC |  CC |  AG |  CG |  GG |  AT |  CT |  GT |  TT | A<*> 	| C<*> 	| G<*> 	| T<*> 	| <*><*> 	|
-// A0A0 A0A1 A1A1 A0A2 A1A2 A2A2 A0A3 A1A3 A2A3 A3A3 A0A4 A1A4 A2A4 A3A4 A4A4
+/// maximum number of genotypes to consider
+/// depends on: MAX_NALLELES
+///  (MAX_NALLELES * (MAX_NALLELES+1)) / 2
+/// |  0  |  1  |  5  |  2  |  6  |  9  |  3  |  7  |  10 |  12 | 4      | 8     | 11    | 13    | 14  		|
+/// |  AA |  AC |  CC |  AG |  CG |  GG |  AT |  CT |  GT |  TT | A<*> 	| C<*> 	| G<*> 	| T<*> 	| <*><*> 	|
+/// A0A0 A0A1 A1A1 A0A2 A1A2 A2A2 A0A3 A1A3 A2A3 A3A3 A0A4 A1A4 A2A4 A3A4 A4A4
 #define MAX_NGTS 15  
 
-// Old order (vcfgl v<=0.3.3)
-// AA, AC, AG, AT, A<*>, CC, CG, CT, C<*>, GG, GT, G<*>, TT, T<*>, <*><*>
-// AA, AC, AG, AT, CC, CG, CT, GG, GT, TT
+/// Old order (vcfgl v<=0.3.3)
+/// AA, AC, AG, AT, A<*>, CC, CG, CT, C<*>, GG, GT, G<*>, TT, T<*>, <*><*>
+/// AA, AC, AG, AT, CC, CG, CT, GG, GT, TT
 
-// assume diploid samples
+/// assume diploid samples
 #define SIM_PLOIDY 2
 
-// source: bcftools/bam2bcf.c L41 CAP_DIST
+/// source: bcftools/bam2bcf.c L41 CAP_DIST
 #define CAP_TAIL_DIST 25
 
-// source: bcftools/bam2bcf.c L381
+/// source: bcftools/bam2bcf.c L381
 #define CAP_BASEQ 63
 
-#define BCF_GT_PHASED_0 3  // bcf_gt_phased(0)
-#define BCF_GT_PHASED_1 5  // bcf_gt_phased(1)
+#define BCF_GT_PHASED_0 3  /// bcf_gt_phased(0)
+#define BCF_GT_PHASED_1 5  /// bcf_gt_phased(1)
 
 
 /* -> FUNCTION-LIKE MACROS ---------------------------------------------------*/
@@ -308,6 +321,43 @@ do { \
     } \
 } while (0);
 
+#define CHECK_ARG_INTERVAL_IE_DBL(argval, minval, maxval, argstr) \
+do { \
+    if (((argval) < (minval)) || ((argval) >= (maxval)) ) { \
+        \
+            ERROR("[Bad argument value: '%s %f'] Allowed range is [%f,%f]", (argstr), (argval), (minval), (maxval)); \
+    } \
+} while (0);
+
+
+#define CHECK_ARG_INTERVAL_II_DBL(argval, minval, maxval, argstr) \
+do { \
+    if (((argval) < (minval)) || ((argval) > (maxval)) ) { \
+        \
+            ERROR("[Bad argument value: '%s %f'] Allowed range is [%f,%f]", (argstr), (argval), (minval), (maxval)); \
+    } \
+} while (0);
+
+
+#define CHECK_ARG_INTERVAL_EI_DBL(argval, minval, maxval, argstr) \
+do { \
+    if (((argval) <= (minval)) || ((argval) > (maxval)) ) { \
+        \
+            ERROR("[Bad argument value: '%s %f'] Allowed range is [%f,%f]", (argstr), (argval), (minval), (maxval)); \
+    } \
+} while (0);
+
+
+#define CHECK_ARG_INTERVAL_EE_DBL(argval, minval, maxval, argstr) \
+do { \
+    if (((argval) <= (minval)) || ((argval) >= (maxval)) ) { \
+        \
+            ERROR("[Bad argument value: '%s %f'] Allowed range is [%f,%f]", (argstr), (argval), (minval), (maxval)); \
+    } \
+} while (0);
+
+
+
 #define CHECK_ARG_INTERVAL_01(argval, argstr) \
 do { \
     if ( ((argval)!=0) && ((argval)!=1) ) { \
@@ -319,93 +369,99 @@ do { \
 
 
 
-           /* LOOKUP TABLES & LOOKUP FUNCTIONS ------------------------------------------*/
+           /* LOOKUP TABLES & LOOKUP MACROS ------------------------------------------*/
 
-           // @brief lut_qs_to_qs2 - map quality score to squared quality score
-extern const int lut_qs_to_qs2[64];
+extern const int lut_char_to_acgt_int[85];
 
-// [R]
-// qToP<-function(q){10^(-q/10)}
-// CAP_BASEQ=63
-// arrSize=CAP_BASEQ+1
-// paste0("qScore_to_errorProb[",arrSize,"]={",paste(unlist(format(lapply(0:CAP_BASEQ,FUN=qToP),scientific=F)),collapse=","),"};")
-extern const double qScore_to_errorProb[64];
+#define ACGT_CHAR2INT(c) \
+    ( ( (((unsigned char)(c)) < 85) ? (lut_char_to_acgt_int[((unsigned char)(c))]) : (-1) ) )
 
 
-// [R]
-// qToP <- function(q) { 10 ^ (-q / 10) }
-// CAP_BASEQ = 256
-// arrSize = CAP_BASEQ + 1
-// generate_likelihoods_homhit_ln <- function(i) { p = 1 - qToP(i);ret = log((p * 0.5) + (p * 0.5));return(ret); }
-// generate_likelihoods_hethit_ln <- function(i) { p = 1 - qToP(i);p3 = (1 - p) / 3.0;ret = log((p * 0.5) + (p3 * 0.5));return(ret); }
-// generate_likelihoods_homnonhit_ln <- function(i) { p = 1 - qToP(i);p3 = (1 - p) / 3.0;ret = log((0.5 * p3) + (0.5 * p3));return(ret); }
-// fn = generate_likelihoods_homhit_ln
-// x1 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
-// fn = generate_likelihoods_hethit_ln
-// x2 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
-// fn = generate_likelihoods_homnonhit_ln
-// x3 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
-// print(gsub("-Inf", "NEG_INF", paste0("qScore_to_ln_gl[3][", arrSize, "]=", "{", paste(x1, x2, x3, sep = ","), "};")))
+/// @brief lut_qs_to_qs2 - map quality score to squared quality score
+/// @details
+/// [R]
+/// > n <- 63
+/// > paste0("const int qs_to_qs2[", n + 1, "] = {", paste(sapply(0:n,
+/// function(n) n*n),collapse = ", "),"};") [1] "const int qs_to_qs2[64] = {0, 1,
+/// 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324,
+/// 361, 400, 441, 484, 529, 576, 625, 676, 729, 784, 841, 900, 961, 1024, 1089,
+/// 1156, 1225, 1296, 1369, 1444, 1521, 1600, 1681, 1764, 1849, 1936, 2025, 2116,
+/// 2209, 2304, 2401, 2500, 2601, 2704, 2809, 2916, 3025, 3136, 3249, 3364, 3481,
+/// 3600, 3721, 3844, 3969};"
+/// remove CAP_BASEQ (63)
+extern const int lut_qs_to_qs2[63];
+/// @assume CAP_BASEQ == 63
+#define QS_TO_QSSQ(q) ( (0==(q)) ? (0) : ( ((q)<CAP_BASEQ) ? (lut_qs_to_qs2[(q)]) : (3969) ) )
+
+
+/// @brief NALLELES_TO_NGTS - get number of genotypes from number of
+/// alleles
+/// @param 	n (int) - number of alleles
+/// @return	  (int) - number of unique unordered genotypes expected for n
+/// alleles
+///                    e.g. A, C -> AA AC CC -> 3
+extern const int lut_nAlleles_to_nGenotypes[6];
+#define NALLELES_TO_NGTS(n) ( (((n)>0) && ((n)<6)) ? lut_nAlleles_to_nGenotypes[(n)] : -1 )
+
+/// @note not in use - alternative method
+/// @brief nAlleles2nGenotypes - get the number of possible genotypes assuming
+/// ploidy==2
+/// @param n	
+/// number of alleles
+/// @return		number of expected genotypes
+/// equivalent to (n * (n+1)) / 2
+inline int nAlleles2nGenotypes(const int n) {
+    return (((n * (n + 1)) >> 1));
+}
+
+
+
+/// [R]
+/// qToP<-function(q){10^(-q/10)}
+/// CAP_BASEQ=63
+/// arrSize=CAP_BASEQ+1
+/// paste0("qScore_to_errorProb[",arrSize,"]={",paste(unlist(format(lapply(0:CAP_BASEQ,FUN=qToP),scientific=F)),collapse=","),"};")
+/// remove CAP_BASEQ (63)
+extern const double qScore_to_errorProb[63];
+/// @assume CAP_BASEQ == 63
+/// @note does NOT check if q is in range [0, CAP_BASEQ]; DRAGON
+#define QS_TO_ERRPROB(q) ( (0==(q)) ? 1.0 : ( ((q) < CAP_BASEQ) ? qScore_to_errorProb[(q)] : 0.0000005011872 ) )
+
+/// @brief qScore_to_ln_gl - lookup table for mapping quality score to ln genotype likelihoods
+/// [R]
+/// qToP <- function(q) { 10 ^ (-q / 10) }
+/// CAP_BASEQ = 256
+/// arrSize = CAP_BASEQ + 1
+/// generate_likelihoods_homhit_ln <- function(i) { p = 1 - qToP(i);ret = log((p * 0.5) + (p * 0.5));return(ret); }
+/// generate_likelihoods_hethit_ln <- function(i) { p = 1 - qToP(i);p3 = (1 - p) / 3.0;ret = log((p * 0.5) + (p3 * 0.5));return(ret); }
+/// generate_likelihoods_homnonhit_ln <- function(i) { p = 1 - qToP(i);p3 = (1 - p) / 3.0;ret = log((0.5 * p3) + (0.5 * p3));return(ret); }
+/// fn = generate_likelihoods_homhit_ln
+/// x1 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+/// fn = generate_likelihoods_hethit_ln
+/// x2 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+/// fn = generate_likelihoods_homnonhit_ln
+/// x3 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+/// print(gsub("-Inf", "NEG_INF", paste0("qScore_to_ln_gl[3][", arrSize, "]=", "{", paste(x1, x2, x3, sep = ","), "};")))
 extern const double qScore_to_ln_gl[3][257];
 
-// [R]
-// qToP <- function(q) { 10 ^ (-q / 10) }
-// CAP_BASEQ = 256
-// arrSize = CAP_BASEQ + 1
-// generate_likelihoods_homhit_log10 <- function(i) { p = qToP(i);ret = log10(1 - p);return(ret); }
-// generate_likelihoods_hethit_log10 <- function(i) { p = qToP(i);ret = log10((1 - p) / 2 + p / 6);return(ret); }
-// generate_likelihoods_homnonhit_log10 <- function(i) { p = qToP(i);ret = log10(p) - log10(3);return(ret); }
-// fn = generate_likelihoods_homhit_log10
-// x1 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
-// fn = generate_likelihoods_hethit_log10
-// x2 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
-// fn = generate_likelihoods_homnonhit_log10
-// x3 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
-// print(gsub("-Inf", "NEG_INF", paste0("qScore_to_log10_gl[3][", arrSize, "]=", "{", paste(x1, x2, x3, sep = ","), "};")))
+/// @brief qScore_to_log10_gl - lookup table for mapping quality score to log10 genotype likelihoods
+/// [R]
+/// qToP <- function(q) { 10 ^ (-q / 10) }
+/// CAP_BASEQ = 256
+/// arrSize = CAP_BASEQ + 1
+/// generate_likelihoods_homhit_log10 <- function(i) { p = qToP(i);ret = log10(1 - p);return(ret); }
+/// generate_likelihoods_hethit_log10 <- function(i) { p = qToP(i);ret = log10((1 - p) / 2 + p / 6);return(ret); }
+/// generate_likelihoods_homnonhit_log10 <- function(i) { p = qToP(i);ret = log10(p) - log10(3);return(ret); }
+/// fn = generate_likelihoods_homhit_log10
+/// x1 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+/// fn = generate_likelihoods_hethit_log10
+/// x2 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+/// fn = generate_likelihoods_homnonhit_log10
+/// x3 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+/// print(gsub("-Inf", "NEG_INF", paste0("qScore_to_log10_gl[3][", arrSize, "]=", "{", paste(x1, x2, x3, sep = ","), "};")))
 extern const double qScore_to_log10_gl[3][257];
-
-// qScore	phred-scaled quality score
-// 			qScore = -10 * log10(error_probability)
-
-// @brief qs_to_qs2 - get squared quality score from quality score
-// @details
-// [R]
-// > n <- 63
-// > paste0("const int qs_to_qs2[", n + 1, "] = {", paste(sapply(0:n,
-// function(n) n*n),collapse = ", "),"};") [1] "const int qs_to_qs2[64] = {0, 1,
-// 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324,
-// 361, 400, 441, 484, 529, 576, 625, 676, 729, 784, 841, 900, 961, 1024, 1089,
-// 1156, 1225, 1296, 1369, 1444, 1521, 1600, 1681, 1764, 1849, 1936, 2025, 2116,
-// 2209, 2304, 2401, 2500, 2601, 2704, 2809, 2916, 3025, 3136, 3249, 3364, 3481,
-// 3600, 3721, 3844, 3969};"
-inline int qs_to_qs2(const int q) {
-    if (0 == q) {
-        return 0;
-    } else if (q > CAP_BASEQ) {
-        return lut_qs_to_qs2[CAP_BASEQ];
-    } else if (q > 0) {
-        return lut_qs_to_qs2[q];
-    } else {
-        NEVER;
-    }
-}
-
-/* -> SHARED INLINE FUNCTIONS ------------------------------------------------*/
-
-// @brief nAlleles_to_nGenotypes - get number of genotypes from number of
-// alleles
-// @param 	n (int) - number of alleles
-// @return	  (int) - number of unique unordered genotypes expected for n
-// alleles
-//                    e.g. A, C -> AA AC CC -> 3
-extern const int lut_nAlleles_to_nGenotypes[6];
-inline int nAlleles_to_nGenotypes(const int n) {
-    DEVASSERT(n > 0 && n < 6);
-    return (lut_nAlleles_to_nGenotypes[n]);
-}
-
 
 
 extern float bcf_float_missing_union_f;
 
-#endif  // __SHARED__
+#endif  /// __SHARED__

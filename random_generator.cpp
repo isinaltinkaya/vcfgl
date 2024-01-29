@@ -16,19 +16,6 @@ void NormalSampler_destroy(NormalSampler* norm) {
     norm = NULL;
 }
 
-double NormalSampler::sample(void) {
-
-    double u, v, x, y, q;
-    do {
-        u = sample_uniform_rng2();
-        v = 1.7156 * (sample_uniform_rng2() - 0.5);
-        x = u - 0.449871;
-        y = abs(v) + 0.386595;
-        q = (x * x) + y * (0.19600 * y - 0.25472 * x);
-    } while ((q > 0.27597) && (q > 0.27846 || (v * v) > -4.0 * log(u) * (u * u)));
-
-    return(this->mu + this->sigma * v / u);
-}
 
 Gamma1Sampler* Gamma1Sampler_init(const double shape) {
 

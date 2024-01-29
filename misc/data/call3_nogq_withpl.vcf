@@ -1,0 +1,26 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##contig=<ID=chr22,length=10>
+##fileDate=Tue Dec 19 11:21:41 2023
+##ALT=<ID=*,Description="Symbolic alternate allele representing any possible alternative allele at this location">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Simulated per-sample read depth">
+##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihood in log10 likelihood ratio format">
+##FORMAT=<ID=PL,Number=G,Type=Integer,Description="Phred-scaled genotype likelihoods">
+##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the REF and ALT alleles">
+##INFO=<ID=AD,Number=R,Type=Integer,Description="Total allelic depths for the REF and ALT alleles">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GP,Number=G,Type=Float,Description="Genotype posterior probabilities in the range 0 to 1">
+##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes for each ALT allele, in the same order as listed">
+##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">
+##INFO=<ID=DP4,Number=4,Type=Integer,Description="Number of high-quality ref-forward , ref-reverse, alt-forward and alt-reverse bases">
+##INFO=<ID=MQ,Number=1,Type=Integer,Description="Average mapping quality">
+##INFO=<ID=PV4,Number=4,Type=Float,Description="P-values for strand bias, baseQ bias, mapQ bias and tail distance bias">
+##source=manually created by isinaltinkaya 240115, second min pl values are set to match the gq values in call3.vcf
+##bcftools_annotateVersion=1.18-6-gc7cbe0b3+htslib-1.18-7-gac70212
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	popYRI_ind1	popYRI_ind2
+chr22	2	.	A	.	515.208	PASS	.	GT:PL	0/0:.	0/0:.
+chr22	4	.	C	A,T	515.208	PASS	.	GT:DP:PL	./.:0:.,.,.,.,.,.	1/1:2:10,7,0,8,10,16
+chr22	5	.	A	C	515.208	PASS	.	GT:DP:PL	0/0:10:0,10,20	1/0:10:5,0,13
+chr22	6	.	C	.	515.208	PASS	.	GT:PL	0/0:0	0/0:0
+chr22	8	.	A	.	515.208	PASS	.	GT:PL	./.:.	0/0:0
+chr22	9	.	A	T	515.208	PASS	.	GT:DP:PL	0/1:10:127,0,127	1/1:2:44,26,0

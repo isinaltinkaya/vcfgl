@@ -8,8 +8,75 @@
 
 typedef struct gvcfData gvcfData;
 
+/* -> BCF TAGS ---------------------------------------------------------------*/
+
+// @enum bcf_tag_number
+// @brief Defines the number of elements in a bcf tag array
+// @note If you add a new enum bcf_tag_number (nElements++), make sure to
+// -> Update simRecord constructor:
+// 		init max_size_bcf_tag_number:
+// 			set size to new nElements
+//			set init values for new bcf_tag_number
+// 		init current_size_bcf_tag_number:
+// 			set size to new nElements
+//			set init values for new bcf_tag_number
+#define N_ENUM_BCF_TAG_NUMBER 10
+
+enum bcf_tag_number {
+    FMT_NUMBER_1,               // [0], 1*nSamples, FIXED
+    FMT_NUMBER_GT,              // [1], Ploidy*nSamples, for GT, FIXED
+    FMT_NUMBER_G,               // [2], nGenotypes*nSamples, VARIABLE_PER_REC
+    FMT_NUMBER_R,               // [3], nAllelesObserved*nSamples, VARIABLE_PER_REC
+    FMT_NUMBER_R_WITH_NONREF,   // [4], if addNonRef (nAllelesObserved+1)*nSamples, else nAllelesObserved*nSamples, VARIABLE_PER_REC
+    INFO_NUMBER_1,              // [5], 1, FIXED
+    INFO_NUMBER_G,              // [6], nGenotypes, VARIABLE_PER_REC
+    INFO_NUMBER_R,              // [7], nAllelesObserved, VARIABLE_PER_REC
+    INFO_NUMBER_R_WITH_NONREF,  // [8], if addNonRef nAllelesObserved+1, else nAllelesObserved, VARIABLE_PER_REC
+    INFO_NUMBER_16              // [9], 16, FIXED
+};
+
+// inspired by: bcftools/tag2tag
+// @typedef struct bcf_tag_t
+// @brief Stores information about a bcf tag
+// @field n		bcf tag number (expected number of elements in the tag's
+// array)
+// @field type	bcf tag type (BCF_HT_*), see bcf.h
+// @field str		bcf tag string
+// @field hdr		bcf tag header
+// @note If you add a new enum bcf_tag (nTags++), make sure to
+// -> Update bcf_tag_t information in bcf_tags[new_tag] in bcf_utils.cpp
+typedef struct {
+    enum bcf_tag_number n;
+    int type;
+    const char* str = NULL;
+    const char* hdr = NULL;
+} bcf_tag_t;
+
+// @enum bcf_tag
+// @brief Defines the bcf tags used in this program
+// @note If you add a new enum bcf_tag, make sure to
+// -> Update bcf_tag_t bcf_tags[] in bcf_utils.cpp
+// -> Update extern bcf_tag_t bcf_tags[nElements++] in bcf_utils.h
+enum bcf_tag {
+    GT,        // 1
+    GL,        // 2
+    GP,        // 3
+    PL,        // 4
+    FMT_DP,    // 5
+    INFO_DP,   // 6
+    QS,        // 7
+    I16,       // 8
+    FMT_AD,    // 9
+    FMT_ADF,   // 10
+    FMT_ADR,   // 11
+    INFO_AD,   // 12
+    INFO_ADF,  // 13
+    INFO_ADR,  // 14
+};
+extern bcf_tag_t bcf_tags[15];
+
+
 /* ========================================================================== */
-/* /BEGIN/ BCF UTILS ======================================================== */
 
 typedef struct simRecord {
 
@@ -149,96 +216,187 @@ typedef struct simRecord {
     void prepare_FMT_NUMBER_R_tags(void);
     void prepare_FMT_NUMBER_G_tags(void);
 
-    void reset_rec_objects();
 
     void expand_arrays(const int new_size);
 
     void add_tags();
 
 
+    // reset the reused arrays by setting elements to initial values
+    // these were allocated during simRecord construction, and reused in
+    // simulating each record
+    void reset_rec_objects() {
+
+
+        // ACGT: A, C, G, T, <*> (non-ref)
+        // assumption: MAX_NALLELES == 5
+        this->acgt2alleles[0] = -1;
+        this->acgt2alleles[1] = -1;
+        this->acgt2alleles[2] = -1;
+        this->acgt2alleles[3] = -1;
+        this->acgt2alleles[4] = -1;
+
+        this->alleles2acgt[0] = -1;
+        this->alleles2acgt[1] = -1;
+        this->alleles2acgt[2] = -1;
+        this->alleles2acgt[3] = -1;
+        this->alleles2acgt[4] = -1;
+
+        this->nAlleles = 0;
+        this->nAllelesObserved = 0;
+
+        //TODO check why removing this has no effect
+        free(this->gt_arr);
+        this->gt_arr = NULL;
+
+        // -> reset INFO_ACGT arrays (size=4) 
+        // unroll
+        this->acgt_info_ad_arr[0] = 0;
+        this->acgt_info_ad_arr[1] = 0;
+        this->acgt_info_ad_arr[2] = 0;
+        this->acgt_info_ad_arr[3] = 0;
+
+        this->acgt_sum_taildist[0] = 0.0;
+        this->acgt_sum_taildist[1] = 0.0;
+        this->acgt_sum_taildist[2] = 0.0;
+        this->acgt_sum_taildist[3] = 0.0;
+
+        this->acgt_sum_taildist_sq[0] = 0.0;
+        this->acgt_sum_taildist_sq[1] = 0.0;
+        this->acgt_sum_taildist_sq[2] = 0.0;
+        this->acgt_sum_taildist_sq[3] = 0.0;
+
+        // -> reset FMT_ACGT arrays (size=4*nSamples)
+        for (int i = 0; i < nSamples * 4; ++i) {
+            this->acgt_fmt_ad_arr[i] = 0;
+            this->acgt_fmt_adf_arr[i] = 0;
+            this->acgt_fmt_adr_arr[i] = 0;
+            this->acgt_fmt_qsum_arr[i] = 0;
+            this->acgt_fmt_qsum_sq_arr[i] = 0;
+
+        }
+
+        // 2 * base + which_strand
+        this->acgt_n_bases_forI16[0] = 0;
+        this->acgt_n_bases_forI16[1] = 0;
+        this->acgt_n_bases_forI16[2] = 0;
+        this->acgt_n_bases_forI16[3] = 0;
+        this->acgt_n_bases_forI16[4] = 0;
+        this->acgt_n_bases_forI16[5] = 0;
+        this->acgt_n_bases_forI16[6] = 0;
+        this->acgt_n_bases_forI16[7] = 0;
+
+        int size = -1;
+
+
+        if (this->fmt_dp_arr != NULL) {
+            size = this->max_size_bcf_tag_number[bcf_tags[FMT_DP].n];
+            for (int i = 0;i < size;++i) {
+                this->fmt_dp_arr[i] = 0;
+            }
+        }
+
+        if (this->info_dp_arr != NULL) {
+            size = this->max_size_bcf_tag_number[bcf_tags[INFO_DP].n];
+            for (int i = 0;i < size;++i) {
+                this->info_dp_arr[i] = 0;
+            }
+        }
+
+        // GL PL GP share the same size
+        size = this->max_size_bcf_tag_number[bcf_tags[GL].n];
+        for (int i = 0;i < size;++i) {
+            this->gl_arr[i] = -0.0;
+
+            if (NULL != this->gp_arr) {
+                this->gp_arr[i] = MINGP;
+            }
+
+            if (NULL != this->pl_arr) {
+                this->pl_arr[i] = MAXPL;
+            }
+        }
+
+
+        if (this->qs_arr != NULL) {
+            size = this->max_size_bcf_tag_number[bcf_tags[QS].n];
+            for (int i = 0;i < size;++i) {
+                this->qs_arr[i] = 0.0;
+            }
+        }
+
+
+        if (this->info_ad_arr != NULL) {
+            size = this->max_size_bcf_tag_number[bcf_tags[INFO_AD].n];
+            for (int i = 0;i < size;++i) {
+                this->info_ad_arr[i] = 0;
+            }
+        }
+
+        if (this->info_adf_arr != NULL) {
+            size = this->max_size_bcf_tag_number[bcf_tags[INFO_ADF].n];
+            for (int i = 0;i < size;++i) {
+                this->info_adf_arr[i] = 0;
+            }
+        }
+
+        if (this->info_adr_arr != NULL) {
+            size = this->max_size_bcf_tag_number[bcf_tags[INFO_ADR].n];
+            for (int i = 0;i < size;++i) {
+                this->info_adr_arr[i] = 0;
+            }
+        }
+
+        if (this->fmt_ad_arr != NULL) {
+            size = this->max_size_bcf_tag_number[bcf_tags[FMT_AD].n];
+            for (int i = 0;i < size;++i) {
+                this->fmt_ad_arr[i] = 0;
+            }
+        }
+
+        if (this->fmt_adf_arr != NULL) {
+            size = this->max_size_bcf_tag_number[bcf_tags[FMT_ADF].n];
+            for (int i = 0;i < size;++i) {
+                this->fmt_adf_arr[i] = 0;
+            }
+        }
+
+        if (this->fmt_adr_arr != NULL) {
+            size = this->max_size_bcf_tag_number[bcf_tags[FMT_ADR].n];
+            for (int i = 0;i < size;++i) {
+                this->fmt_adr_arr[i] = 0;
+            }
+        }
+
+        if (this->i16_arr != NULL) {
+            // unroll 
+            this->i16_arr[0] = 0.0;
+            this->i16_arr[1] = 0.0;
+            this->i16_arr[2] = 0.0;
+            this->i16_arr[3] = 0.0;
+            this->i16_arr[4] = 0.0;
+            this->i16_arr[5] = 0.0;
+            this->i16_arr[6] = 0.0;
+            this->i16_arr[7] = 0.0;
+            this->i16_arr[8] = 0.0;
+            this->i16_arr[9] = 0.0;
+            this->i16_arr[10] = 0.0;
+            this->i16_arr[11] = 0.0;
+            this->i16_arr[12] = 0.0;
+            this->i16_arr[13] = 0.0;
+            this->i16_arr[14] = 0.0;
+            this->i16_arr[15] = 0.0;
+        }
+
+
+        this->alleles.l = 0;
+    }
+
 } simRecord;
 
-/* -> BCF TAGS ---------------------------------------------------------------*/
-
-// @enum bcf_tag_number
-// @brief Defines the number of elements in a bcf tag array
-// @note If you add a new enum bcf_tag_number (nElements++), make sure to
-// -> Update simRecord constructor:
-// 		init max_size_bcf_tag_number:
-// 			set size to new nElements
-//			set init values for new bcf_tag_number
-// 		init current_size_bcf_tag_number:
-// 			set size to new nElements
-//			set init values for new bcf_tag_number
-#define N_ENUM_BCF_TAG_NUMBER 10
-
-enum bcf_tag_number {
-    FMT_NUMBER_1,               // [0], 1*nSamples, FIXED
-    FMT_NUMBER_GT,              // [1], Ploidy*nSamples, for GT, FIXED
-    FMT_NUMBER_G,               // [2], nGenotypes*nSamples, VARIABLE_PER_REC
-    FMT_NUMBER_R,               // [3], nAllelesObserved*nSamples, VARIABLE_PER_REC
-    FMT_NUMBER_R_WITH_NONREF,   // [4], if addNonRef (nAllelesObserved+1)*nSamples, else nAllelesObserved*nSamples, VARIABLE_PER_REC
-    INFO_NUMBER_1,              // [5], 1, FIXED
-    INFO_NUMBER_G,              // [6], nGenotypes, VARIABLE_PER_REC
-    INFO_NUMBER_R,              // [7], nAllelesObserved, VARIABLE_PER_REC
-    INFO_NUMBER_R_WITH_NONREF,  // [8], if addNonRef nAllelesObserved+1, else nAllelesObserved, VARIABLE_PER_REC
-    INFO_NUMBER_16              // [9], 16, FIXED
-};
-
-// inspired by: bcftools/tag2tag
-// @typedef struct bcf_tag_t
-// @brief Stores information about a bcf tag
-// @field n		bcf tag number (expected number of elements in the tag's
-// array)
-// @field type	bcf tag type (BCF_HT_*), see bcf.h
-// @field str		bcf tag string
-// @field hdr		bcf tag header
-// @note If you add a new enum bcf_tag (nTags++), make sure to
-// -> Update bcf_tag_t information in bcf_tags[new_tag] in bcf_utils.cpp
-typedef struct {
-    enum bcf_tag_number n;
-    int type;
-    const char* str = NULL;
-    const char* hdr = NULL;
-} bcf_tag_t;
-
-// @enum bcf_tag
-// @brief Defines the bcf tags used in this program
-// @note If you add a new enum bcf_tag, make sure to
-// -> Update bcf_tag_t bcf_tags[] in bcf_utils.cpp
-// -> Update extern bcf_tag_t bcf_tags[nElements++] in bcf_utils.h
-enum bcf_tag {
-    GT,        // 1
-    GL,        // 2
-    GP,        // 3
-    PL,        // 4
-    FMT_DP,    // 5
-    INFO_DP,   // 6
-    QS,        // 7
-    I16,       // 8
-    FMT_AD,    // 9
-    FMT_ADF,   // 10
-    FMT_ADR,   // 11
-    INFO_AD,   // 12
-    INFO_ADF,  // 13
-    INFO_ADR,  // 14
-};
-extern bcf_tag_t bcf_tags[15];
-
-
-/* -> MISC -------------------------------------------------------------------*/
-
-/// @brief nAlleles2nGenotypes - get the number of possible genotypes assuming
-/// ploidy==2
-/// @param n	
-/// number of alleles
-/// @return		number of expected genotypes
-/// equivalent to (n * (n+1)) / 2
-inline int nAlleles2nGenotypes(const int n) {
-    return (((n * (n + 1)) >> 1));
-}
 
 /* ========================================================================== */
+/* -> GVCF -------------------------------------------------------------------*/
 
 
 // source: mostly based on gvcf_t in bcftools/gvcf.h

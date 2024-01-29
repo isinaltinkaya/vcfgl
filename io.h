@@ -15,7 +15,7 @@ BGZF* open_BGZF(const char* fn, const char* mode);
 void write_BGZF(BGZF* fp, const void* data, const int size);
 void write_BGZF_kstring_buffer(BGZF* fp, kstring_t* buffer);
 
-int get_qScore(const double error_prob_forQs);
+// int get_qScore(const double error_prob_forQs);
 
 typedef struct preCalcStruct preCalcStruct;
 
@@ -50,6 +50,7 @@ struct argStruct {
     // --> Input/Output
 
     char* in_fn;
+    int gtSource;
     char* out_fnprefix;
     char* output_mode;
 

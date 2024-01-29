@@ -1,0 +1,22 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##source=manual edit by isinaltinkaya
+##contig=<ID=chr22,length=10>
+##fileDate=Mon Jan 29 12:21:11 2024
+##source=vcfgl [version: v0.4.3-8f175d5] [build: Jan 29 2024 11:49:07] [htslib: 1.15.1-20-g46c56fcc]
+##source=Command: vcfgl --verbose 0 --threads 1 --seed 42 --input /home/isin/Projects/VCFGL/vcfgl/test/data/data4_acgt_biallelic_a2g_c2t.vcf --source 1 --output /home/isin/Projects/VCFGL/vcfgl/test/testwd/test13 --output-mode v --depth 2.000000 --error-rate 0.024000 --error-qs 0  --gl-model 2 --platform 0 --precise-gl 0 --i16-mapq 20  -explode 1 --rm-invar-sites 0 --rm-empty-sites 0 -doUnobserved 2 -doGVCF 0 -printPileup 0 -printTruth 0  -printBasePickError 0 -printQsError 0 -printGlError 0 -printQScores 0 -addGL 1 -addGP 0 -addPL 1 -addI16 0 -addQS 0 -addFormatDP 1 -addInfoDP 0 -addFormatAD 0 -addInfoAD 0 -addFormatADF 0 -addInfoADF 0 -addFormatADR 0 -addInfoADR 0
+##ALT=<ID=NON_REF,Description="Represents any possible alternative allele at this location">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Simulated per-sample read depth">
+##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihood in log10 likelihood ratio format">
+##FORMAT=<ID=PL,Number=G,Type=Integer,Description="Phred-scaled genotype likelihoods">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	popYRI_ind1	popYRI_ind2	popYRI_ind3	popYRI_ind4
+chr22	1	.	G	<NON_REF>	.	PASS	.	DP:GL:PL	2:0,-0.594632,-4.13215:0,6,41	1:0,-0.297316,-2.06607:0,3,21	4:0,-1.18926,-8.26429:0,12,83	3:0,-0.891948,-6.19822:0,9,62
+chr22	2	.	G	<NON_REF>	.	PASS	.	DP:GL:PL	4:0,-1.18926,-8.26429:0,12,83	0:.,.,.:.,.,.	2:0,-0.594632,-4.13215:0,6,41	1:0,-0.297316,-2.06607:0,3,21
+chr22	3	.	G	T,<NON_REF>	.	PASS	.	DP:GL:PL	4:0,-1.18926,-8.26429,-1.18926,-8.26429,-8.26429:0,12,83,12,83,83	2:0,-0.594632,-4.13215,-0.594632,-4.13215,-4.13215:0,6,41,6,41,41	2:0,-0.594632,-4.13215,-0.594632,-4.13215,-4.13215:0,6,41,6,41,41	1:-2.06607,-0.297316,0,-2.06607,-0.297316,-2.06607:21,3,0,21,3,21
+chr22	4	.	G	<NON_REF>	.	PASS	.	DP:GL:PL	2:0,-0.594632,-4.13215:0,6,41	1:0,-0.297316,-2.06607:0,3,21	3:0,-0.891948,-6.19822:0,9,62	1:0,-0.297316,-2.06607:0,3,21
+chr22	5	.	G	<NON_REF>	.	PASS	.	DP:GL:PL	2:0,-0.594632,-4.13215:0,6,41	0:.,.,.:.,.,.	1:0,-0.297316,-2.06607:0,3,21	3:0,-0.891948,-6.19822:0,9,62
+chr22	6	.	T	<NON_REF>	.	PASS	.	DP:GL:PL	2:0,-0.594632,-4.13215:0,6,41	4:0,-1.18926,-8.26429:0,12,83	6:0,-1.7839,-12.3964:0,18,124	0:.,.,.:.,.,.
+chr22	7	.	G	<NON_REF>	.	PASS	.	DP:GL:PL	0:.,.,.:.,.,.	1:0,-0.297316,-2.06607:0,3,21	2:0,-0.594632,-4.13215:0,6,41	1:0,-0.297316,-2.06607:0,3,21
+chr22	8	.	G	C,<NON_REF>	.	PASS	.	DP:GL:PL	2:0,-0.594632,-4.13215,-0.594632,-4.13215,-4.13215:0,6,41,6,41,41	4:0,-1.18926,-8.26429,-1.18926,-8.26429,-8.26429:0,12,83,12,83,83	3:-1.17412,0,-3.2402,-1.76876,-3.53751,-5.30627:12,0,32,18,35,53	1:0,-0.297316,-2.06607,-0.297316,-2.06607,-2.06607:0,3,21,3,21,21
+chr22	9	.	G	<NON_REF>	.	PASS	.	DP:GL:PL	1:0,-0.297316,-2.06607:0,3,21	7:0,-2.08121,-14.4625:0,21,145	1:0,-0.297316,-2.06607:0,3,21	1:0,-0.297316,-2.06607:0,3,21
+chr22	10	.	G	<NON_REF>	.	PASS	.	DP:GL:PL	4:0,-1.18926,-8.26429:0,12,83	2:0,-0.594632,-4.13215:0,6,41	0:.,.,.:.,.,.	4:0,-1.18926,-8.26429:0,12,83

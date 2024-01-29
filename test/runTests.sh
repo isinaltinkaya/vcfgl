@@ -8,7 +8,6 @@ SCRIPTPATH=$(realpath "$0")
 
 TESTTYPE=${1:-"regular"}
 
-
 SCRIPTDIR=$(dirname "$SCRIPTPATH")
 DATADIR=$(realpath "$SCRIPTDIR/data")
 TESTWD=$(realpath "$SCRIPTDIR/testwd")
@@ -21,7 +20,6 @@ NOCOLOR='\033[0m'
 rm -rfv ${TESTWD}/
 mkdir -pv ${TESTWD}/
 echo ${TESTWD}
-
 
 
 testExec(){
@@ -78,6 +76,45 @@ printf "########################################################################
 printf "\n\n"
 
 
+runTestDiff(){
+	if [ ${TESTTYPE} == "regular" ]  || [ ${TESTTYPE} == "all" ]; then
+		local id=${1}
+		local outFile=${2}
+		local refFile=${3}
+		local outPref=${TESTWD}/${id}
+		local logFile=${outPref}.log
+		local diffFile=${outPref}.diff
+
+		local diffcmd="diff -s ${outFile} ${refFile} > ${diffFile} 2>&1"
+
+		printf "# ${id} -> Running diff\n"
+		printf "# Command:\n${diffcmd}\n"
+
+		eval ${diffcmd}
+
+		if [ $? -eq 0 ]; then
+			printf "${GREEN}"
+			printf "# ${id} -> Diff: OK\n"
+			printf "${NOCOLOR}"
+			printf "\n\n"
+		else
+			printf "\n\n"
+			printf "${RED}"
+			printf "###############################################################################\n"
+			printf "# ${id} FAILED\n"
+
+			printf "\n# Command:\n${diffcmd}\n"
+			printf "\n# Output file:\n${outFile}\n"
+			printf "\n# Reference file:\n${refFile}\n"
+			printf "\n# Log file:\n${logFile}\n"
+			printf "\n# Diff file:\n${diffFile}\n"
+			printf "###############################################################################\n"
+			printf "${NOCOLOR}"
+			printf "\n\n"
+			exit 1
+		fi
+	fi
+}
 
 
 runTestDiffVcf(){
@@ -209,78 +246,28 @@ runTest(){
 # test all tags together, gl 1
 ID="test1"
 
-
 INFILENAME=${DATADIR}/"data1.vcf"
 
-threads=1
-seed=42
-depth=1
-depthsFile=""
-err=0.2
-qs=0
-betavar=""
-GL=1
-gl1theta="--gl1-theta 0.83"
-platform=0
-usePreciseGlError=0
-explode=1
-rmInvarSites=0
-rmEmptySites=0
-doUnobserved=1 # **
-doGVCF=0
-printPileup=1
-printTruth=1
-addGL=1
-addGP=1
-addPL=1
-addI16=1
-addQS=1
-addFormatDP=1
-addInfoDP=1
-addFormatAD=1
-addInfoAD=1
-addFormatADF=1
-addInfoADF=1
-addFormatADR=1
-addInfoADR=1
-doGVCF=0
-gvcfDps=""
-
-
-ARGS="--verbose 0 \
---threads ${threads} \
---seed ${seed} \
+ARGS="
+--seed 42 \
 --output-mode v \
---depth ${depth} \
---error-rate ${err} \
---error-qs ${qs} \
-${betavar} \
---gl-model ${GL} \
-${gl1theta} \
---platform ${platform} \
---precise-gl ${usePreciseGlError} \
--explode ${explode} \
---rm-invar-sites ${rmInvarSites} \
---rm-empty-sites ${rmEmptySites} \
--doUnobserved ${doUnobserved} \
--doGVCF ${doGVCF} \
--printPileup ${printPileup} \
--printTruth ${printTruth} \
--addGL ${addGL} \
--addGP ${addGP} \
--addPL ${addPL} \
--addI16 ${addI16} \
--addQS ${addQS} \
--addFormatDP ${addFormatDP} \
--addInfoDP ${addInfoDP} \
--addFormatAD ${addFormatAD} \
--addInfoAD ${addInfoAD} \
--addFormatADF ${addFormatADF} \
--addInfoADF ${addInfoADF} \
--addFormatADR ${addFormatADR} \
--addInfoADR ${addInfoADR} \
--doGVCF ${doGVCF} \
-${gvcfDps}
+--depth 1 \
+--error-rate 0.2 \
+--gl-model 1 \
+--precise-gl 0 \
+-explode 1 \
+-doUnobserved 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 \
+-addFormatADF 1 \
+-addInfoADF 1 \
+-addFormatADR 1 \
+-addInfoADR 1 
 "
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
@@ -294,74 +281,23 @@ ID="test2"
 
 INFILENAME=${DATADIR}/"data2.vcf"
 
-threads=1
-seed=42
-depth=2
-depthsFile=""
-err=0.01
-qs=0
-betavar=""
-GL=2 # **
-gl1theta=""
-platform=0
-usePreciseGlError=0
-explode=0 # **
-rmInvarSites=0
-rmEmptySites=0
-doUnobserved=2 # **
-doGVCF=0
-printPileup=1
-printTruth=1
-addGL=1
-addGP=1
-addPL=1
-addI16=1
-addQS=1
-addFormatDP=1
-addInfoDP=1
-addFormatAD=1
-addInfoAD=1
-addFormatADF=0
-addInfoADF=0
-addFormatADR=0
-addInfoADR=0
-doGVCF=0
-gvcfDps=""
-
-ARGS="--verbose 0 \
---threads ${threads} \
---seed ${seed} \
+ARGS="
+--seed 42 \
 --output-mode v \
---depth ${depth} \
---error-rate ${err} \
---error-qs ${qs} \
-${betavar} \
---gl-model ${GL} \
-${gl1theta} \
---platform ${platform} \
---precise-gl ${usePreciseGlError} \
--explode ${explode} \
---rm-invar-sites ${rmInvarSites} \
---rm-empty-sites ${rmEmptySites} \
--doUnobserved ${doUnobserved} \
--doGVCF ${doGVCF} \
--printPileup ${printPileup} \
--printTruth ${printTruth} \
--addGL ${addGL} \
--addGP ${addGP} \
--addPL ${addPL} \
--addI16 ${addI16} \
--addQS ${addQS} \
--addFormatDP ${addFormatDP} \
--addInfoDP ${addInfoDP} \
--addFormatAD ${addFormatAD} \
--addInfoAD ${addInfoAD} \
--addFormatADF ${addFormatADF} \
--addInfoADF ${addInfoADF} \
--addFormatADR ${addFormatADR} \
--addInfoADR ${addInfoADR} \
--doGVCF ${doGVCF} \
-${gvcfDps}
+--depth 2 \
+--error-rate 0.01 \
+--gl-model 2 \
+--precise-gl 0 \
+-explode 0 \
+-doUnobserved 2 \
+-printTruth 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 
 "
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
@@ -372,82 +308,38 @@ runTestDiffVcf ${ID} ${TESTWD}/${ID}.truth.vcf  ${SCRIPTDIR}/reference/${ID}/${I
 # ################################################################################
 # # TEST3
 # data3
-# # ** err 0
-# # ** --rm-empty-sites 1 // removes site 6 and 8
-# # ** --rm-invar-sites 3 // 1+2, 1:removes sites 1,2,3,7,10 2:removes site 9
+# ** err 0
+# ** --rm-empty-sites 1 // removes site 6 and 8
+# ** --rm-invar-sites 3 // 1+2, 1:removes sites 1,2,3,7,10 2:removes site 9
+# ** --doUnobserved 3 // explode A,C,G,T
+# ** -explode 1 // explode to unobserved invar sites
 
 ID="test3"
 
 INFILENAME=${DATADIR}/"data3.vcf"
 
-threads=1
-seed=42
-depth=1
-depthsFile=""
-err=0
-qs=0
-betavar=""
-GL=1
-gl1theta="--gl1-theta 0.83"
-platform=0
-usePreciseGlError=0
-explode=1 # **
-rmInvarSites=3 # **
-rmEmptySites=1 # **
-doUnobserved=3 # **
-doGVCF=0
-printPileup=1
-printTruth=1
-addGL=1
-addGP=1
-addPL=1
-addI16=1
-addQS=1
-addFormatDP=1
-addInfoDP=1
-addFormatAD=1
-addInfoAD=1
-addFormatADF=1
-addInfoADF=1
-addFormatADR=1
-addInfoADR=1
-doGVCF=0
-gvcfDps=""
-
-ARGS="--verbose 0 \
---threads ${threads} \
---seed ${seed} \
+ARGS="
+--seed 42 \
 --output-mode v \
---depth ${depth} \
---error-rate ${err} \
---error-qs ${qs} \
-${betavar} \
---gl-model ${GL} \
-${gl1theta} \
---platform ${platform} \
---precise-gl ${usePreciseGlError} \
--explode ${explode} \
---rm-invar-sites ${rmInvarSites} \
---rm-empty-sites ${rmEmptySites} \
--doUnobserved ${doUnobserved} \
--doGVCF ${doGVCF} \
--printPileup ${printPileup} \
--printTruth ${printTruth} \
--addGL ${addGL} \
--addGP ${addGP} \
--addPL ${addPL} \
--addI16 ${addI16} \
--addQS ${addQS} \
--addFormatDP ${addFormatDP} \
--addInfoDP ${addInfoDP} \
--addFormatAD ${addFormatAD} \
--addInfoAD ${addInfoAD} \
--addFormatADF ${addFormatADF} \
--addInfoADF ${addInfoADF} \
--addFormatADR ${addFormatADR} \
--addInfoADR ${addInfoADR} \
--doGVCF ${doGVCF} \
-${gvcfDps}
+--depth 1 \
+--error-rate 0 \
+--gl-model 1 \
+--precise-gl 0 \
+-explode 1 \
+--rm-invar-sites 3 \
+--rm-empty-sites 1 \
+-doUnobserved 3 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 \
+-addFormatADF 1 \
+-addInfoADF 1 \
+-addFormatADR 1 \
+-addInfoADR 1 
 "
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
@@ -460,74 +352,23 @@ ID="test4"
 
 INFILENAME=${DATADIR}/"data3.vcf"
 
-threads=1
-seed=42
-depth="inf"
-depthsFile=""
-err=0
-qs=0
-betavar=""
-GL=1
-gl1theta="--gl1-theta 0.83"
-platform=0
-usePreciseGlError=0
-explode=1 
-rmInvarSites=0 
-rmEmptySites=1 
-doUnobserved=1
-doGVCF=0
-printPileup=0
-printTruth=1
-addGL=1
-addGP=1
-addPL=1
-addI16=0
-addQS=0
-addFormatDP=0
-addInfoDP=0
-addFormatAD=0
-addInfoAD=0
-addFormatADF=0
-addInfoADF=0
-addFormatADR=0
-addInfoADR=0
-doGVCF=0
-gvcfDps=""
 
-ARGS="--verbose 0 \
---threads ${threads} \
---seed ${seed} \
+ARGS="
+--seed 42 \
 --output-mode v \
---depth ${depth} \
---error-rate ${err} \
---error-qs ${qs} \
-${betavar} \
---gl-model ${GL} \
-${gl1theta} \
---platform ${platform} \
---precise-gl ${usePreciseGlError} \
--explode ${explode} \
---rm-invar-sites ${rmInvarSites} \
---rm-empty-sites ${rmEmptySites} \
--doUnobserved ${doUnobserved} \
--doGVCF ${doGVCF} \
--printPileup ${printPileup} \
--printTruth ${printTruth} \
--addGL ${addGL} \
--addGP ${addGP} \
--addPL ${addPL} \
--addI16 ${addI16} \
--addQS ${addQS} \
--addFormatDP ${addFormatDP} \
--addInfoDP ${addInfoDP} \
--addFormatAD ${addFormatAD} \
--addInfoAD ${addInfoAD} \
--addFormatADF ${addFormatADF} \
--addInfoADF ${addInfoADF} \
--addFormatADR ${addFormatADR} \
--addInfoADR ${addInfoADR} \
--doGVCF ${doGVCF} \
-${gvcfDps}
+--depth inf \
+--error-rate 0 \
+--gl-model 1 \
+--precise-gl 0 \
+-explode 1 \
+--rm-empty-sites 1 \
+-doUnobserved 1 \
+-printTruth 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 0 \
+-addQS 0 \
+-addFormatDP 0
 "
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
@@ -540,76 +381,29 @@ runTestDiffVcf ${ID} ${TESTWD}/${ID}.truth.vcf  ${SCRIPTDIR}/reference/${ID}/${I
 ID="test5"
 # 0.01	error-rate
 # 0		error-qs **
+# ** -doUnobserved 4 // <*> + explode A,C,G,T
 INFILENAME=${DATADIR}/"data3.vcf"
 
-threads=1
-seed=42
-depth=2
-depthsFile=""
-err=0.01
-qs=0
-betavar=""
-GL=2
-gl1theta=""
-platform=0
-usePreciseGlError=0
-explode=1 
-rmInvarSites=0
-rmEmptySites=0
-doUnobserved=4 # **
-doGVCF=0
-printPileup=1
-printTruth=1
-addGL=1
-addGP=1
-addPL=1
-addI16=1
-addQS=1
-addFormatDP=1
-addInfoDP=1
-addFormatAD=1
-addInfoAD=1
-addFormatADF=1
-addInfoADF=1
-addFormatADR=1
-addInfoADR=1
-doGVCF=0
-gvcfDps=""
-
-ARGS="--verbose 0 \
---threads ${threads} \
---seed ${seed} \
+ARGS="
+--seed 42 \
 --output-mode v \
---depth ${depth} \
---error-rate ${err} \
---error-qs ${qs} \
-${betavar} \
---gl-model ${GL} \
-${gl1theta} \
---platform ${platform} \
---precise-gl ${usePreciseGlError} \
--explode ${explode} \
---rm-invar-sites ${rmInvarSites} \
---rm-empty-sites ${rmEmptySites} \
--doUnobserved ${doUnobserved} \
--doGVCF ${doGVCF} \
--printPileup ${printPileup} \
--printTruth ${printTruth} \
--addGL ${addGL} \
--addGP ${addGP} \
--addPL ${addPL} \
--addI16 ${addI16} \
--addQS ${addQS} \
--addFormatDP ${addFormatDP} \
--addInfoDP ${addInfoDP} \
--addFormatAD ${addFormatAD} \
--addInfoAD ${addInfoAD} \
--addFormatADF ${addFormatADF} \
--addInfoADF ${addInfoADF} \
--addFormatADR ${addFormatADR} \
--addInfoADR ${addInfoADR} \
--doGVCF ${doGVCF} \
-${gvcfDps}
+--depth 2 \
+--error-rate 0.01 \
+--gl-model 2 \
+--precise-gl 0 \
+-explode 1 \
+-doUnobserved 4 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 \
+-addFormatADF 1 \
+-addInfoADF 1 \
+-addFormatADR 1 \
+-addInfoADR 1 
 "
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
@@ -622,74 +416,28 @@ ID="test6"
 
 INFILENAME=${DATADIR}/"data3.vcf"
 
-threads=1
-seed=42
-depth=2
-depthsFile=""
-err=0.01
-qs=2
-betavar="--beta-variance 1e-5"
-GL=2
-gl1theta=""
-platform=0
-usePreciseGlError=0
-explode=1 
-rmInvarSites=0
-rmEmptySites=0
-doUnobserved=4
-doGVCF=0
-printPileup=1
-printTruth=1
-addGL=1
-addGP=1
-addPL=1
-addI16=1
-addQS=1
-addFormatDP=1
-addInfoDP=1
-addFormatAD=1
-addInfoAD=1
-addFormatADF=1
-addInfoADF=1
-addFormatADR=1
-addInfoADR=1
-doGVCF=0
-gvcfDps=""
-
-ARGS="--verbose 0 \
---threads ${threads} \
---seed ${seed} \
+ARGS="
+--seed 42 \
 --output-mode v \
---depth ${depth} \
---error-rate ${err} \
---error-qs ${qs} \
-${betavar} \
---gl-model ${GL} \
-${gl1theta} \
---platform ${platform} \
---precise-gl ${usePreciseGlError} \
--explode ${explode} \
---rm-invar-sites ${rmInvarSites} \
---rm-empty-sites ${rmEmptySites} \
--doUnobserved ${doUnobserved} \
--doGVCF ${doGVCF} \
--printPileup ${printPileup} \
--printTruth ${printTruth} \
--addGL ${addGL} \
--addGP ${addGP} \
--addPL ${addPL} \
--addI16 ${addI16} \
--addQS ${addQS} \
--addFormatDP ${addFormatDP} \
--addInfoDP ${addInfoDP} \
--addFormatAD ${addFormatAD} \
--addInfoAD ${addInfoAD} \
--addFormatADF ${addFormatADF} \
--addInfoADF ${addInfoADF} \
--addFormatADR ${addFormatADR} \
--addInfoADR ${addInfoADR} \
--doGVCF ${doGVCF} \
-${gvcfDps}
+--depth 2 \
+--error-rate 0.01 \
+--error-qs 2 \
+--beta-variance 1e-5 \
+--gl-model 2 \
+--precise-gl 0 \
+-explode 1 \
+-doUnobserved 4 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 \
+-addFormatADF 1 \
+-addInfoADF 1 \
+-addFormatADR 1 \
+-addInfoADR 1 
 "
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
@@ -699,160 +447,70 @@ runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 ################################################################################
 # # TEST7
 ID="test7"
-
-# gvcf with --gvcf-dps 1
+# ** gvcf with --gvcf-dps 1
+# ** -doUnobserved 2 // <NON_REF>
 INFILENAME=${DATADIR}/"data1.vcf"
 
-threads=1
-seed=42
-depth=1
-depthsFile=""
-err=0.2
-qs=0
-betavar=""
-GL=1
-gl1theta="--gl1-theta 0.83"
-platform=0
-usePreciseGlError=0
-explode=1 
-rmInvarSites=0
-rmEmptySites=1
-doUnobserved=2
-doGVCF=1
-printPileup=0
-printTruth=0
-addGL=1
-addGP=1
-addPL=1
-addI16=0
-addQS=1
-addFormatDP=1
-addInfoDP=1
-addFormatAD=1
-addInfoAD=1
-addFormatADF=1
-addInfoADF=1
-addFormatADR=1
-addInfoADR=1
-doGVCF=1
-gvcfDps="--gvcf-dps 1"
-
-ARGS="--verbose 0 \
---threads ${threads} \
---seed ${seed} \
+ARGS="
+--seed 42 \
 --output-mode v \
---depth ${depth} \
---error-rate ${err} \
---error-qs ${qs} \
-${betavar} \
---gl-model ${GL} \
-${gl1theta} \
---platform ${platform} \
---precise-gl ${usePreciseGlError} \
--explode ${explode} \
---rm-invar-sites ${rmInvarSites} \
---rm-empty-sites ${rmEmptySites} \
--doUnobserved ${doUnobserved} \
--doGVCF ${doGVCF} \
--printPileup ${printPileup} \
--printTruth ${printTruth} \
--addGL ${addGL} \
--addGP ${addGP} \
--addPL ${addPL} \
--addI16 ${addI16} \
--addQS ${addQS} \
--addFormatDP ${addFormatDP} \
--addInfoDP ${addInfoDP} \
--addFormatAD ${addFormatAD} \
--addInfoAD ${addInfoAD} \
--addFormatADF ${addFormatADF} \
--addInfoADF ${addInfoADF} \
--addFormatADR ${addFormatADR} \
--addInfoADR ${addInfoADR} \
--doGVCF ${doGVCF} \
-${gvcfDps}
+--depth 1 \
+--error-rate 0.2 \
+--gl-model 1 \
+--gl1-theta 0.83 \
+--precise-gl 0 \
+-explode 1 \
+--rm-empty-sites 1 \
+-doUnobserved 2 \
+-addGP 1 \
+-addPL 1 \
+-addI16 0 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 \
+-addFormatADF 1 \
+-addInfoADF 1 \
+-addFormatADR 1 \
+-addInfoADR 1 \
+-doGVCF 1 \
+--gvcf-dps 1
 "
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 
 
-
 ################################################################################
 # # TEST8
 ID="test8"
 
-# gvcf with --gvcf-dps 
 INFILENAME=${DATADIR}/"data2.vcf"
 
-threads=1
-seed=42
-depth=4
-depthsFile=""
-err=0.001
-qs=0
-betavar=""
-GL=2
-gl1theta="--gl1-theta 0.83"
-platform=0
-usePreciseGlError=0
-explode=1 
-rmInvarSites=0
-rmEmptySites=1
-doUnobserved=2
-doGVCF=1
-printPileup=0
-printTruth=0
-addGL=1
-addGP=1
-addPL=1
-addI16=0
-addQS=1
-addFormatDP=1
-addInfoDP=1
-addFormatAD=1
-addInfoAD=1
-addFormatADF=1
-addInfoADF=1
-addFormatADR=1
-addInfoADR=1
-doGVCF=1
-gvcfDps="--gvcf-dps 1"
-
-ARGS="--verbose 0 \
---threads ${threads} \
---seed ${seed} \
+ARGS="
+--seed 42 \
 --output-mode v \
---depth ${depth} \
---error-rate ${err} \
---error-qs ${qs} \
-${betavar} \
---gl-model ${GL} \
-${gl1theta} \
---platform ${platform} \
---precise-gl ${usePreciseGlError} \
--explode ${explode} \
---rm-invar-sites ${rmInvarSites} \
---rm-empty-sites ${rmEmptySites} \
--doUnobserved ${doUnobserved} \
--doGVCF ${doGVCF} \
--printPileup ${printPileup} \
--printTruth ${printTruth} \
--addGL ${addGL} \
--addGP ${addGP} \
--addPL ${addPL} \
--addI16 ${addI16} \
--addQS ${addQS} \
--addFormatDP ${addFormatDP} \
--addInfoDP ${addInfoDP} \
--addFormatAD ${addFormatAD} \
--addInfoAD ${addInfoAD} \
--addFormatADF ${addFormatADF} \
--addInfoADF ${addInfoADF} \
--addFormatADR ${addFormatADR} \
--addInfoADR ${addInfoADR} \
--doGVCF ${doGVCF} \
-${gvcfDps}
+--depth 4 \
+--error-rate 0.001 \
+--gl-model 2 \
+--precise-gl 0 \
+-explode 1 \
+--rm-empty-sites 1 \
+-doUnobserved 2 \
+-addGL 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 0 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 \
+-addFormatADF 1 \
+-addInfoADF 1 \
+-addFormatADR 1 \
+-addInfoADR 1 \
+-doGVCF 1 \
+--gvcf-dps 1
 "
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
@@ -864,74 +522,29 @@ ID="test9"
 
 INFILENAME=${DATADIR}/"data3.vcf"
 
-threads=1
-seed=42
-depth=2
-depthsFile=""
-err=0.024
-qs=2
-betavar="--beta-variance 1e-5"
-GL=2
-gl1theta=""
-platform=0
-usePreciseGlError=0
-explode=1 
-rmInvarSites=0
-rmEmptySites=0
-doUnobserved=4
-doGVCF=0
-printPileup=1
-printTruth=1
-addGL=1
-addGP=1
-addPL=1
-addI16=1
-addQS=1
-addFormatDP=1
-addInfoDP=1
-addFormatAD=1
-addInfoAD=1
-addFormatADF=1
-addInfoADF=1
-addFormatADR=1
-addInfoADR=1
-doGVCF=0
-gvcfDps=""
-
-ARGS="--verbose 0 \
---threads ${threads} \
---seed ${seed} \
+ARGS="
+--seed 42 \
 --output-mode v \
---depth ${depth} \
---error-rate ${err} \
---error-qs ${qs} \
-${betavar} \
---gl-model ${GL} \
-${gl1theta} \
---platform ${platform} \
---precise-gl ${usePreciseGlError} \
--explode ${explode} \
---rm-invar-sites ${rmInvarSites} \
---rm-empty-sites ${rmEmptySites} \
--doUnobserved ${doUnobserved} \
--doGVCF ${doGVCF} \
--printPileup ${printPileup} \
--printTruth ${printTruth} \
--addGL ${addGL} \
--addGP ${addGP} \
--addPL ${addPL} \
--addI16 ${addI16} \
--addQS ${addQS} \
--addFormatDP ${addFormatDP} \
--addInfoDP ${addInfoDP} \
--addFormatAD ${addFormatAD} \
--addInfoAD ${addInfoAD} \
--addFormatADF ${addFormatADF} \
--addInfoADF ${addInfoADF} \
--addFormatADR ${addFormatADR} \
--addInfoADR ${addInfoADR} \
--doGVCF ${doGVCF} \
-${gvcfDps}
+--depth 2 \
+--error-rate 0.024 \
+--error-qs 2 \
+--beta-variance 1e-5 \
+--gl-model 2 \
+--precise-gl 0 \
+-explode 1 \
+-doUnobserved 4 \
+-addGL 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 \
+-addFormatADF 1 \
+-addInfoADF 1 \
+-addFormatADR 1 \
+-addInfoADR 1 
 "
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
@@ -944,78 +557,34 @@ ID="test10"
 # same as test9 but --precise-gl 1
 INFILENAME=${DATADIR}/"data3.vcf"
 
-threads=1
-seed=42
-depth=2
-depthsFile=""
-err=0.024
-qs=2
-betavar="--beta-variance 1e-5"
-GL=2
-gl1theta=""
-platform=0
-usePreciseGlError=1
-explode=1 
-rmInvarSites=0
-rmEmptySites=0
-doUnobserved=4
-doGVCF=0
-printPileup=1
-printTruth=1
-addGL=1
-addGP=1
-addPL=1
-addI16=1
-addQS=1
-addFormatDP=1
-addInfoDP=1
-addFormatAD=1
-addInfoAD=1
-addFormatADF=1
-addInfoADF=1
-addFormatADR=1
-addInfoADR=1
-doGVCF=0
-gvcfDps=""
-
-ARGS="--verbose 0 \
---threads ${threads} \
---seed ${seed} \
+ARGS="
+--seed 42 \
 --output-mode v \
---depth ${depth} \
---error-rate ${err} \
---error-qs ${qs} \
-${betavar} \
---gl-model ${GL} \
-${gl1theta} \
---platform ${platform} \
---precise-gl ${usePreciseGlError} \
--explode ${explode} \
---rm-invar-sites ${rmInvarSites} \
---rm-empty-sites ${rmEmptySites} \
--doUnobserved ${doUnobserved} \
--doGVCF ${doGVCF} \
--printPileup ${printPileup} \
--printTruth ${printTruth} \
--addGL ${addGL} \
--addGP ${addGP} \
--addPL ${addPL} \
--addI16 ${addI16} \
--addQS ${addQS} \
--addFormatDP ${addFormatDP} \
--addInfoDP ${addInfoDP} \
--addFormatAD ${addFormatAD} \
--addInfoAD ${addInfoAD} \
--addFormatADF ${addFormatADF} \
--addInfoADF ${addInfoADF} \
--addFormatADR ${addFormatADR} \
--addInfoADR ${addInfoADR} \
--doGVCF ${doGVCF} \
-${gvcfDps}
+--depth 2 \
+--error-rate 0.024 \
+--error-qs 2 \
+--beta-variance 1e-5 \
+--gl-model 2 \
+--precise-gl 1 \
+-explode 1 \
+-doUnobserved 4 \
+-printPileup 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 \
+-addFormatADF 1 \
+-addInfoADF 1 \
+-addFormatADR 1 \
+-addInfoADR 1 
 "
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
+runTestDiff ${ID} ${TESTWD}/${ID}.pileup.gz ${SCRIPTDIR}/reference/${ID}/${ID}.pileup.gz
 
 
 ################################################################################
@@ -1026,76 +595,173 @@ ID="test11"
 INFILENAME=${DATADIR}/"data3.vcf"
 depthsFile=${DATADIR}/"data3.depthsfile.txt"
 
-threads=1
-seed=42
-err=0.024
-qs=2
-betavar="--beta-variance 1e-5"
-GL=2
-gl1theta=""
-platform=0
-usePreciseGlError=0
-explode=1 
-rmInvarSites=0
-rmEmptySites=0
-doUnobserved=4
-doGVCF=0
-printPileup=1
-printTruth=1
-addGL=1
-addGP=1
-addPL=1
-addI16=1
-addQS=1
-addFormatDP=1
-addInfoDP=1
-addFormatAD=1
-addInfoAD=1
-addFormatADF=1
-addInfoADF=1
-addFormatADR=1
-addInfoADR=1
-doGVCF=0
-gvcfDps=""
-
-ARGS="--verbose 0 \
---threads ${threads} \
---seed ${seed} \
+ARGS="
+--seed 42 \
 --output-mode v \
 --depths-file ${depthsFile} \
---error-rate ${err} \
---error-qs ${qs} \
-${betavar} \
---gl-model ${GL} \
-${gl1theta} \
---platform ${platform} \
---precise-gl ${usePreciseGlError} \
--explode ${explode} \
---rm-invar-sites ${rmInvarSites} \
---rm-empty-sites ${rmEmptySites} \
--doUnobserved ${doUnobserved} \
--doGVCF ${doGVCF} \
--printPileup ${printPileup} \
--printTruth ${printTruth} \
--addGL ${addGL} \
--addGP ${addGP} \
--addPL ${addPL} \
--addI16 ${addI16} \
--addQS ${addQS} \
--addFormatDP ${addFormatDP} \
--addInfoDP ${addInfoDP} \
--addFormatAD ${addFormatAD} \
--addInfoAD ${addInfoAD} \
--addFormatADF ${addFormatADF} \
--addInfoADF ${addInfoADF} \
--addFormatADR ${addFormatADR} \
--addInfoADR ${addInfoADR} \
--doGVCF ${doGVCF} \
-${gvcfDps}
+--error-rate 0.024 \
+--error-qs 2 \
+--beta-variance 1e-5 \
+--gl-model 2 \
+--precise-gl 0 \
+-explode 1 \
+-doUnobserved 4 \
+-addGL 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 \
+-addFormatADF 1 \
+-addInfoADF 1 \
+-addFormatADR 1 \
+-addInfoADR 1 
 "
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
+
+###############################################################################
+# # test12
+ID="test12"
+
+INFILENAME=${DATADIR}/"data4_acgt_biallelic.vcf"
+
+ARGS="
+--seed 42 \
+--depth 2 \
+--output-mode v \
+--error-rate 0.024 \
+--gl-model 2 \
+--source 1 \
+-explode 1 \
+-doUnobserved 1 \
+-addPL 1 
+"
+
+runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
+runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
+
+
+
+###############################################################################
+# # test13
+ID="test13"
+#
+# diff -s <(./misc/fetchGl -i test/testwd/test12.vcf -gt AA 2> /dev/null) <(./misc/fetchGl -i test/testwd/test13.vcf -gt GG 2> /dev/null)
+# diff -s <(./misc/fetchGl -i test/testwd/test12.vcf -gt CC 2> /dev/null) <(./misc/fetchGl -i test/testwd/test13.vcf -gt TT 2> /dev/null)
+
+INFILENAME=${DATADIR}/"data4_acgt_biallelic_a2g_c2t.vcf"
+
+ARGS="
+--seed 42 \
+--depth 2 \
+--output-mode v \
+--error-rate 0.024 \
+--gl-model 2 \
+--source 1 \
+-explode 1 \
+-doUnobserved 2 \
+-addPL 1 
+"
+
+runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
+runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
+
+
+###############################################################################
+# # test14
+ID="test14"
+#
+# diff -s <(./misc/fetchGl -i test/testwd/test12.vcf -gt AA 2>&1 ) <(./misc/fetchGl -i test/testwd/test14.vcf -gt AA 2>&1 )
+# diff -s <(./misc/fetchGl -i test/testwd/test12.vcf -gt TT 2>&1 ) <(./misc/fetchGl -i test/testwd/test14.vcf -gt TT 2>&1 )
+# diff -s <(./misc/fetchGl -i test/testwd/test12.vcf -gt GA 2>&1 ) <(./misc/fetchGl -i test/testwd/test14.vcf -gt GA 2>&1 )
+# diff -s <(./misc/fetchGl -i test/testwd/test12.vcf -gt AC 2>&1 ) <(./misc/fetchGl -i test/testwd/test14.vcf -gt AC 2>&1 )
+
+
+INFILENAME=${DATADIR}/"data4_binary_biallelic.vcf"
+
+ARGS=" \
+--seed 42 \
+--depth 2 \
+--output-mode v \
+--error-rate 0.024 \
+--gl-model 2 \
+--source 0 \
+-explode 1 \
+-doUnobserved 0 \
+-addGL 1 \
+-addQS 1
+"
+
+runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
+runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
+
+
+###############################################################################
+# # test15
+ID="test15"
+# same as test2, test multithreading
+
+INFILENAME=${DATADIR}/"data2.vcf"
+
+ARGS="
+--threads 4 \
+--seed 42 \
+--output-mode b \
+--depth 2 \
+--error-rate 0.01 \
+--gl-model 2 \
+--precise-gl 0 \
+-explode 0 \
+-doUnobserved 2 \
+-printTruth 1 \
+-printPileup 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 
+"
+
+runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
+
+
+###############################################################################
+# # test16
+ID="test16"
+
+# same as test2, test platform 1 and qs 1
+
+INFILENAME=${DATADIR}/"data2.vcf"
+
+ARGS="
+--seed 42 \
+--output-mode v \
+--depth 2 \
+--error-rate 0.01 \
+--gl-model 2 \
+--precise-gl 0 \
+-explode 0 \
+-doUnobserved 2 \
+-printTruth 1 \
+--platform 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 
+"
+
+runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
+runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
+runTestDiffVcf ${ID} ${TESTWD}/${ID}.truth.vcf ${SCRIPTDIR}/reference/test2/test2.truth.vcf
 
 ###############################################################################
 

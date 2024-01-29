@@ -1,0 +1,21 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##source=manual edit by isinaltinkaya
+##contig=<ID=chr22,length=10>
+##fileDate=Mon Jan 29 12:21:25 2024
+##source=vcfgl [version: v0.4.3-8f175d5] [build: Jan 29 2024 11:49:07] [htslib: 1.15.1-20-g46c56fcc]
+##source=Command: vcfgl --verbose 0 --threads 1 --seed 42 --input /home/isin/Projects/VCFGL/vcfgl/test/data/data4_binary_biallelic.vcf --source 0 --output /home/isin/Projects/VCFGL/vcfgl/test/testwd/test14 --output-mode v --depth 2.000000 --error-rate 0.024000 --error-qs 0  --gl-model 2 --platform 0 --precise-gl 0 --i16-mapq 20  -explode 1 --rm-invar-sites 0 --rm-empty-sites 0 -doUnobserved 0 -doGVCF 0 -printPileup 0 -printTruth 0  -printBasePickError 0 -printQsError 0 -printGlError 0 -printQScores 0 -addGL 1 -addGP 0 -addPL 0 -addI16 0 -addQS 1 -addFormatDP 1 -addInfoDP 0 -addFormatAD 0 -addInfoAD 0 -addFormatADF 0 -addInfoADF 0 -addFormatADR 0 -addInfoADR 0
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Simulated per-sample read depth">
+##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihood in log10 likelihood ratio format">
+##INFO=<ID=QS,Number=R,Type=Float,Description="Normalized phred-score allele quality sum. Auxiliary bcf tag used for calling">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	popYRI_ind1	popYRI_ind2	popYRI_ind3	popYRI_ind4
+chr22	1	.	A	.	.	PASS	QS=4	DP:GL	2:0	1:0	4:0	3:0
+chr22	2	.	A	.	.	PASS	QS=3	DP:GL	4:0	0:.	2:0	1:0
+chr22	3	.	A	C	.	PASS	QS=3,1	DP:GL	4:0,-1.18926,-8.26429	2:0,-0.594632,-4.13215	2:0,-0.594632,-4.13215	1:-2.06607,-0.297316,0
+chr22	4	.	A	.	.	PASS	QS=4	DP:GL	2:0	1:0	3:0	1:0
+chr22	5	.	A	.	.	PASS	QS=3	DP:GL	2:0	0:.	1:0	3:0
+chr22	6	.	C	.	.	PASS	QS=3	DP:GL	2:0	4:0	6:0	0:.
+chr22	7	.	A	.	.	PASS	QS=3	DP:GL	0:.	1:0	2:0	1:0
+chr22	8	.	A	G	.	PASS	QS=3.66667,0.333333	DP:GL	2:0,-0.594632,-4.13215	4:0,-1.18926,-8.26429	3:-1.17412,0,-3.2402	1:0,-0.297316,-2.06607
+chr22	9	.	A	.	.	PASS	QS=4	DP:GL	1:0	7:0	1:0	1:0
+chr22	10	.	A	.	.	PASS	QS=3	DP:GL	4:0	2:0	0:.	4:0
