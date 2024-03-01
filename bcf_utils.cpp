@@ -72,6 +72,16 @@ simRecord::simRecord(bcf_hdr_t* in_hdr) {
                 this->base_qScores[s][i] = -1;
             }
         }
+
+        if (PROGRAM_WILL_ADJUST_QS) {
+            this->adj_base_qScores = (int**)malloc(this->nSamples * sizeof(double*));
+            for (int s = 0;s < this->nSamples;++s) {
+                this->adj_base_qScores[s] = (int*)malloc(this->_nBasesPerSample * sizeof(int));
+                for (int i = 0;i < this->_nBasesPerSample;++i) {
+                    this->adj_base_qScores[s][i] = -1;
+                }
+            }
+        }
     }
 
     if ((0 == args->preCalc) && (1 == args->usePreciseGlError)) {
@@ -277,6 +287,10 @@ simRecord::~simRecord() {
             free(this->base_qScores[s]);
             this->base_qScores[s] = NULL;
         }
+        if (NULL != this->adj_base_qScores) {
+            free(this->adj_base_qScores[s]);
+            this->adj_base_qScores[s] = NULL;
+        }
         free(this->bases[s]);
         this->bases[s] = NULL;
     }
@@ -287,6 +301,10 @@ simRecord::~simRecord() {
     if (NULL != this->base_qScores) {
         free(this->base_qScores);
         this->base_qScores = NULL;
+    }
+    if (NULL != this->adj_base_qScores) {
+        free(this->adj_base_qScores);
+        this->adj_base_qScores = NULL;
     }
     free(this->bases);
     this->bases = NULL;
@@ -623,10 +641,16 @@ void simRecord::expand_arrays(const int new_size) {
         if (NULL != this->base_qScores) {
             this->base_qScores[s] = (int*)realloc(this->base_qScores[s], this->_nBasesPerSample * sizeof(int));
         }
+        if (NULL != this->adj_base_qScores) {
+            this->adj_base_qScores[s] = (int*)realloc(this->adj_base_qScores[s], this->_nBasesPerSample * sizeof(int));
+        }
         this->bases[s] = (int*)realloc(this->bases[s], this->_nBasesPerSample * sizeof(int));
         for (int i = old_nBasesPerSample;i < this->_nBasesPerSample;++i) {
             if (NULL != this->base_qScores) {
                 this->base_qScores[s][i] = -1;
+            }
+            if (NULL != this->adj_base_qScores) {
+                this->adj_base_qScores[s][i] = -1;
             }
             this->bases[s][i] = -1;
         }

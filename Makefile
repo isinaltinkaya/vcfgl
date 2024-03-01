@@ -204,7 +204,7 @@ FLAGS := $(CPPFLAGS) $(CXXFLAGS)
 
 
 # Versioning
-VERSION = v0.4.3
+VERSION = v0.5
 
 ifneq ($(wildcard .git),)
 VERSION := $(VERSION)-$(shell git describe --always)

@@ -14,42 +14,6 @@ extern unsigned short int rng2_seeder_save[3];
 extern const char* nonref_str;
 
 
-preCalcStruct::preCalcStruct() {
-    this->homT = -1.0;
-    this->het = -1.0;
-    this->homF = -1.0;
-    this->error_prob_forQs = -1.0;
-    this->error_prob_forGl = -1.0;
-    this->qScore = -1;
-    this->q5 = -1;
-}
-
-void preCalcStruct::prepare_gls_preCalc(void) {
-
-    if (0 == args->usePreciseGlError) {
-
-        this->error_prob_forGl = QS_TO_ERRPROB(this->qScore);
-        this->homT = qScore_to_log10_gl[0][qScore];
-        this->het = qScore_to_log10_gl[1][qScore];
-        this->homF = qScore_to_log10_gl[2][qScore];
-
-    } else if (1 == args->usePreciseGlError) {
-
-        this->error_prob_forGl = this->error_prob_forQs;
-        if (0.0 == this->error_prob_forGl) {
-            this->homT = 0;
-            this->het = -0.30103;
-            this->homF = NEG_INF;
-        } else if (this->error_prob_forGl > 0.0) {
-            // prepare for gl calculation with pre-calculated terms
-            this->homT = log10(1.0 - this->error_prob_forGl);
-            this->het = log10((1.0 - this->error_prob_forGl) / 2.0 + this->error_prob_forGl / 6.0);
-            this->homF = log10(this->error_prob_forGl) - PRE_CALC_LOG10_3;
-        } else {
-            NEVER;
-        }
-    }
-}
 
 
 FILE* get_FILE(const char* fname, const char* mode) {
@@ -97,14 +61,6 @@ void write_BGZF(BGZF* fp, const void* data, const int size) {
     return;
 }
 
-
-char* get_time() {
-    time_t current_time;
-    struct tm* local_time;
-    current_time = time(NULL);
-    local_time = localtime(&current_time);
-    return (asctime(local_time));
-}
 
 
 void version_page() {
@@ -179,22 +135,29 @@ void help_page() {
     fprintf(stderr, "                                      2: Simulate the errors in the reported quality scores and genotype likelihoods (requires: -bv FLOAT)\n");
     fprintf(stderr, "   -bv, --beta-variance FLOAT _______ Designated variance for the beta distribution\n");
     fprintf(stderr, "   -GL, --gl-model 1|[2] ____________ Genotype likelihood model to be used in simulation\n");
-    fprintf(stderr, "                                      1: Genotype likelihood model with correlated errors (a.k.a. samtools model, angsd -GL 1)\n");
-    fprintf(stderr, "                                      2: Canonical genotype likelihood model with independent errors (a.k.a. GATK model, angsd -GL 2)\n");
+    fprintf(stderr, "                                      1: Genotype likelihood model with correlated errors (a.k.a. Li model, samtools model, angsd -GL 1)\n");
+    fprintf(stderr, "                                      2: Canonical genotype likelihood model with independent errors (a.k.a. McKenna model, GATK model, angsd -GL 2)\n");
     fprintf(stderr, "         --gl1-theta FLOAT [0.83] ___ Theta parameter for the genotype likelihood model 1 (requires: -GL 1)\n");
     fprintf(stderr, "         --platform [0]|1 ___________ 0: Do not use platform specification\n");
-    fprintf(stderr, "                                      1: NovaSeq 6000 (qualities are binned into 4 values: 2, 12, 23 and 37)\n");
+    fprintf(stderr, "                                      1: NovaSeq 6000 (RTA3), qualities are binned into 4 values: 2, 12, 23 and 37\n");
 
     fprintf(stderr, "         --precise-gl [0]|1 _________ 0: Use the discrete phred-scaled error probabilities in the genotype likelihood calculation\n");
     fprintf(stderr, "                                      1: Use precise error probabilities in the genotype likelihood calculation (requires: -GL 2)\n");
     fprintf(stderr, "         --i16-mapq INT [20] ________ Mapping quality score for I16 tag (requires: -addI16 1)\n");
     fprintf(stderr, "         --gvcf-dps INT(,INT..) _____ Minimum per-sample read depth range(s) for constructing gVCF blocks (requires: -doGVCF 1)\n");
-    fprintf(stderr, "                                      Example: `--gvcf-dps 5,10,20` will group invariable sites into three types of gVCF blocks: [5,10), [10,20) and [20,inf).\n");
+    fprintf(stderr, "                                      Example: `--gvcf-dps 5,10,20` will group invariable sites into three types of gVCF blocks: [5,10), [10,20) and [20,inf)\n");
     fprintf(stderr, "                                      Sites with minimum depth < 5 will be printed as regular VCF records.\n");
+    fprintf(stderr, "         --adjust-qs INT+ [3] _______ 0: Do not adjust quality scores\n");
+    fprintf(stderr, "                                      1: Use adjusted quality scores in genotype likelihoods (requires: --precise-gl 0)\n");
+    fprintf(stderr, "                                      2: Use adjusted quality scores in calculating the quality score sum (QS) tag (requires: -addQS 1)\n");
+    fprintf(stderr, "                                      4: Use adjusted quality scores in pileup output (requires: --printPileup 1)\n");
+    fprintf(stderr, "                                      8: Use adjusted quality scores in --printQScores output (requires: --printQScores 1)\n");
+    fprintf(stderr, "                                      16: Use adjusted quality scores in --printGlError output (requires: --printGlError 1)\n");
+    fprintf(stderr, "         --adjust-by FLOAT [0.499] __ Adjustment value for quality scores (requires: --adjust-qs > 0)\n");
     fprintf(stderr, "         -explode [0]|1 _____________ 1: Explode to sites that are not in input file.\n");
     fprintf(stderr, "                                      Useful for simulating invariable sites when the input file only contains variable sites.\n");
     fprintf(stderr, "                                      Sets all genotypes in exploded sites to homozygous reference.\n");
-    fprintf(stderr, "         --rm-invar-sites INT+ ______ 0: Do not remove invariable sites\n");
+    fprintf(stderr, "         --rm-invar-sites INT+ [0]___ 0: Do not remove invariable sites\n");
     fprintf(stderr, "                                      1: Remove sites where all individuals' true genotypes in the input file are homozygous reference\n");
     fprintf(stderr, "                                      2: Remove sites where all individuals' true genotypes in the input file are homozygous alternative\n");
     fprintf(stderr, "                                      4: Remove sites where the all simulated reads among all individuals are the same base\n");
@@ -278,6 +241,8 @@ argStruct* args_init() {
     args->usePreciseGlError = 0;
     args->i16_mapq = ARG_I16_MAPQ_DEFAULT;
     args->gvcf_dps_str = NULL;
+    args->adjustQs = 3;
+    args->adjustBy = 0.499;
 
     args->explode = 0;
     args->rmInvarSites = 0;
@@ -336,7 +301,9 @@ argStruct* args_init() {
 
     args->preCalc = NULL;
 
-    return args;
+    args->gl1errmod = NULL;
+
+    return(args);
 }
 
 
@@ -455,6 +422,14 @@ argStruct* args_get(int argc, char** argv) {
 
         else if (strcasecmp("--gvcf-dps", arv) == 0) {
             args->gvcf_dps_str = strdup(val);
+        }
+
+        else if (strcasecmp("--adjust-qs", arv) == 0) {
+            args->adjustQs = atoi(val);
+        }
+
+        else if (strcasecmp("--adjust-by", arv) == 0) {
+            args->adjustBy = atof(val);
         }
 
         else if (strcasecmp("-explode", arv) == 0) {
@@ -663,9 +638,29 @@ argStruct* args_get(int argc, char** argv) {
 
     CHECK_ARG_INTERVAL_INT(args->GL, 1, 2, "--gl-model");
     CHECK_ARG_INTERVAL_DBL(args->glModel1_theta, 0.0, 1.0, "--gl1-theta");
-    CHECK_ARG_INTERVAL_01(args->platform, "--platform");
+    CHECK_ARG_VALUES_LIST(args->platform, "--platform", ARG_PLATFORM_NONE, ARG_PLATFORM_RTA3);
     CHECK_ARG_INTERVAL_01(args->usePreciseGlError, "--precise-gl");
     CHECK_ARG_INTERVAL_INT(args->i16_mapq, 0, 60, "--i16-mapq");
+    CHECK_ARG_INTERVAL_INT(args->adjustQs, 0, 15, "--adjust-qs");
+    if (PROGRAM_WILL_ADJUST_QS && args->adjustBy == 0.0) {
+        ERROR("--adjust-qs %d requires a non-zero value for --adjust-by. Please set --adjust-by and rerun.", args->adjustQs);
+    }
+    if (PROGRAM_WILL_ADJUST_QS_FOR_GL && args->usePreciseGlError) {
+        ERROR("--adjust-qs %d requires --precise-gl 0. Please set --precise-gl 0 and rerun.", ARG_QS_ADJUST_FOR_GL);
+    }
+    if (PROGRAM_WILL_ADJUST_QS_FOR_QSUM && !args->addQS) {
+        ERROR("--adjust-qs %d requires -addQS 1. Please set -addQS 1 and rerun.", ARG_QS_ADJUST_FOR_QSUM);
+    }
+    if (PROGRAM_WILL_ADJUST_QS_FOR_PILEUP && !args->printPileup) {
+        ERROR("--adjust-qs %d requires --printPileup 1. Please set --printPileup 1 and rerun.", ARG_QS_ADJUST_FOR_PILEUP);
+    }
+    if (PROGRAM_WILL_ADJUST_QS_FOR_PRINTQSCORES && !args->printQScores) {
+        ERROR("--adjust-qs %d requires --printQScores 1. Please set --printQScores and rerun.", ARG_QS_ADJUST_FOR_PRINTQSCORES);
+    }
+    if (PROGRAM_WILL_ADJUST_QS_FOR_PRINTGLERROR && !args->printGlError) {
+        ERROR("--adjust-qs %d requires --printGlError 1. Please set --printGlError and rerun.", ARG_QS_ADJUST_FOR_PRINTGLERROR);
+
+    }
 
     CHECK_ARG_INTERVAL_01(args->explode, "-explode");
     CHECK_ARG_INTERVAL_INT(args->rmInvarSites, 0, 7, "--rm-invar-sites");
@@ -791,7 +786,8 @@ argStruct* args_get(int argc, char** argv) {
 
     args->arg_fp = open_FILE(args->out_fnprefix, ".arg");
 
-    args->datetime = strdup(get_time());
+    args->datetime = (char*)malloc(256 * sizeof(char));
+    ASSERT(NULL != args->datetime);
 
     if (args->error_qs != 0) {
 
@@ -861,45 +857,6 @@ argStruct* args_get(int argc, char** argv) {
     }
 
 
-    // if ((0 == args->error_qs) || (1 == args->error_qs)) {
-        // args->preCalc = new preCalcStruct();
-        // args->preCalc->error_prob_forQs = args->error_rate;
-        // args->preCalc->qScore = get_qScore(args->preCalc->error_prob_forQs);
-        // args->preCalc->q5 = args->preCalc->qScore << 5;
-        // if (1 == args->GL) {
-            // glModel1 = glModel1_init();
-            // calculate_gls = alleles_calculate_gls_log10_glModel1_fixedQScore;
-        // } else if (2 == args->GL) {
-            // args->preCalc->prepare_gls_preCalc();
-            // calculate_gls = alleles_calculate_gls_log10_glModel2_fixedQScore;
-        // }
-//
-        // if (args->printGlError) {
-            // fprintf(stdout, "gl_error_prob\tNA\tNA\tNA\tNA\t%f\n", args->preCalc->error_prob_forGl);
-        // }
-//
-        // if (args->printQsError) {
-            // fprintf(stdout, "qs_error_prob\tNA\tNA\tNA\tNA\t%f\n", args->preCalc->error_prob_forQs);
-        // }
-//
-        // if (args->printQScores) {
-            // fprintf(stdout, "qs\tNA\tNA\tNA\tNA\t%d\n", args->preCalc->qScore);
-        // }
-//
-    // } else if (2 == args->error_qs) {
-        // if (1 == args->GL) {
-            // glModel1 = glModel1_init();
-            // calculate_gls = alleles_calculate_gls_log10_glModel1;
-        // } else if (2 == args->GL) {
-            // if (args->usePreciseGlError) {
-                // calculate_gls = alleles_calculate_gls_log10_glModel2_precise1;
-            // } else {
-                // calculate_gls = alleles_calculate_gls_log10_glModel2_precise0;
-            // }
-        // }
-    // }
-//
-//
     // ---------------------------------------------------------------------- //
     // PRINT ARGUMENTS
 
@@ -945,9 +902,16 @@ argStruct* args_get(int argc, char** argv) {
         i16_mapq_str[0] = '\0';
     }
 
+    char adjust_qs_str[256];
+    if (args->adjustQs) {
+        sprintf(adjust_qs_str, "--adjust-by %f", args->adjustBy);
+    } else {
+        adjust_qs_str[0] = '\0';
+    }
+
     ASSERT(asprintf(
         &args->command,
-        "Command: vcfgl --verbose %d --threads %d --seed %d --input %s --source %d --output %s --output-mode %s %s --error-rate %f --error-qs %d %s %s --platform %d --precise-gl %d --i16-mapq %d %s -explode %d --rm-invar-sites %d --rm-empty-sites %d -doUnobserved %d -doGVCF %d -printPileup %d -printTruth %d  -printBasePickError %d -printQsError %d -printGlError %d -printQScores %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d -addFormatDP %d -addInfoDP %d -addFormatAD %d -addInfoAD %d -addFormatADF %d -addInfoADF %d -addFormatADR %d -addInfoADR %d",
+        "Command: vcfgl --verbose %d --threads %d --seed %d --input %s --source %d --output %s --output-mode %s %s --error-rate %f --error-qs %d %s %s --platform %d --precise-gl %d %s %s --adjust-qs %d %s -explode %d --rm-invar-sites %d --rm-empty-sites %d -doUnobserved %d -doGVCF %d -printPileup %d -printTruth %d  -printBasePickError %d -printQsError %d -printGlError %d -printQScores %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d -addFormatDP %d -addInfoDP %d -addFormatAD %d -addInfoAD %d -addFormatADF %d -addInfoADF %d -addFormatADR %d -addInfoADR %d",
         args->verbose,
         args->n_threads,
         args->seed,
@@ -962,8 +926,10 @@ argStruct* args_get(int argc, char** argv) {
         gl_model_str,
         args->platform,
         args->usePreciseGlError,
-        args->i16_mapq,
+        i16_mapq_str,
         gvcf_dps_val,
+        args->adjustQs,
+        adjust_qs_str,
         args->explode,
         args->rmInvarSites,
         args->rmEmptySites,
@@ -989,12 +955,6 @@ argStruct* args_get(int argc, char** argv) {
         args->addFormatADR,
         args->addInfoADR) > 0);
 
-
-
-    fprintf(stderr, "\n%s\n\n", args->command);
-    fprintf(stderr, "\n%s\n", args->datetime);
-    fprintf(args->arg_fp, "\n%s\n\n", args->command);
-    fprintf(args->arg_fp, "\n%s\n", args->datetime);
 
     if (args->printPileup) {
         args->out_pileup_fn = (char*)malloc(strlen(args->out_fnprefix) + strlen(".pileup.gz") + 1);
@@ -1080,6 +1040,10 @@ argStruct* args_get(int argc, char** argv) {
         fprintf(args->arg_fp, "-> Pileup output file: %s\n", args->out_pileup_fn);
     }
 
+    if (1 == args->GL) {
+        args->gl1errmod = errmod_init(1.0 - args->glModel1_theta);
+        ASSERT(NULL != args->gl1errmod);
+    }
 
     // ---------------------------------------------------------------------- //
     // ARGUMENT WARNINGS
@@ -1182,6 +1146,10 @@ void args_destroy(argStruct* args) {
 
     if (args->preCalc != NULL) {
         delete (args->preCalc);
+    }
+
+    if (args->gl1errmod != NULL) {
+        errmod_destroy(args->gl1errmod);
     }
 
     free(args);

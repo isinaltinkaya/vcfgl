@@ -123,6 +123,7 @@ typedef struct simRecord {
     // \def base_qScores[nSamples][nBasesPerSample]
     // if (base_qScores==NULL); then use args->qScore instead
     int** base_qScores = NULL;
+    int** adj_base_qScores = NULL;
 
     // \def acgtint_bases[nSamples][nBasesPerSample]
     // int representation of base (A=0,C=1,G=2,T=3)

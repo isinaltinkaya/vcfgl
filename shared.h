@@ -96,7 +96,25 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 /// C       T,G      0/1
 #define ARG_GTSOURCE_ACGT 1
 
-#define ARG_I16_MAPQ_DEFAULT 20
+#define ARG_I16_MAPQ_DEFAULT (20)
+
+// args->adjustQs
+// NONE: do not perform any adjustment
+#define ARG_QS_ADJUST_NONE       (0)
+// [+1] use adjusted quality scores for genotype likelihoods
+#define ARG_QS_ADJUST_FOR_GL     (1<<0)
+// [+2] use adjusted quality scores for qsum (QS tag)
+#define ARG_QS_ADJUST_FOR_QSUM   (1<<1)
+// [+4] use adjusted quality scores for pileup output
+#define ARG_QS_ADJUST_FOR_PILEUP (1<<2)
+// [+8] use adjusted quality scores for --printQScores
+#define ARG_QS_ADJUST_FOR_PRINTQSCORES (1<<3)
+// [+16] use adjusted quality scores for --printGlError
+#define ARG_QS_ADJUST_FOR_PRINTGLERROR (1<<4)
+
+#define ARG_PLATFORM_NONE (0)
+#define ARG_PLATFORM_RTA3 (1)
+
 
 /// --> CONSTANTS:SIGNALS
 
@@ -151,6 +169,24 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define PROGRAM_WILL_USE_ACGT_GTSOURCE \
     ( ((args->gtSource)==ARG_GTSOURCE_ACGT) )
 
+#define PROGRAM_WILL_ADJUST_QS_FOR_GL \
+    ( ((args->adjustQs) & ARG_QS_ADJUST_FOR_GL) )
+
+#define PROGRAM_WILL_ADJUST_QS_FOR_QSUM \
+    ( ((args->adjustQs) & ARG_QS_ADJUST_FOR_QSUM) )
+
+#define PROGRAM_WILL_ADJUST_QS_FOR_PILEUP \
+    ( ((args->adjustQs) & ARG_QS_ADJUST_FOR_PILEUP) )
+
+#define PROGRAM_WILL_ADJUST_QS_FOR_PRINTQSCORES \
+    ( ((args->adjustQs) & ARG_QS_ADJUST_FOR_PRINTQSCORES) )
+
+#define PROGRAM_WILL_ADJUST_QS_FOR_PRINTGLERROR \
+    ( ((args->adjustQs) & ARG_QS_ADJUST_FOR_PRINTGLERROR) )
+
+#define PROGRAM_WILL_ADJUST_QS \
+    ( (args->adjustQs) )
+
 #define BASE_A 0
 #define BASE_C 1
 #define BASE_G 2
@@ -204,6 +240,9 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
+
+#define APPLY_RTA3_QSCORE_BINNING(qs) \
+    ( ((qs) <= 2) ? 2 : (((qs) <= 14) ? 12 : (((qs) <= 30) ? 23 : 37 )))
 
 #define FLUSH_BGZF_KSTRING_BUFFER(fp, buffer) \
     do {                                               \
@@ -357,7 +396,6 @@ do { \
 } while (0);
 
 
-
 #define CHECK_ARG_INTERVAL_01(argval, argstr) \
 do { \
     if ( ((argval)!=0) && ((argval)!=1) ) { \
@@ -366,6 +404,23 @@ do { \
     } \
 } while (0);
 
+#define CHECK_ARG_VALUES_LIST(argval, argstr, ...) \
+do { \
+    int __argval = (argval); \
+    int __argvals[] = { __VA_ARGS__ }; \
+    int __nvals = sizeof(__argvals) / sizeof(int); \
+    int __i; \
+    int __found = 0; \
+    for (__i = 0; __i < __nvals; ++__i) { \
+        if (__argval == __argvals[__i]) { \
+            __found = 1; \
+            break; \
+        } \
+    } \
+    if (!__found) { \
+        ERROR("Bad argument value: '%s %d'", (argstr), (argval)); \
+    } \
+} while (0);
 
 
 
@@ -463,5 +518,7 @@ extern const double qScore_to_log10_gl[3][257];
 
 
 extern float bcf_float_missing_union_f;
+
+
 
 #endif  /// __SHARED__

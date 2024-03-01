@@ -5,6 +5,8 @@
 #include <htslib/bgzf.h> // bgzf
 #include <htslib/hts.h>  // hts_version()
 
+#include <ctime> // time_t, localtime, asctime
+
 #include "random_generator.h" // BetaSampler, PoissonSampler
 
 
@@ -15,21 +17,19 @@ BGZF* open_BGZF(const char* fn, const char* mode);
 void write_BGZF(BGZF* fp, const void* data, const int size);
 void write_BGZF_kstring_buffer(BGZF* fp, kstring_t* buffer);
 
-// int get_qScore(const double error_prob_forQs);
 
 typedef struct preCalcStruct preCalcStruct;
 
 struct preCalcStruct {
-    double homT;
-    double het;
-    double homF;
-    double error_prob_forQs;
-    double error_prob_forGl;
-    int qScore;
-    int q5; // q << 5 value
-    preCalcStruct();
-    ~preCalcStruct() {};
-    void prepare_gls_preCalc(void);
+    double homT = -1.0;
+    double het = -1.0;
+    double homF = -1.0;
+    double error_prob_forQs = -1.0;
+    double error_prob_forGl = -1.0;
+    int qScore = -1;
+    int q5 = -1; // qScore << 5 value
+    int adj_qScore = -1;
+    int adj_q5 = -1; // adj_qScore << 5 value
 };
 
 
@@ -73,6 +73,8 @@ struct argStruct {
     int usePreciseGlError;
     int i16_mapq;
     char* gvcf_dps_str;
+    int adjustQs;
+    double adjustBy;
 
     int explode;
     int rmInvarSites;
@@ -136,6 +138,8 @@ struct argStruct {
     // if error_qs == 2, then preCalc ==NULL
     preCalcStruct* preCalc;
 
+    errmod_t* gl1errmod;
+
     // functions:
     double* read_depthsFile(void);
 
@@ -147,5 +151,6 @@ argStruct* args_init();
 argStruct* args_get(int argc, char** argv);
 
 void args_destroy(argStruct* args);
+
 
 #endif  // __ARGUMENTS__

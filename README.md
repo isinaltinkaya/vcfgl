@@ -1,4 +1,3 @@
-
 <!--
 TODO:
 - [ ] Move examples etc (commented out stuff at the end of this file) to documentation
@@ -9,9 +8,6 @@ TODO:
 
 <a name="readme-top"></a>
 
-
-
-
 <h3 align="center">vcfgl</h3>
 
 <p align="center">
@@ -19,7 +15,6 @@ TODO:
 <a href="https://github.com/isinaltinkaya/vcfgl/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GNU%20GPLv3.0-purple.svg"/></a>
 </p>
 <!-- ![vcfgl](https://img.shields.io/badge/version-v0.3.3-brightgreen.svg)  -->
-
 
   <p align="center">
     Genotype likelihood simulator for VCF/BCF files
@@ -36,9 +31,6 @@ TODO:
     <a href="https://github.com/isinaltinkaya/vcfgl/issues">Request Feature</a>
   </p>
 </div>
-
-
-
 
 <details open>
   <summary>Table of Contents</summary>
@@ -72,21 +64,19 @@ TODO:
   </ol>
 </details>
 
-
-
 ## Overview
 
 **vcfgl** is a lightweight command-line program for simulating VCF/BCF and gVCF files. It allows you to simulate sequencing data with various parameters, such as read depth, base-calling error rates, quality score errors, and genotype likelihood models.
 
 ## Installation
 
-<!-- ### Prerequisites 
+<!-- ### Prerequisites
 
 HTSlib -->
 
 You can install **vcfgl** using one of the following methods:
 
-### &rarr; Method 1: Using HTSlib submodule 
+### &rarr; Method 1: Using HTSlib submodule
 
 This method uses the htslib submodule in the repository.
 
@@ -96,8 +86,7 @@ cd vcfgl;
 make;
 ```
 
-
-### &rarr; Method 2: Using systemwide HTSlib installation 
+### &rarr; Method 2: Using systemwide HTSlib installation
 
 This method assumes you have a systemwide htslib installation.
 
@@ -107,8 +96,7 @@ cd vcfgl;
 make HTSSRC="systemwide";
 ```
 
-
-### &rarr; Method 3: Using specified HTSlib path 
+### &rarr; Method 3: Using specified HTSlib path
 
 This method allows you to specify the path to your htslib installation.
 
@@ -119,7 +107,8 @@ make HTSSRC=path/to/htslib;
 ```
 
 For detailed compilation instructions, in vcfgl directory, run:
-<details ><summary> <code> make help </code></summary> 
+
+<details><summary> <code> make help </code></summary>
 
 <pre>$ make help
 
@@ -155,31 +144,19 @@ For detailed compilation instructions, in vcfgl directory, run:
 </pre>
 </details>
 
-
-
 # Usage
-
 
 You can access the command-line help page using `vcfgl --help` or `vcfgl -h`:
 
-
-<details >
+<details open>
 <summary> <code> vcfgl --help </code></summary>
 
 <pre>$ ./vcfgl -h
 
-Program: vcfgl
-License: GNU GPLv3.0
-Version: v0.4-bb8df2d (htslib: 1.15.1-20-g46c56fc)
-Build: Dec 19 2023 17:04:37
-
 Usage: vcfgl -i &lt;input&gt; [options]
 
-    -h, --help                        Print this help message and exit
-    -v, --version                     Print version and build information and exit
-
 Option descriptions:
-     -s, --long-option TYPE [X]       Description
+     -s, --long-option TYPE [X] _____ Description
      -s                               Short option (if any)
          --long-option                Long option
                        TYPE           Type of the argument value, can be:
@@ -190,108 +167,131 @@ Option descriptions:
                                         - FILE (filename)
                                         - x|y|z (one of the listed values x, y or z)
                             [X]       Default argument value (if any)
+                                _____ Connector to the option description for better readability
 
 
 General options:
-    -V, --verbose INT [0]             Verbosity level
-    -@, --threads INT [1]             Number of threads
-    -s, --seed INT [time]             Random seed for initializing the random number generator
+    -V, --verbose INT [0] ___________ Verbosity level
+    -@, --threads INT [1] ___________ Number of threads
+    -s, --seed INT [time] ___________ Random seed for initializing the random number generator
 
 Input/Output:
-    -i, --input FILE                  Input file
-    -o, --output STRING [&apos;output&apos;]    Output filename prefix
-    -O, --output-mode [b]|u|z|v       b: Compressed BCF (.bcf), u: uncompressed BCF (.bcf), z: compressed VCF (.vcf.gz), v: uncompressed VCF (.vcf)
+    -i, --input FILE ________________ Input VCF/BCF file
+        --source [0]|1 ______________ 0: Input REF/ALT alleles are in binary format (REF=0, ALT=1; typically outputted from msprime BinaryMutationModel)
+                                      1: Input REF/ALT alleles are in VCF format (REF=i, ALT=j(,k..); i, j and k from {A,C,G,T}; i.e. the regular VCF format)
+    -o, --output STRING [&apos;output&apos;] __ Output filename prefix
+    -O, --output-mode [b]|u|z|v _____ b: Compressed BCF (.bcf), u: uncompressed BCF (.bcf), z: compressed VCF (.vcf.gz), v: uncompressed VCF (.vcf)
 
 Simulation parameters:
-    -d, --depth FLOAT|&apos;inf&apos;           Mean per-site read depth
+    -d, --depth FLOAT|&apos;inf&apos; _________ Mean per-site read depth
                                       (&apos;inf&apos;) Simulate true values (requires: -addFormatDP 0 -addInfoDP 0)
-   -df, --depths-file FILE            File containing mean per-site read depth values for each sample. One value per line.
-    -e, --error-rate FLOAT            Base-calling error probability
-   -eq, --error-qs [0]|1|2            0: Do not simulate errors in quality scores. Assumes all quality score assignments are correct
+   -df, --depths-file FILE __________ File containing mean per-site read depth values for each sample. One value per line.
+    -e, --error-rate FLOAT __________ Base-calling error probability
+   -eq, --error-qs [0]|1|2 __________ 0: Do not simulate errors in quality scores. Assumes all quality score assignments are correct
                                       1: Simulate site-specific errors in the probability of wrong base calls (requires: -bv FLOAT)
                                       2: Simulate the errors in the reported quality scores and genotype likelihoods (requires: -bv FLOAT)
-   -bv, --beta-variance FLOAT         Designated variance for the beta distribution
-   -GL, --gl-model 1|[2]              Genotype likelihood model to be used in simulation
-                                      1: Genotype likelihood model with correlated errors (a.k.a. samtools model, angsd -GL 1)
-                                      2: Canonical genotype likelihood model with independent errors (a.k.a. GATK model, angsd -GL 2)
-         --gl1-theta FLOAT [0.83]     Theta parameter for the genotype likelihood model 1 (requires: -GL 1)
-         --platform [0]|1             0: Do not use platform specification
-                                      1: NovaSeq 6000 (qualities are binned into 4 values: 2, 12, 23 and 37)
-         --precise-gl [0]|1           0: Use the discrete phred-scaled error probabilities in the genotype likelihood calculation
+   -bv, --beta-variance FLOAT _______ Designated variance for the beta distribution
+   -GL, --gl-model 1|[2] ____________ Genotype likelihood model to be used in simulation
+                                      1: Genotype likelihood model with correlated errors (a.k.a. Li model, samtools model, angsd -GL 1)
+                                      2: Canonical genotype likelihood model with independent errors (a.k.a. McKenna model, GATK model, angsd -GL 2)
+         --gl1-theta FLOAT [0.83] ___ Theta parameter for the genotype likelihood model 1 (requires: -GL 1)
+         --platform [0]|1 ___________ 0: Do not use platform specification
+                                      1: NovaSeq 6000 (RTA3), qualities are binned into 4 values: 2, 12, 23 and 37
+         --precise-gl [0]|1 _________ 0: Use the discrete phred-scaled error probabilities in the genotype likelihood calculation
                                       1: Use precise error probabilities in the genotype likelihood calculation (requires: -GL 2)
-         --i16-mapq INT [20]          Mapping quality score for I16 tag (requires: -addI16 1)
-         --gvcf-dps INT(,INT..)       Minimum per-sample read depth range(s) for constructing gVCF blocks (requires: -doGVCF 1)
-                                      Example: `--gvcf-dps 5,10,20` will group invariable sites into three types of gVCF blocks: [5,10), [10,20) and [20,inf).
+         --i16-mapq INT [20] ________ Mapping quality score for I16 tag (requires: -addI16 1)
+         --gvcf-dps INT(,INT..) _____ Minimum per-sample read depth range(s) for constructing gVCF blocks (requires: -doGVCF 1)
+                                      Example: `--gvcf-dps 5,10,20` will group invariable sites into three types of gVCF blocks: [5,10), [10,20) and [20,inf)
                                       Sites with minimum depth &lt; 5 will be printed as regular VCF records.
-         -explode [0]|1               1: Explode to sites that are not in input file.
+         --adjust-qs INT+ [3] _______ 0: Do not adjust quality scores
+                                      1: Use adjusted quality scores in genotype likelihoods (requires: --precise-gl 0)
+                                      2: Use adjusted quality scores in calculating the quality score sum (QS) tag (requires: -addQS 1)
+                                      4: Use adjusted quality scores in pileup output (requires: --printPileup 1)
+                                      8: Use adjusted quality scores in --printQScores output (requires: --printQScores 1)
+                                      16: Use adjusted quality scores in --printGlError output (requires: --printGlError 1)
+         --adjust-by FLOAT [0.499] __ Adjustment value for quality scores (requires: --adjust-qs &gt; 0)
+         -explode [0]|1 _____________ 1: Explode to sites that are not in input file.
                                       Useful for simulating invariable sites when the input file only contains variable sites.
                                       Sets all genotypes in exploded sites to homozygous reference.
-         --rm-invar-sites INT+        0: Do not remove invariable sites
+         --rm-invar-sites INT+ [0]___ 0: Do not remove invariable sites
                                       1: Remove sites where all individuals&apos; true genotypes in the input file are homozygous reference
                                       2: Remove sites where all individuals&apos; true genotypes in the input file are homozygous alternative
                                       4: Remove sites where the all simulated reads among all individuals are the same base
                                       Example: &apos;--rm-invar-sites 3&apos; (1+2) will do both 1 and 2 (i.e. remove all homozygous sites)
-         --rm-empty-sites [0]|1       0: Do not remove empty sites
+         --rm-empty-sites [0]|1 _____ 0: Do not remove empty sites
                                       1: Remove empty sites (i.e. sites where no reads were simulated)
-         -doUnobserved INT [1]        0: Trim unobserved alleles. Only alleles that are observed will be listed in REF and ALT fields
+         -doUnobserved INT [1] ______ 0: Trim unobserved alleles. Only alleles that are observed will be listed in REF and ALT fields
                                       1: Use &apos;&lt;*&gt;&apos; notation to represent unobserved alleles
                                       2: Use &apos;&lt;NON_REF&gt;&apos; notation to represent unobserved alleles (a.k.a. GATK notation)
                                       3: Explode unobserved bases from {A,C,G,T} list
                                       4: Use &apos;&lt;*&gt;&apos; notation to represent unobserved alleles and explode unobserved bases from {A,C,G,T} list
                                       5: Use &apos;&lt;NON_REF&gt;&apos; notation to represent unobserved alleles and explode unobserved bases from {A,C,G,T} list
-         -doGVCF [0]|1                0: Disabled, 1: Output in gVCF format (requires: --rm-invar-sites 0, -doUnobserved 2, -addPL 1 and --gvcf-dps INT)
-         -printPileup [0]|1           0: Disabled, 1: Also output in pileup format (&lt;output_prefix&gt;.pileup.gz)
-         -printTruth [0]|1            0: Disabled, 1: Also output the VCF file containing the true genotypes (named &lt;output_prefix&gt;.truth.vcf)
+         -doGVCF [0]|1 ______________ 0: Disabled, 1: Output in gVCF format (requires: --rm-invar-sites 0, -doUnobserved 2, -addPL 1 and --gvcf-dps INT)
+         -printPileup [0]|1 _________ 0: Disabled, 1: Also output in pileup format (&lt;output_prefix&gt;.pileup.gz)
+         -printTruth [0]|1 __________ 0: Disabled, 1: Also output the VCF file containing the true genotypes (named &lt;output_prefix&gt;.truth.vcf)
+         -printBasePickError [0]|1 __ 0: Disabled, 1: Print the base picking error probability to stdout.
+                                      If --error-qs 1 is used, writes per-read base picking error probabilities to stdout.
+                                      If --error-qs 0 or 2 is used, writes a single value which is used for all samples and sites.
+         -printQsError [0]|1 ________ 0: Disabled, 1: Print the error probability used in quality score calculations to stdout.
+                                      If --error-qs 2 is used, writes per-read quality score error probabilities to stdout.
+                                      If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.
+         -printGlError [0]|1 ________ 0: Disabled, 1: Print the error probability used in genotype likelihood calculations to stdout. (requires: -GL 2)
+                                      Since -GL 1 works directly with quality scores, this option is only available when -GL 2 is used.
+                                      If --error-qs 2 is used, writes per-read error probabilities to stdout.
+                                      If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.
+                                      If --precise-gl 1 is used, the printed values are the same as those printed by -printQsError.
+         -printQScores [0]|1 ________ 0: Disabled, 1: Print the quality scores to stdout.
 
 Output VCF/BCF tags:                  0: Do not add, 1: Add
-         -addGL 0|[1]                 Genotype likelihoods (GL) tag
-         -addGP [0]|1                 Genotype probabilities (GP) tag
-         -addPL [0]|1                 Phred-scaled genotype likelihoods (PL) tag
-         -addI16 [0]|1                I16 tag
-         -addQS [0]|1                 Quality score sum (QS) tag
-         -addFormatDP [1]|0           Per-sample read depth (FORMAT/DP) tag
-         -addFormatAD [0]|1           Per-sample allelic read depth (FORMAT/AD) tag
-         -addFormatADF [0]|1          Per-sample forward-strand allelic read depth (FORMAT/ADF) tag
-         -addFormatADR [0]|1          Per-sample reverse-strand allelic read depth (FORMAT/ADR) tag
-         -addInfoDP [0]|1             Total read depth (INFO/DP) tag
-         -addInfoAD [0]|1             Total allelic read depth (INFO/AD) tag
-         -addInfoADF [0]|1            Total forward-strand allelic read depth (INFO/ADF) tag
-         -addInfoADR [0]|1            Total reverse-strand allelic read depth (INFO/ADR) tag
+         -addGL 0|[1] _______________ Genotype likelihoods (GL) tag
+         -addGP [0]|1 _______________ Genotype probabilities (GP) tag
+         -addPL [0]|1 _______________ Phred-scaled genotype likelihoods (PL) tag
+         -addI16 [0]|1 ______________ I16 tag
+         -addQS [0]|1 _______________ Quality score sum (QS) tag
+         -addFormatDP [1]|0 _________ Per-sample read depth (FORMAT/DP) tag
+         -addFormatAD [0]|1 _________ Per-sample allelic read depth (FORMAT/AD) tag
+         -addFormatADF [0]|1 ________ Per-sample forward-strand allelic read depth (FORMAT/ADF) tag
+         -addFormatADR [0]|1 ________ Per-sample reverse-strand allelic read depth (FORMAT/ADR) tag
+         -addInfoDP [0]|1 ___________ Total read depth (INFO/DP) tag
+         -addInfoAD [0]|1 ___________ Total allelic read depth (INFO/AD) tag
+         -addInfoADF [0]|1 __________ Total forward-strand allelic read depth (INFO/ADF) tag
+         -addInfoADR [0]|1 __________ Total reverse-strand allelic read depth (INFO/ADR) tag
 
 </pre>
 </details>
 
+<details> <summary> Option descriptions </summary>
 
 Option format is `-s, --long-option TYPE [X]: Description` where `-s` is the short format of the option (if any), `--long-option` is the long option, `TYPE` is the type of the argument value, and `[X]` denotes that the default argument value is `X` (if any).
 
 Type of the argument values can be:
 
-Type | Description | Example
--- | -- | --
-`INT` | Integer | `--long-option 3`
-`INT+` | Additive integer | `--long-option 3` will do both `--long-option 1` and `--long-option 2`
-`FLOAT` | Floating point number | `--long-option 3.14`
-`STRING` | String | `--long-option "hello"`
-`FILE` | Filename | `--long-option "file.txt"` or `--long-option /path/to/file.txt`
-`x\|y\|z` | One of the listed values x, y, or z | `--long-option x`
-`INT(,INT..)` | A single integer or a comma-separated list of integers | `--long-option 1,2,3` or `--long-option 1`
+| Type          | Description                                            | Example                                                                |
+| ------------- | ------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `INT`         | Integer                                                | `--long-option 3`                                                      |
+| `INT+`        | Additive integer                                       | `--long-option 3` will do both `--long-option 1` and `--long-option 2` |
+| `FLOAT`       | Floating point number                                  | `--long-option 3.14`                                                   |
+| `STRING`      | String                                                 | `--long-option "hello"`                                                |
+| `FILE`        | Filename                                               | `--long-option "file.txt"` or `--long-option /path/to/file.txt`        |
+| `x\|y\|z`     | One of the listed values x, y, or z                    | `--long-option x`                                                      |
+| `INT(,INT..)` | A single integer or a comma-separated list of integers | `--long-option 1,2,3` or `--long-option 1`                             |
 
+</details>
 
 ## General Options
 
 - `-v, --verbose INT [0]`: Verbosity level.
 - `-@, --threads INT [1]`: Number of threads.
-- `-s, --seed INT [time]`: Random seed for initializing the random number generator. If not defined, the seed will be set using the current system time. 
+- `-s, --seed INT [time]`: Random seed for initializing the random number generator. If not defined, the seed will be set using the current system time.
 
   N.B. If multiple simulations are run in parallel and the seed is not defined, the random number generator may be initialized with the same seed for all of the simulations, given that it is likely that the simulations start at the same time. Therefore, it is highly recommended to set the seed manually when running multiple simulations in parallel.
 
 ## Input/Output
 
 - `-i, --input FILE`: Input filename.
-- `-o, --output STRING ['output']`: Output filename prefix. If not defined, the output filename prefix will be set to `output`. The program will append the suffix to the output filename prefix based on the given options. A simulation argument values log file (ending with `.arg`) is always generated. 
+- `-o, --output STRING ['output']`: Output filename prefix. If not defined, the output filename prefix will be set to `output`. The program will append the suffix to the output filename prefix based on the given options. A simulation argument values log file (ending with `.arg`) is always generated.
 
   - Example: `vcfgl -i test/data/data1.vcf -o test/data1_output -e 0.1 -d 1 ` will generate `data1_output.arg`, `data1_output.bcf` files in the `test` directory.
-
 
   - Example: `vcfgl -i test/data/data1.vcf -e 0.1 -d 1 -printPileup 1 -printTruth 1 -O z -o data1` will generate `data1.arg`, `data1.pileup.gz` (`-printPileup 1`), `data1.truth.vcf.gz` (`-printTruth 1`), and `data1.vcf.gz` (`-O z`) files in the current directory.
 
@@ -312,8 +312,8 @@ Type | Description | Example
   - `2`: Simulate errors in the reported quality scores and genotype likelihoods (requires `--beta-variance`)
 - `-bv, --beta-variance FLOAT`: Designated variance for the beta distribution
 - `-GL, --gl-model 1|[2]`: Genotype likelihood model to be used in simulation
-  - `1`: Genotype likelihood model with correlated errors (samtools model)
-  - `2`: Canonical genotype likelihood model with independent errors (GATK model)
+  - `1`: Genotype likelihood model with correlated errors (Li model)
+  - `2`: Canonical genotype likelihood model with independent errors (McKenna model)
 - `--gl1-theta FLOAT [0.83]`: Theta parameter for genotype likelihood model 1 (requires `-GL 1`)
 - `--platform [0]|1`: Use platform specification
 - `--precise-gl [0]|1`: Use precise error probabilities in the genotype likelihood calculation (requires `-GL 2`)
@@ -346,19 +346,17 @@ Control which tags are added to the output VCF/BCF files.
 - `-addInfoADF [0]|1`: Total forward-strand allelic read depth (INFO/ADF) tag
 - `-addInfoADR [0]|1`: Total reverse-strand allelic read depth (INFO/ADR) tag
 
-
 # Tutorials
 
 # Contact
 
 If you have any questions about the program, feature requests, or bug reports, you can open a new issue at [GitHub Issues](https://github.com/isinaltinkaya/vcfgl/issues). Alternatively, you can contact the main developer using the contact information at [isinaltinkaya.com](http://isinaltinkaya.com/).
 
-
 # How to cite
 
 <!-- For more details, please refer to the documentation at [](). -->
 
-<!-- 
+<!--
 
 1. For each site; for each haplotype; sample number of reads from Poisson distribution with mean equal to given depth value
 
@@ -373,16 +371,16 @@ If you have any questions about the program, feature requests, or bug reports, y
 4. Normalize the log10 genotype likelihood by substracting the maximum genotype likelihood value
 observed at site. -->
 
-<!-- 
+<!--
 ## Installation
 
 To install **vcfgl**, simply download the binary executable for your platform from the [latest releases](https://github.com/your-username/vcfgl/releases) on GitHub.
 ### Method 0: Using release tarball
 
-//// TODO 
+//// TODO
 
  -->
-<!-- 
+<!--
 
 
 ## Input file
@@ -408,10 +406,10 @@ You can use `-explode 1` to expand simulations to the sites not observed in the 
 
 Example command:
 ```shell
-./vcfgl -i example.vcf -e 0.01 -d 5 -O v -d 3 --seed 42 -explode 1 
+./vcfgl -i example.vcf -e 0.01 -d 5 -O v -d 3 --seed 42 -explode 1
 ```
 
-Example input: `example.vcf` 
+Example input: `example.vcf`
 
 Our input file contains two sites, and its header contains one chromosome named "chr22" with length 5.
 ```
@@ -448,12 +446,12 @@ chr22	5	.	A	C,G,T	.	PASS	.	GT:DP:GL	0|0:4:0,-1.19828,-9.89103,-1.19828,-9.89103,
 
 
 ## Define different depths for individuals using `--depths-file <filename>`
- 
+
 Example: You want to set the average per-site read depth of different individuals to the target read depths as:
 
 sample | target depth
 -- | --
-ind1 | 1 
+ind1 | 1
 ind2 | 5
 ind3 | 0.4
 ind4 | 4
@@ -468,7 +466,7 @@ Example depths file: `depths.txt`
 4
 ```
 
-Then, you can run vcfgl using 
+Then, you can run vcfgl using
 ```shell
 ./vcfgl -i input.vcf --depths-file depths.txt
 ```
@@ -482,7 +480,7 @@ ___
 
 ## Notes for ANGSD/msToGlf users
 
-The basic functionality of the program (`--error-qs 0`) is designed to simulate data equivalent to those simulated using [msToGlf](https://github.com/ANGSD/angsd/blob/master/misc/msToGlf.c). 
+The basic functionality of the program (`--error-qs 0`) is designed to simulate data equivalent to those simulated using [msToGlf](https://github.com/ANGSD/angsd/blob/master/misc/msToGlf.c).
 Similar to msToGlf, vcfgl can simulate the genotype likelihoods using direct genotype likelihood model via `-GL 2`, and output pileup format via `-printPileup 1`.
 
 
@@ -575,13 +573,13 @@ Binary representation | Allele
 ### - Sampling strands
 
 The following options require strand information:
-* `-addI16 1` 
+* `-addI16 1`
 * `-addFormatADF 1`
 * `-addFormatADR 1`
 * `-addInfoADF 1`
 * `-addInfoADR 1`
 
-These options will trigger the random sampling of strands. The strands are sampled as forward and reverse strands from a binomial distribution with equal probability. 
+These options will trigger the random sampling of strands. The strands are sampled as forward and reverse strands from a binomial distribution with equal probability.
 
 
 ### - Unobserved alleles

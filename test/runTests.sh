@@ -362,6 +362,7 @@ ARGS="
 --precise-gl 0 \
 -explode 1 \
 --rm-empty-sites 1 \
+--adjust-qs 1 \
 -doUnobserved 1 \
 -printTruth 1 \
 -addGP 1 \
@@ -566,6 +567,7 @@ ARGS="
 --beta-variance 1e-5 \
 --gl-model 2 \
 --precise-gl 1 \
+--adjust-qs 2 \
 -explode 1 \
 -doUnobserved 4 \
 -printPileup 1 \
@@ -584,7 +586,7 @@ ARGS="
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
-diff -s <(zcat ${ID} ${TESTWD}/${ID}.pileup.gz) <(zcat ${SCRIPTDIR}/reference/${ID}/${ID}.pileup.gz)
+diff -s <(zcat ${TESTWD}/${ID}.pileup.gz) <(zcat ${SCRIPTDIR}/reference/${ID}/${ID}.pileup.gz)
 
 
 ################################################################################
@@ -636,6 +638,7 @@ ARGS="
 --error-rate 0.024 \
 --gl-model 2 \
 --source 1 \
+--adjust-qs 1 \
 -explode 1 \
 -doUnobserved 1 \
 -addPL 1 
@@ -662,6 +665,7 @@ ARGS="
 --error-rate 0.024 \
 --gl-model 2 \
 --source 1 \
+--adjust-qs 1 \
 -explode 1 \
 -doUnobserved 2 \
 -addPL 1 

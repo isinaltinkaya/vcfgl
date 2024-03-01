@@ -6,6 +6,7 @@
  */
 
 #include <htslib/thread_pool.h> // htsThreadPool
+#include <time.h> // clock
 
 #include "shared.h"
 #include "io.h"
@@ -14,7 +15,6 @@
 #include "gl_methods.h"
 
 argStruct* args;
-glModel1Struct* glModel1;
 
 const char* nonref_str;
 
@@ -128,7 +128,7 @@ inline int check_rec_alleles(simRecord* sim) {
         }
     }
 
-#if DEV==1
+#if 0
     for (int i = 0;i < n_alleles;++i) {
         fprintf(stderr, "Found %s allele: %s with int value %d\n", i == 0 ? "REF" : (i == 1 ? "ALT_1" : (i == 2 ? "ALT_2" : (i == 3 ? "ALT_3" : "ALT_4"))), sim->rec->d.allele[i], rec_alleles[i]);
     }
@@ -139,40 +139,6 @@ inline int check_rec_alleles(simRecord* sim) {
 
 }
 
-inline int get_qScore(const double error_prob_forQs) {
-
-    int qScore = -1;
-
-    DEVASSERT(error_prob_forQs >= 0.0);
-    DEVASSERT(error_prob_forQs <= 1.0);
-
-
-    if (0.0 == error_prob_forQs) {
-        qScore = CAP_BASEQ;
-    } else if (error_prob_forQs > 0.0 && error_prob_forQs < 1.0) {
-        qScore = (int)(-10.0 * log10(error_prob_forQs) + 0.499);
-        if (qScore > CAP_BASEQ) {
-            qScore = CAP_BASEQ;
-        }
-    } else {
-        NEVER;
-    }
-
-    if (1 == args->platform) {
-
-        if (qScore <= 2) {
-            qScore = 2;
-        } else if (qScore <= 14) {
-            qScore = 12;
-        } else if (qScore <= 30) {
-            qScore = 23;
-        } else {
-            qScore = 37;
-        }
-    }
-
-    return(qScore);
-}
 
 
 inline void write_record_values(htsFile* out_fp, simRecord* sim) {
@@ -335,7 +301,7 @@ inline int simulate_site_with_no_reads(simRecord* sim) {
 // skip position reasons:
 // -3	observed only 1 simulated allele at position (iff PROGRAM_WILL_SKIP_SIM_INVAR_SITES)
 // -4	no alleles were observed at position (iff 1==args->rmEmptySites)
-inline int simulate_record_values(simRecord* sim) {
+int simulate_record_values(simRecord* sim) {
 
     bcf1_t* rec = sim->rec;
 
@@ -352,8 +318,11 @@ inline int simulate_record_values(simRecord* sim) {
     const int nSamples = sim->nSamples;
     int n_sim_reads = 0;
 
+    // -- for error-qs 2
     double error_prob_forQs_i = -1.0;
     int qScore_i = -1;
+    int adjqScore_i = -1;
+    // --
 
     // -------------------------------------------- //
     // reset reused objects for the current rec
@@ -488,9 +457,36 @@ inline int simulate_record_values(simRecord* sim) {
 
                 if (2 == args->error_qs) {
                     error_prob_forQs_i = args->betaSampler->sample();
-                    qScore_i = get_qScore(error_prob_forQs_i);
-                    DEVASSERT(qScore_i >= 0);
+
+                    qScore_i = -1;
+                    adjqScore_i = -1;
+
+                    if (0.0 == error_prob_forQs_i) {
+                        qScore_i = CAP_BASEQ;
+                    } else if (1.0 == error_prob_forQs_i) {
+                        qScore_i = 0;
+                    } else if ((0.0 < error_prob_forQs_i) && (error_prob_forQs_i < 1.0)) {
+                        double tmp = -10.0 * log10(error_prob_forQs_i);
+                        qScore_i = (int)(tmp);
+                        adjqScore_i = (PROGRAM_WILL_ADJUST_QS) ? (int)(tmp + args->adjustBy) : adjqScore_i;
+                    } else {
+                        ERROR("Bad error probability value: %f", error_prob_forQs_i);
+                    }
+
+                    qScore_i = (qScore_i > CAP_BASEQ) ? CAP_BASEQ : qScore_i;
+                    qScore_i = (ARG_PLATFORM_RTA3 == args->platform) ? APPLY_RTA3_QSCORE_BINNING(qScore_i) : qScore_i;
+
+                    if (PROGRAM_WILL_ADJUST_QS) {
+                        adjqScore_i = (adjqScore_i > CAP_BASEQ) ? CAP_BASEQ : adjqScore_i;
+                        adjqScore_i = (ARG_PLATFORM_RTA3 == args->platform) ? (APPLY_RTA3_QSCORE_BINNING(adjqScore_i)) : adjqScore_i;
+                    }
+
                     sim->base_qScores[s][read_i] = qScore_i;
+
+                    if (PROGRAM_WILL_ADJUST_QS) {
+                        DEVASSERT(sim->adj_base_qScores != NULL);
+                        sim->adj_base_qScores[s][read_i] = adjqScore_i;
+                    }
 
 
                     if (args->printQsError) {
@@ -500,7 +496,7 @@ inline int simulate_record_values(simRecord* sim) {
 
                     if (args->printQScores) {
                         // TSV: type, sample_id, contig, site, read_index, qScore
-                        fprintf(stdout, "qs\t%s\t%s\t%ld\t%d\t%d\n", sim->hdr->samples[s], sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1, read_i, qScore_i);
+                        fprintf(stdout, "qs\t%s\t%s\t%ld\t%d\t%d\n", sim->hdr->samples[s], sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1, read_i, ((PROGRAM_WILL_ADJUST_QS_FOR_PRINTQSCORES) ? adjqScore_i : qScore_i));
                     }
 
                     if (args->usePreciseGlError) {
@@ -512,22 +508,30 @@ inline int simulate_record_values(simRecord* sim) {
                     } else {
                         if (args->printGlError) {
                             // TSV: type, sample_id, contig, site, read_index, error_prob
-                            fprintf(stdout, "gl_error_prob\t%s\t%s\t%ld\t%d\t%f\n", sim->hdr->samples[s], sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1, read_i, QS_TO_ERRPROB(qScore_i));
+                            fprintf(stdout, "gl_error_prob\t%s\t%s\t%ld\t%d\t%f\n", sim->hdr->samples[s], sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1, read_i, ((PROGRAM_WILL_ADJUST_QS_FOR_PRINTGLERROR) ? (QS_TO_ERRPROB(adjqScore_i)) : (QS_TO_ERRPROB(qScore_i))));
                         }
                     }
 
-                    sample_acgt_fmt_qsum_arr[r_base] += qScore_i;
-                    sample_acgt_fmt_qsum_sq_arr[r_base] += QS_TO_QSSQ(qScore_i);
-                } else {
-                    ASSERT(args->preCalc != NULL);
-                    if (sim->base_qScores != NULL) {
-                        sim->base_qScores[s][read_i] = args->preCalc->qScore;
-                    }
-                    ASSERT(sim->base_error_probs == NULL);
-                    // will use precalculated values at args->preCalc->qScore and args->preCalc->error_prob_forGl instead
 
-                    sample_acgt_fmt_qsum_arr[r_base] += args->preCalc->qScore;
-                    sample_acgt_fmt_qsum_sq_arr[r_base] += QS_TO_QSSQ(args->preCalc->qScore);
+                    if (PROGRAM_WILL_ADJUST_QS_FOR_QSUM) {
+                        ASSERT(adjqScore_i != -1);
+                        sample_acgt_fmt_qsum_arr[r_base] += adjqScore_i;
+                        sample_acgt_fmt_qsum_sq_arr[r_base] += QS_TO_QSSQ(adjqScore_i);
+                    } else {
+                        sample_acgt_fmt_qsum_arr[r_base] += qScore_i;
+                        sample_acgt_fmt_qsum_sq_arr[r_base] += QS_TO_QSSQ(qScore_i);
+                    }
+
+                } else {
+                    // will use precalculated values at args->preCalc->qScore and args->preCalc->error_prob_forGl instead
+                    if (PROGRAM_WILL_ADJUST_QS_FOR_QSUM) {
+                        ASSERT(args->preCalc->adj_qScore != -1);
+                        sample_acgt_fmt_qsum_arr[r_base] += args->preCalc->adj_qScore;
+                        sample_acgt_fmt_qsum_sq_arr[r_base] += QS_TO_QSSQ(args->preCalc->adj_qScore);
+                    } else {
+                        sample_acgt_fmt_qsum_arr[r_base] += args->preCalc->qScore;
+                        sample_acgt_fmt_qsum_sq_arr[r_base] += QS_TO_QSSQ(args->preCalc->qScore);
+                    }
 
                 }
 
@@ -574,13 +578,15 @@ inline int simulate_record_values(simRecord* sim) {
                     kputc("ACGT"[sim->bases[s][read_i]], sim->pileup);
                 }
                 kputc('\t', sim->pileup);
+
                 if (NULL != sim->base_qScores) {
                     for (int read_i = 0; read_i < n_sim_reads; read_i++) {
-                        kputc(sim->base_qScores[s][read_i] + QSCORE_PHRED_ENCODING_OFFSET, sim->pileup);
+                        kputc((PROGRAM_WILL_ADJUST_QS_FOR_PILEUP ? sim->adj_base_qScores[s][read_i] : sim->base_qScores[s][read_i]) + QSCORE_PHRED_ENCODING_OFFSET, sim->pileup);
                     }
                 } else {
+
                     for (int read_i = 0; read_i < n_sim_reads; read_i++) {
-                        kputc(args->preCalc->qScore + QSCORE_PHRED_ENCODING_OFFSET, sim->pileup);
+                        kputc((PROGRAM_WILL_ADJUST_QS_FOR_PILEUP ? args->preCalc->adj_qScore : args->preCalc->qScore) + QSCORE_PHRED_ENCODING_OFFSET, sim->pileup);
                     }
                 }
             }
@@ -868,7 +874,7 @@ inline int simulate_record_values(simRecord* sim) {
                 NEVER;
             } else {
 
-#if DEV==1
+#if 0
                 if (sim->gl_arr[i] == std::numeric_limits<float>::infinity()) {
                     NEVER;
                 }
@@ -985,12 +991,10 @@ inline int simulate_record_values(simRecord* sim) {
 
             // 3   #non-ref bases on the forward strand
             // 3   (old definition) #non-ref Q13 bases on the forward strand
-            // sim->i16_arr[2] += sim->acgt_n_q13_bases[(b * 2) + SIM_FORWARD_STRAND];
             sim->i16_arr[2] += sim->acgt_n_bases_forI16[(b * 2) + SIM_FORWARD_STRAND];
 
             // 4   #non-ref bases on the reverse strand
             // 4   (old definition) #non-ref Q13 bases on the reverse strand
-            // sim->i16_arr[3] += sim->acgt_n_q13_bases[(b * 2) + SIM_REVERSE_STRAND];
             sim->i16_arr[3] += sim->acgt_n_bases_forI16[(b * 2) + SIM_REVERSE_STRAND];
 
             for (s = 0; s < nSamples; ++s) {
@@ -1020,7 +1024,7 @@ inline int simulate_record_values(simRecord* sim) {
     }
 
     return (0);
-            }
+}
 
 inline int simulate_record_true_values(simRecord* sim) {
 
@@ -1032,9 +1036,6 @@ inline int simulate_record_true_values(simRecord* sim) {
     // reset reused objects for the current rec
     sim->reset_rec_objects();
     // -------------------------------------------- //
-
-    int ref = -1;
-    int alt = -1;
 
     // count of acgt bases in genotypes
     // for A,C,G,T
@@ -1505,19 +1506,94 @@ inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
 
 int main(int argc, char** argv) {
 
+    clock_t tic = clock();
 
     args = args_get(--argc, ++argv);
+
+    time_t start_time = time(NULL);
+    struct tm* local_start_time = NULL;
+    ASSERT((local_start_time = localtime(&start_time)) != NULL);
+    ASSERT(strftime(args->datetime, 256, "%a %b %d %H:%M:%S %Y", local_start_time) != 0);
+
+    fprintf(stderr, "\n%s\n\n", args->command);
+    fprintf(stderr, "\n[Program start] %s\n", args->datetime);
+
+    fprintf(args->arg_fp, "\n%s\n\n", args->command);
+    fprintf(args->arg_fp, "\n[Program start] %s\n", args->datetime);
+
 
     if ((0 == args->error_qs) || (1 == args->error_qs)) {
         args->preCalc = new preCalcStruct();
         args->preCalc->error_prob_forQs = args->error_rate;
-        args->preCalc->qScore = get_qScore(args->preCalc->error_prob_forQs);
+
+        int qs = -1;
+        int adjqs = -1;
+
+        if (0.0 == args->preCalc->error_prob_forQs) {
+            qs = CAP_BASEQ;
+            adjqs = CAP_BASEQ;
+        } else if (1.0 == args->preCalc->error_prob_forQs) {
+            qs = 0;
+            adjqs = 0;
+        } else if ((0.0 < args->preCalc->error_prob_forQs) && (args->preCalc->error_prob_forQs < 1.0)) {
+            double tmp = -10.0 * log10(args->preCalc->error_prob_forQs);
+            qs = (int)(tmp);
+            if (PROGRAM_WILL_ADJUST_QS) {
+                adjqs = (int)(tmp + args->adjustBy);
+            }
+        } else {
+            ERROR("Bad error probability value: %f", args->preCalc->error_prob_forQs);
+        }
+
+        qs = (qs > CAP_BASEQ) ? CAP_BASEQ : qs;
+        qs = (ARG_PLATFORM_RTA3 == args->platform) ? APPLY_RTA3_QSCORE_BINNING(qs) : qs;
+        args->preCalc->qScore = qs;
         args->preCalc->q5 = args->preCalc->qScore << 5;
+
+        if (PROGRAM_WILL_ADJUST_QS) {
+            adjqs = (adjqs > CAP_BASEQ) ? CAP_BASEQ : adjqs;
+            adjqs = (ARG_PLATFORM_RTA3 == args->platform) ? APPLY_RTA3_QSCORE_BINNING(adjqs) : adjqs;
+            args->preCalc->adj_qScore = adjqs;
+            args->preCalc->adj_q5 = args->preCalc->adj_qScore << 5;
+        }
+
+
         if (1 == args->GL) {
-            glModel1 = glModel1_init();
+
             calculate_gls = alleles_calculate_gls_log10_glModel1_fixedQScore;
+
         } else if (2 == args->GL) {
-            args->preCalc->prepare_gls_preCalc();
+
+            if (0 == args->usePreciseGlError) {
+                if (PROGRAM_WILL_ADJUST_QS_FOR_GL) {
+                    args->preCalc->error_prob_forGl = QS_TO_ERRPROB(args->preCalc->adj_qScore);
+                    args->preCalc->homT = qScore_to_log10_gl[0][args->preCalc->adj_qScore];
+                    args->preCalc->het = qScore_to_log10_gl[1][args->preCalc->adj_qScore];
+                    args->preCalc->homF = qScore_to_log10_gl[2][args->preCalc->adj_qScore];
+                } else {
+                    args->preCalc->error_prob_forGl = QS_TO_ERRPROB(args->preCalc->qScore);
+                    args->preCalc->homT = qScore_to_log10_gl[0][args->preCalc->qScore];
+                    args->preCalc->het = qScore_to_log10_gl[1][args->preCalc->qScore];
+                    args->preCalc->homF = qScore_to_log10_gl[2][args->preCalc->qScore];
+                }
+
+            } else if (1 == args->usePreciseGlError) {
+
+                args->preCalc->error_prob_forGl = args->preCalc->error_prob_forQs;
+                if (0.0 == args->preCalc->error_prob_forGl) {
+                    args->preCalc->homT = 0;
+                    args->preCalc->het = -0.30103;
+                    args->preCalc->homF = NEG_INF;
+                } else if (args->preCalc->error_prob_forGl > 0.0) {
+                    // prepare for gl calculation with pre-calculated terms
+                    args->preCalc->homT = log10(1.0 - args->preCalc->error_prob_forGl);
+                    args->preCalc->het = log10((1.0 - args->preCalc->error_prob_forGl) / 2.0 + args->preCalc->error_prob_forGl / 6.0);
+                    args->preCalc->homF = log10(args->preCalc->error_prob_forGl) - PRE_CALC_LOG10_3;
+                } else {
+                    NEVER;
+                }
+            }
+
             calculate_gls = alleles_calculate_gls_log10_glModel2_fixedQScore;
         }
 
@@ -1530,12 +1606,11 @@ int main(int argc, char** argv) {
         }
 
         if (args->printQScores) {
-            fprintf(stdout, "qs\tNA\tNA\tNA\tNA\t%d\n", args->preCalc->qScore);
+            fprintf(stdout, "qs\tNA\tNA\tNA\tNA\t%d\n", (PROGRAM_WILL_ADJUST_QS) ? args->preCalc->adj_qScore : args->preCalc->qScore);
         }
 
     } else if (2 == args->error_qs) {
         if (1 == args->GL) {
-            glModel1 = glModel1_init();
             calculate_gls = alleles_calculate_gls_log10_glModel1;
         } else if (2 == args->GL) {
             if (args->usePreciseGlError) {
@@ -1623,13 +1698,25 @@ int main(int argc, char** argv) {
 
     delete sim;
 
-    if (NULL != glModel1) {
-
-        glModel1_destroy(glModel1);
-    }
-
     free(true_gts_acgt_int);
     true_gts_acgt_int = NULL;
+
+    free(true_gts_alleles_idx);
+    true_gts_alleles_idx = NULL;
+
+    free(n_sim_reads_arr);
+    n_sim_reads_arr = NULL;
+
+    clock_t toc = clock();
+
+    fprintf(stderr, "\n\tElapsed time (CPU): %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
+    fprintf(args->arg_fp, "\n\tElapsed time (CPU): %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
+
+    time_t end_time = time(NULL);
+    fprintf(stdout, "\tElapsed time (Real): %f seconds\n", difftime(end_time, start_time));
+    fprintf(args->arg_fp, "\tElapsed time (Real): %f seconds\n", difftime(end_time, start_time));
+
+
 
     args_destroy(args);
 
