@@ -48,15 +48,12 @@ inline int check_rec_alleles(simRecord* sim) {
 
     const int nSamples = sim->nSamples;
 
-
-
     // -> clear
     // rec_alleles[0] = -1;
     // rec_alleles[1] = -1;
     // rec_alleles[2] = -1;
     // rec_alleles[3] = -1;
     // rec_alleles[4] = -1;
-
 
     char* allele = NULL;
     int x;
@@ -1713,9 +1710,8 @@ int main(int argc, char** argv) {
     fprintf(args->arg_fp, "\n\tElapsed time (CPU): %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
 
     time_t end_time = time(NULL);
-    fprintf(stdout, "\tElapsed time (Real): %f seconds\n", difftime(end_time, start_time));
+    fprintf(stderr, "\tElapsed time (Real): %f seconds\n", difftime(end_time, start_time));
     fprintf(args->arg_fp, "\tElapsed time (Real): %f seconds\n", difftime(end_time, start_time));
-
 
 
     args_destroy(args);

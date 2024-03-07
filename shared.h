@@ -100,7 +100,7 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 
 // args->adjustQs
 // NONE: do not perform any adjustment
-#define ARG_QS_ADJUST_NONE       (0)
+#define ARG_QS_ADJUST_DISABLED       (0)
 // [+1] use adjusted quality scores for genotype likelihoods
 #define ARG_QS_ADJUST_FOR_GL     (1<<0)
 // [+2] use adjusted quality scores for qsum (QS tag)
@@ -111,6 +111,18 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define ARG_QS_ADJUST_FOR_PRINTQSCORES (1<<3)
 // [+16] use adjusted quality scores for --printGlError
 #define ARG_QS_ADJUST_FOR_PRINTGLERROR (1<<4)
+
+#define ARGMAX_QS_ADJUST (ARG_QS_ADJUST_FOR_GL | ARG_QS_ADJUST_FOR_QSUM | ARG_QS_ADJUST_FOR_PILEUP | ARG_QS_ADJUST_FOR_PRINTQSCORES | ARG_QS_ADJUST_FOR_PRINTGLERROR)
+
+#define ARG_RM_INVAR_DISABLED (0<<0)
+#define ARG_RM_INVAR_INPUT_HOMOREFGT (1<<0)
+#define ARG_RM_INVAR_INPUT_HOMOALTGT (1<<1)
+#define ARG_RM_INVAR_INPUT_HOMOGT (ARG_RM_INVAR_INPUT_HOMOREFGT | ARG_RM_INVAR_INPUT_HOMOALTGT)
+#define ARG_RM_INVAR_INPUT_SIM_INVAR (1<<2)
+
+#define ARGMAX_RM_INVAR (ARG_RM_INVAR_INPUT_HOMOREFGT | ARG_RM_INVAR_INPUT_HOMOALTGT | ARG_RM_INVAR_INPUT_SIM_INVAR)
+
+
 
 #define ARG_PLATFORM_NONE (0)
 #define ARG_PLATFORM_RTA3 (1)
@@ -152,16 +164,16 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
     ( (args->addI16 || args->addFormatADF || args->addFormatADR || args->addInfoADF || args->addInfoADR))
 
 #define PROGRAM_WILL_SKIP_INPUT_HOMOREFGT_SITES \
-    ( ((args->rmInvarSites) & 1) )
+    ( ((args->rmInvarSites) & ARG_RM_INVAR_INPUT_HOMOREFGT) )
 
 #define PROGRAM_WILL_SKIP_INPUT_HOMOALTGT_SITES \
-    ( ((args->rmInvarSites) & 2) )
+    ( ((args->rmInvarSites) & ARG_RM_INVAR_INPUT_HOMOALTGT) )
 
 #define PROGRAM_WILL_SKIP_INPUT_HOMOGT_SITES \
-    ( ((args->rmInvarSites) & 3) )
+    ( ((args->rmInvarSites) & ARG_RM_INVAR_INPUT_HOMOGT) )
 
 #define PROGRAM_WILL_SKIP_SIM_INVAR_SITES \
-    ( ((args->rmInvarSites) & 4) )
+    ( ((args->rmInvarSites) & ARG_RM_INVAR_INPUT_SIM_INVAR) )
 
 #define PROGRAM_WILL_USE_BINARY_GTSOURCE \
     ( ((args->gtSource)==ARG_GTSOURCE_BINARY) )

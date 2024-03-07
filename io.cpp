@@ -147,20 +147,21 @@ void help_page() {
     fprintf(stderr, "         --gvcf-dps INT(,INT..) _____ Minimum per-sample read depth range(s) for constructing gVCF blocks (requires: -doGVCF 1)\n");
     fprintf(stderr, "                                      Example: `--gvcf-dps 5,10,20` will group invariable sites into three types of gVCF blocks: [5,10), [10,20) and [20,inf)\n");
     fprintf(stderr, "                                      Sites with minimum depth < 5 will be printed as regular VCF records.\n");
-    fprintf(stderr, "         --adjust-qs INT+ [3] _______ 0: Do not adjust quality scores\n");
-    fprintf(stderr, "                                      1: Use adjusted quality scores in genotype likelihoods (requires: --precise-gl 0)\n");
-    fprintf(stderr, "                                      2: Use adjusted quality scores in calculating the quality score sum (QS) tag (requires: -addQS 1)\n");
-    fprintf(stderr, "                                      4: Use adjusted quality scores in pileup output (requires: --printPileup 1)\n");
-    fprintf(stderr, "                                      8: Use adjusted quality scores in --printQScores output (requires: --printQScores 1)\n");
-    fprintf(stderr, "                                      16: Use adjusted quality scores in --printGlError output (requires: --printGlError 1)\n");
+    // fprintf(stderr, "         --adjust-qs INT+ [3] _______ 0: Do not adjust quality scores\n");
+    fprintf(stderr, "         --adjust-qs INT+ [%d] _______ %d: Do not adjust quality scores\n", args->adjustQs, ARG_QS_ADJUST_DISABLED);
+    fprintf(stderr, "                                      %d: Use adjusted quality scores in genotype likelihoods (requires: --precise-gl 0)\n", ARG_QS_ADJUST_FOR_GL);
+    fprintf(stderr, "                                      %d: Use adjusted quality scores in calculating the quality score sum (QS) tag (requires: -addQS 1)\n", ARG_QS_ADJUST_FOR_QSUM);
+    fprintf(stderr, "                                      %d: Use adjusted quality scores in pileup output (requires: --printPileup 1)\n", ARG_QS_ADJUST_FOR_PILEUP);
+    fprintf(stderr, "                                      %d: Use adjusted quality scores in --printQScores output (requires: --printQScores 1)\n", ARG_QS_ADJUST_FOR_PRINTQSCORES);
+    fprintf(stderr, "                                      %d: Use adjusted quality scores in --printGlError output (requires: --printGlError 1)\n", ARG_QS_ADJUST_FOR_PRINTGLERROR);
     fprintf(stderr, "         --adjust-by FLOAT [0.499] __ Adjustment value for quality scores (requires: --adjust-qs > 0)\n");
     fprintf(stderr, "         -explode [0]|1 _____________ 1: Explode to sites that are not in input file.\n");
     fprintf(stderr, "                                      Useful for simulating invariable sites when the input file only contains variable sites.\n");
     fprintf(stderr, "                                      Sets all genotypes in exploded sites to homozygous reference.\n");
-    fprintf(stderr, "         --rm-invar-sites INT+ [0]___ 0: Do not remove invariable sites\n");
-    fprintf(stderr, "                                      1: Remove sites where all individuals' true genotypes in the input file are homozygous reference\n");
-    fprintf(stderr, "                                      2: Remove sites where all individuals' true genotypes in the input file are homozygous alternative\n");
-    fprintf(stderr, "                                      4: Remove sites where the all simulated reads among all individuals are the same base\n");
+    fprintf(stderr, "         --rm-invar-sites INT+ [%s]___ %d: Do not remove invariable sites\n", ARG_RM_INVAR_DISABLED, ARG_RM_INVAR_DISABLED);
+    fprintf(stderr, "                                      %d: Remove sites where all individuals' true genotypes in the input file are homozygous reference\n", ARG_RM_INVAR_INPUT_HOMOREFGT);
+    fprintf(stderr, "                                      %d: Remove sites where all individuals' true genotypes in the input file are homozygous alternative\n", ARG_RM_INVAR_INPUT_HOMOALTGT);
+    fprintf(stderr, "                                      %d: Remove sites where the all simulated reads among all individuals are the same base\n", ARG_RM_INVAR_INPUT_SIM_INVAR);
     fprintf(stderr, "                                      Example: '--rm-invar-sites 3' (1+2) will do both 1 and 2 (i.e. remove all homozygous sites)\n");
     fprintf(stderr, "         --rm-empty-sites [0]|1 _____ 0: Do not remove empty sites\n");
     fprintf(stderr, "                                      1: Remove empty sites (i.e. sites where no reads were simulated)\n");
@@ -641,7 +642,7 @@ argStruct* args_get(int argc, char** argv) {
     CHECK_ARG_VALUES_LIST(args->platform, "--platform", ARG_PLATFORM_NONE, ARG_PLATFORM_RTA3);
     CHECK_ARG_INTERVAL_01(args->usePreciseGlError, "--precise-gl");
     CHECK_ARG_INTERVAL_INT(args->i16_mapq, 0, 60, "--i16-mapq");
-    CHECK_ARG_INTERVAL_INT(args->adjustQs, 0, 15, "--adjust-qs");
+    CHECK_ARG_INTERVAL_INT(args->adjustQs, 0, ARGMAX_QS_ADJUST, "--adjust-qs");
     if (PROGRAM_WILL_ADJUST_QS && args->adjustBy == 0.0) {
         ERROR("--adjust-qs %d requires a non-zero value for --adjust-by. Please set --adjust-by and rerun.", args->adjustQs);
     }
@@ -663,7 +664,7 @@ argStruct* args_get(int argc, char** argv) {
     }
 
     CHECK_ARG_INTERVAL_01(args->explode, "-explode");
-    CHECK_ARG_INTERVAL_INT(args->rmInvarSites, 0, 7, "--rm-invar-sites");
+    CHECK_ARG_INTERVAL_INT(args->rmInvarSites, 0, ARGMAX_RM_INVAR, "--rm-invar-sites");
     CHECK_ARG_INTERVAL_01(args->rmEmptySites, "--rm-empty-sites");
     CHECK_ARG_INTERVAL_INT(args->doUnobserved, 0, 5, "-doUnobserved");
     CHECK_ARG_INTERVAL_01(args->doGVCF, "-doGVCF");
