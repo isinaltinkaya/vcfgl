@@ -123,11 +123,6 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define ARGMAX_RM_INVAR (ARG_RM_INVAR_INPUT_HOMOREFGT | ARG_RM_INVAR_INPUT_HOMOALTGT | ARG_RM_INVAR_INPUT_SIM_INVAR)
 
 
-
-#define ARG_PLATFORM_NONE (0)
-#define ARG_PLATFORM_RTA3 (1)
-
-
 /// --> CONSTANTS:SIGNALS
 
 /// int prepare_gvcf_block()
@@ -252,9 +247,6 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-
-#define APPLY_RTA3_QSCORE_BINNING(qs) \
-    ( ((qs) <= 2) ? 2 : (((qs) <= 14) ? 12 : (((qs) <= 30) ? 23 : 37 )))
 
 #define FLUSH_BGZF_KSTRING_BUFFER(fp, buffer) \
     do {                                               \

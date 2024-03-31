@@ -69,7 +69,7 @@ struct argStruct {
     double beta_variance;
     int GL;
     double glModel1_theta; // err dep parameter
-    int platform;
+    char* qs_bins_fn;
     int usePreciseGlError;
     int i16_mapq;
     char* gvcf_dps_str;
@@ -110,7 +110,6 @@ struct argStruct {
     char* out_pileup_fn;
     char* output_mode_str;
 
-
     htsFile* in_fp;
     FILE* arg_fp;
     htsFile* out_fp;
@@ -139,6 +138,13 @@ struct argStruct {
     preCalcStruct* preCalc;
 
     errmod_t* gl1errmod;
+
+    /// qs_bins[nRanges]
+    /// qs_bins[i][0] = start of i-th range
+    /// qs_bins[i][1] = end of i-th range
+    /// qs_bins[i][2] = qs value to assign for i-th range
+    uint8_t** qs_bins;
+    int n_qs_bins;
 
     // functions:
     double* read_depthsFile(void);

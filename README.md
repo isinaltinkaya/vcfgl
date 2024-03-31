@@ -2,8 +2,6 @@
 TODO:
 - [ ] Move examples etc (commented out stuff at the end of this file) to documentation
 - [ ] Add issue template etc
-- [ ] Add tutorials links in readme
-
 -->
 
 <a name="readme-top"></a>
@@ -24,7 +22,7 @@ TODO:
     <br />
     <a href="https://github.com/isinaltinkaya/vcfgl">Installation</a>
     ·
-    <a href="https://github.com/isinaltinkaya/vcfgl">Tutorial</a>
+    <a href="https://github.com/isinaltinkaya/vcfgl/doc/tutorial.MD">Tutorial</a>
     ·
     <a href="https://github.com/isinaltinkaya/vcfgl/issues">Report Bug</a>
     ·
@@ -150,6 +148,30 @@ You can access the command-line help page using `vcfgl --help` or `vcfgl -h`:
 
 <details open>
 <summary> <code> vcfgl --help </code></summary>
+<pre>
+Program: vcfgl
+License: GNU GPLv3.0
+Version: v0.5-1b08819 (htslib: 1.15.1-20-g46c56fcc)
+Build: Mar 31 2024 12:56:59
+
+Usage: vcfgl -i &lt;input&gt; [options]
+
+    -h, --help _____________________  Print this help message and exit
+    -v, --version __________________  Print version and build information and exit
+
+Option descriptions:
+     -s, --long-option TYPE [X] _____ Description
+     -s                               Short option (if any)
+         --long-option                Long option
+                       TYPE           Type of the argument value, can be:
+                                        - INT (integer)
+                                        - INT+ (additive integer: sum values to use together
+                                        - FLOAT (floating point number)
+                                        - STRING (string)
+                                        - FILE (filename)
+                                        - x|y|z (one of the listed values x, y or z)
+                            [X]       Default argument value (if any)
+                                _____ Connector to the option description for better readability
 
 <pre>$ ./vcfgl -h
 
@@ -195,15 +217,14 @@ Simulation parameters:
                                       1: Genotype likelihood model with correlated errors (a.k.a. Li model, samtools model, angsd -GL 1)
                                       2: Canonical genotype likelihood model with independent errors (a.k.a. McKenna model, GATK model, angsd -GL 2)
          --gl1-theta FLOAT [0.83] ___ Theta parameter for the genotype likelihood model 1 (requires: -GL 1)
-         --platform [0]|1 ___________ 0: Do not use platform specification
-                                      1: NovaSeq 6000 (RTA3), qualities are binned into 4 values: 2, 12, 23 and 37
+         --qs-bins FILE __________ File containing the quality score binning to be used in the simulation
          --precise-gl [0]|1 _________ 0: Use the discrete phred-scaled error probabilities in the genotype likelihood calculation
                                       1: Use precise error probabilities in the genotype likelihood calculation (requires: -GL 2)
          --i16-mapq INT [20] ________ Mapping quality score for I16 tag (requires: -addI16 1)
          --gvcf-dps INT(,INT..) _____ Minimum per-sample read depth range(s) for constructing gVCF blocks (requires: -doGVCF 1)
                                       Example: `--gvcf-dps 5,10,20` will group invariable sites into three types of gVCF blocks: [5,10), [10,20) and [20,inf)
                                       Sites with minimum depth &lt; 5 will be printed as regular VCF records.
-         --adjust-qs INT+ [3] _______ 0: Do not adjust quality scores
+         --adjust-qs INT+ [0] _______ 0: Do not adjust quality scores
                                       1: Use adjusted quality scores in genotype likelihoods (requires: --precise-gl 0)
                                       2: Use adjusted quality scores in calculating the quality score sum (QS) tag (requires: -addQS 1)
                                       4: Use adjusted quality scores in pileup output (requires: --printPileup 1)
@@ -213,7 +234,7 @@ Simulation parameters:
          -explode [0]|1 _____________ 1: Explode to sites that are not in input file.
                                       Useful for simulating invariable sites when the input file only contains variable sites.
                                       Sets all genotypes in exploded sites to homozygous reference.
-         --rm-invar-sites INT+ [0]___ 0: Do not remove invariable sites
+         --rm-invar-sites INT+ [(null)]___ 0: Do not remove invariable sites
                                       1: Remove sites where all individuals&apos; true genotypes in the input file are homozygous reference
                                       2: Remove sites where all individuals&apos; true genotypes in the input file are homozygous alternative
                                       4: Remove sites where the all simulated reads among all individuals are the same base
@@ -232,15 +253,19 @@ Simulation parameters:
          -printBasePickError [0]|1 __ 0: Disabled, 1: Print the base picking error probability to stdout.
                                       If --error-qs 1 is used, writes per-read base picking error probabilities to stdout.
                                       If --error-qs 0 or 2 is used, writes a single value which is used for all samples and sites.
+                                      The columns are: type, sample_id, contig, site, read_index, base_pick_error_prob
          -printQsError [0]|1 ________ 0: Disabled, 1: Print the error probability used in quality score calculations to stdout.
                                       If --error-qs 2 is used, writes per-read quality score error probabilities to stdout.
                                       If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.
+                                      The columns are: type, sample_id, contig, site, read_index, error_prob
          -printGlError [0]|1 ________ 0: Disabled, 1: Print the error probability used in genotype likelihood calculations to stdout. (requires: -GL 2)
                                       Since -GL 1 works directly with quality scores, this option is only available when -GL 2 is used.
                                       If --error-qs 2 is used, writes per-read error probabilities to stdout.
                                       If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.
                                       If --precise-gl 1 is used, the printed values are the same as those printed by -printQsError.
+                                      The columns are: type, sample_id, contig, site, read_index, error_prob
          -printQScores [0]|1 ________ 0: Disabled, 1: Print the quality scores to stdout.
+                                      The columns are: type, sample_id, contig, site, read_index, qScore
 
 Output VCF/BCF tags:                  0: Do not add, 1: Add
          -addGL 0|[1] _______________ Genotype likelihoods (GL) tag
@@ -256,7 +281,6 @@ Output VCF/BCF tags:                  0: Do not add, 1: Add
          -addInfoAD [0]|1 ___________ Total allelic read depth (INFO/AD) tag
          -addInfoADF [0]|1 __________ Total forward-strand allelic read depth (INFO/ADF) tag
          -addInfoADR [0]|1 __________ Total reverse-strand allelic read depth (INFO/ADR) tag
-
 </pre>
 </details>
 
@@ -315,7 +339,7 @@ Type of the argument values can be:
   - `1`: Genotype likelihood model with correlated errors (Li model)
   - `2`: Canonical genotype likelihood model with independent errors (McKenna model)
 - `--gl1-theta FLOAT [0.83]`: Theta parameter for genotype likelihood model 1 (requires `-GL 1`)
-- `--platform [0]|1`: Use platform specification
+- `--qs-bins FILE`: File containing the quality score binning to be used in the simulation
 - `--precise-gl [0]|1`: Use precise error probabilities in the genotype likelihood calculation (requires `-GL 2`)
 - `--i16-mapq INT [20]`: Mapping quality score for I16 tag (requires `-addI16 1`)
 - `--gvcf-dps INT(,INT..)`: Minimum per-sample read depth range(s) for constructing gVCF blocks (requires `-doGVCF 1`)
@@ -327,6 +351,11 @@ Type of the argument values can be:
 - `-doGVCF [0]|1`: Output in GATK GVCF format
 - `-printPileup [0]|1`: Output in pileup format
 - `-printTruth [0]|1`: Output the VCF file containing the true genotypes
+- `-printBasePickError [0]|1`: Print the base picking error probability to stdout
+- `-printQsError [0]|1`: Print the error probability used in quality score calculations to stdout. The columns are: type, sample_id, contig, site, read_index, error_prob
+- `-printGlError [0]|1`: Print the error probability used in genotype likelihood calculations to stdout. The columns are: type, sample_id, contig, site, read_index, error_prob
+- `-printQScores [0]|1`: Print the quality scores to stdout. The columns are: type, sample_id, contig, site, read_index, qScore
+
 
 ## Output VCF/BCF Tags
 
@@ -500,10 +529,61 @@ You can use `--error-qs 1` to simulate errors in quality scores by simulating th
 You can use `--error-qs 2` to simulate errors in quality scores by simulating the errors in the reported quality scores and genotype likelihoods. The error-base choosing uses the beta distribution mean (i.e. the error rate) and the reported quality scores use the beta distribution-sampled error rates.
 
 
-## Simulate base qualities for a specific sequencing platform
+## Simulate quality score binning
 
-You can use `--platform 1` to simulate base qualities for a specific sequencing platform. Currently, only NovaSeq 6000 is supported. The qualities are binned into four possible quality values: 2, 12, 23 and 37.
+/// @brief read_qs_bins_file - read the file containing the quality score binning description
+/// @return uint8_t** - array of quality score binning ranges 
+/// @details
+/// The file should contain lines with the following format:
+/// [RangeStart],[RangeEnd],[QualityScoreToAssign]
+/// where the ranges are inclusive. All values should be comma-separated, >=0 and <=255.
+/// The file is assumed to be sorted. 
+/// The ranges must cover the entire range from the first RangeStart to the last RangeEnd.
+///
+/// (1) Example file for NovaSeq 6000 RTA3 binning:
+///
+/// 0,2,2
+/// 3,14,12
+/// 15,30,23
+/// 31,40,37
+///
+/// Assigns quality score 2 to reads with quality scores 0-2, 12 to reads with quality scores 3-14, etc. Any quality score above 40 will be assigned 37. First range start must be 0.
+///
+/// (2) Example 2:
+///
+/// 0,0,2
+/// 1,14,11
+/// 15,30,25
+/// 31,40,37
+/// 
+/// This example demonstrates how to assign a specific quality score to a single quality score value. In this example, quality score 2 is assigned when the simulated quality score is exactly 0.
+uint8_t** read_qs_bins_file(void) {
 
+
+You can simulate the base quality score binning by using the `--qs-bins <FILE>` option. The file should contain lines with the following format:
+```
+[RangeStart],[RangeEnd],[QualityScoreToAssign]
+```
+where the ranges are inclusive. All values should be comma-separated, >=0 and <=255. The ranges must cover the entire range from the first RangeStart to the last RangeEnd. The first range start must be 0, and the file is assumed to be sorted. 
+
+Following is an example file for NovaSeq 6000 (RTA3) binning. Please note that these values may change depending on the sequencing platform and the provider.
+
+```
+0,2,2
+3,14,12
+15,30,23
+31,40,37
+```
+
+Assigns quality score 2 to reads with quality scores 0-2, 12 to reads with quality scores 3-14, etc. Any quality score above 40 will be assigned 37. 
+
+To assign a specific quality score to a single quality score value, simply use the same value for the range start and end. For example:
+
+```
+0,0,2
+```
+
+Will assign quality score 2 to reads with quality score 0.
 
 ## Example
 
@@ -536,7 +616,7 @@ Output file: `test/t1_out.bcf`
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##fileDate=Tue Nov 21 09:56:50 2023
 ##source=vcfgl [version: v0.3.3 bb8df2d-dirty] [build: Nov 21 2023 09:56:39] [htslib: 1.15.1-20-g46c56fc]
-##source=vcfgl --verbose 0 --threads 1 --input test/t1.vcf --output test/t1_out --output-mode b --depth 1.000000 --error-rate 0.010000 --error-qs 0 --beta-variance -1.000000e+00 --precise-gl 1 --seed 42 --rm-invar-sites 0 --rm-empty-sites 0 -doUnobserved 1 -doGVCF 0 --platform 0 -explode 0 -addGL 1 -addGP 0 -addPL 0 -addI16 0 -addQS 0 -addFormatDP 0 -addFormatAD 0 -addFormatADF 0 -addFormatADR 0 -addInfoDP 0 -addInfoAD 0 -addInfoADF 0 -addInfoADR 0
+##source=vcfgl --verbose 0 --threads 1 --input test/t1.vcf --output test/t1_out --output-mode b --depth 1.000000 --error-rate 0.010000 --error-qs 0 --beta-variance -1.000000e+00 --precise-gl 1 --seed 42 --rm-invar-sites 0 --rm-empty-sites 0 -doUnobserved 1 -doGVCF 0 -explode 0 -addGL 1 -addGP 0 -addPL 0 -addI16 0 -addQS 0 -addFormatDP 0 -addFormatAD 0 -addFormatADF 0 -addFormatADR 0 -addInfoDP 0 -addInfoAD 0 -addInfoADF 0 -addInfoADR 0
 ##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihood in log10 likelihood ratio format">
 ##bcftools_viewVersion=1.18+htslib-1.18
 ##bcftools_viewCommand=view test/t1_out.bcf; Date=Tue Nov 21 09:56:53 2023

@@ -255,6 +255,7 @@ ARGS="
 --error-rate 0.2 \
 --gl-model 1 \
 --precise-gl 0 \
+--adjust-qs 3 \
 -explode 1 \
 -doUnobserved 1 \
 -addGP 1 \
@@ -291,6 +292,7 @@ ARGS="
 -explode 0 \
 -doUnobserved 2 \
 -printTruth 1 \
+--adjust-qs 3 \
 -addGP 1 \
 -addPL 1 \
 -addI16 1 \
@@ -328,6 +330,7 @@ ARGS="
 -explode 1 \
 --rm-invar-sites 3 \
 --rm-empty-sites 1 \
+--adjust-qs 3 \
 -doUnobserved 3 \
 -addGP 1 \
 -addPL 1 \
@@ -392,6 +395,7 @@ ARGS="
 --error-rate 0.01 \
 --gl-model 2 \
 --precise-gl 0 \
+--adjust-qs 3 \
 -explode 1 \
 -doUnobserved 4 \
 -addGP 1 \
@@ -426,6 +430,7 @@ ARGS="
 --beta-variance 1e-5 \
 --gl-model 2 \
 --precise-gl 0 \
+--adjust-qs 3 \
 -explode 1 \
 -doUnobserved 4 \
 -addGP 1 \
@@ -462,6 +467,7 @@ ARGS="
 --precise-gl 0 \
 -explode 1 \
 --rm-empty-sites 1 \
+--adjust-qs 3 \
 -doUnobserved 2 \
 -addGP 1 \
 -addPL 1 \
@@ -498,6 +504,7 @@ ARGS="
 -explode 1 \
 --rm-empty-sites 1 \
 -doUnobserved 2 \
+--adjust-qs 3 \
 -addGL 1 \
 -addGP 1 \
 -addPL 1 \
@@ -532,6 +539,7 @@ ARGS="
 --beta-variance 1e-5 \
 --gl-model 2 \
 --precise-gl 0 \
+--adjust-qs 3 \
 -explode 1 \
 -doUnobserved 4 \
 -addGL 1 \
@@ -606,6 +614,7 @@ ARGS="
 --beta-variance 1e-5 \
 --gl-model 2 \
 --precise-gl 0 \
+--adjust-qs 3 \
 -explode 1 \
 -doUnobserved 4 \
 -addGL 1 \
@@ -694,6 +703,7 @@ ARGS=" \
 --error-rate 0.024 \
 --gl-model 2 \
 --source 0 \
+--adjust-qs 3 \
 -explode 1 \
 -doUnobserved 0 \
 -addGL 1 \
@@ -721,6 +731,7 @@ ARGS="
 --precise-gl 0 \
 -explode 0 \
 -doUnobserved 2 \
+--adjust-qs 3 \
 -printTruth 1 \
 -printPileup 1 \
 -addGP 1 \
@@ -739,7 +750,7 @@ runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 # # test16
 ID="test16"
 
-# same as test2, test platform 1 and qs 1
+# same as test2, test qs binning
 
 INFILENAME=${DATADIR}/"data2.vcf"
 
@@ -753,7 +764,8 @@ ARGS="
 -explode 0 \
 -doUnobserved 2 \
 -printTruth 1 \
---platform 1 \
+--qs-bins test/data/rta3_qs_bins.csv \
+--adjust-qs 3 \
 -addGP 1 \
 -addPL 1 \
 -addI16 1 \

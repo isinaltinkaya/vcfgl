@@ -15,6 +15,121 @@ extern const char* nonref_str;
 
 
 
+/// @brief read_qs_bins_file - read the file containing the quality score binning description
+/// @return uint8_t** - array of quality score binning ranges 
+/// @details
+/// The file should contain lines with the following format:
+/// [RangeStart],[RangeEnd],[QualityScoreToAssign]
+/// where the ranges are inclusive. All values should be comma-separated, >=0 and <=255.
+/// The file is assumed to be sorted. 
+/// The ranges must cover the entire range from the first RangeStart to the last RangeEnd.
+///
+/// (1) Example file for NovaSeq 6000 RTA3 binning:
+///
+/// 0,2,2
+/// 3,14,12
+/// 15,30,23
+/// 31,40,37
+///
+/// Assigns quality score 2 to reads with quality scores 0-2, 12 to reads with quality scores 3-14, etc. Any quality score above 40 will be assigned 37. First range start must be 0.
+///
+/// (2) Example 2:
+///
+/// 0,0,2
+/// 1,14,11
+/// 15,30,25
+/// 31,40,37
+/// 
+/// This example demonstrates how to assign a specific quality score to a single quality score value. In this example, quality score 2 is assigned when the simulated quality score is exactly 0.
+uint8_t** read_qs_bins_file(void) {
+
+    if (args->verbose > 0) {
+        fprintf(stderr, "-> Reading quality score binning file: %s\n", args->qs_bins_fn);
+    }
+
+    FILE* fp = NULL;
+    if ((fp = fopen(args->qs_bins_fn, "r")) == NULL) {
+        ERROR("Could not open file: %s\n", args->qs_bins_fn);
+    }
+
+    int rangeStart[256] = { -1 };
+    int rangeEnd[256] = { -1 };
+    int qualityScore[256] = { -1 };
+
+    int i = 0;
+    while (1) {
+        if (EOF == fscanf(fp, "%d,%d,%d\n", &rangeStart[i], &rangeEnd[i], &qualityScore[i])) {
+            break;
+        }
+        if (rangeStart[i] > rangeEnd[i]) {
+            ERROR("Range start value is greater than range end value in line %d of file: %s\n", i + 1, args->qs_bins_fn);
+        }
+        if (rangeStart[i] < 0) {
+            ERROR("Range start value is less than 0 in line %d of file: %s\n", i + 1, args->qs_bins_fn);
+        } else if (rangeStart[i] > 255) {
+            ERROR("Range start value is greater than 255 in line %d of file: %s\n", i + 1, args->qs_bins_fn);
+        }
+        if (rangeEnd[i] < 0) {
+            ERROR("Range end value is less than 0 in line %d of file: %s\n", i + 1, args->qs_bins_fn);
+        } else if (rangeEnd[i] > 255) {
+            ERROR("Range end value is greater than 255 in line %d of file: %s\n", i + 1, args->qs_bins_fn);
+        }
+        if (qualityScore[i] < 0) {
+            ERROR("Quality score value is less than 0 in line %d of file: %s\n", i + 1, args->qs_bins_fn);
+        } else if (qualityScore[i] > 255) {
+            ERROR("Quality score value is greater than 255 in line %d of file: %s\n", i + 1, args->qs_bins_fn);
+        }
+
+        if (i == 0) {
+            if (rangeStart[i] != 0) {
+                ERROR("Quality score range does not start from 0 in line %d of file: %s\n", i + 1, args->qs_bins_fn);
+            }
+        }else{
+            if (rangeStart[i] != (rangeEnd[i - 1] + 1)) {
+                ERROR("Quality score range is not continuous in line %d of file: %s. Previous range end: %d, current range start: %d\n", i + 1, args->qs_bins_fn, rangeEnd[i - 1], rangeStart[i]);
+            }
+        }
+        i++;
+    }
+
+
+    if (args->verbose > 0) {
+        fprintf(stderr, "\n-> Read %d quality score binning ranges from file: %s\n", i, args->qs_bins_fn);
+        if (args->verbose > 1) {
+            fprintf(stderr, "\t-> Ranges: ");
+            for (int j = 0;j < i;j++) {
+                fprintf(stderr, "%d-%d:%d ", rangeStart[j], rangeEnd[j], qualityScore[j]);
+            }
+            fprintf(stderr, "\n");
+        }
+    }
+
+
+    const size_t nRanges = i;
+    if (nRanges == 0) {
+        ERROR("Could not read any quality score binning ranges from file: %s\n", args->qs_bins_fn);
+    }
+
+    /// qs_bins[nRanges]
+    /// qs_bins[i][0] = start of i-th range
+    /// qs_bins[i][1] = end of i-th range
+    /// qs_bins[i][2] = qs value to assign for i-th range
+    args->n_qs_bins = nRanges;
+    uint8_t** ret = (uint8_t**)malloc(nRanges * sizeof(uint8_t*));
+    ASSERT(NULL != ret);
+    for (size_t j = 0;j < nRanges;j++) {
+        ret[j] = (uint8_t*)malloc(3 * sizeof(uint8_t));
+        ASSERT(NULL != ret[j]);
+        ret[j][0] = rangeStart[j];
+        ret[j][1] = rangeEnd[j];
+        ret[j][2] = qualityScore[j];
+    }
+
+    fclose(fp);
+    fp = NULL;
+    return(ret);
+}
+
 
 FILE* get_FILE(const char* fname, const char* mode) {
     FILE* fp;
@@ -138,16 +253,13 @@ void help_page() {
     fprintf(stderr, "                                      1: Genotype likelihood model with correlated errors (a.k.a. Li model, samtools model, angsd -GL 1)\n");
     fprintf(stderr, "                                      2: Canonical genotype likelihood model with independent errors (a.k.a. McKenna model, GATK model, angsd -GL 2)\n");
     fprintf(stderr, "         --gl1-theta FLOAT [0.83] ___ Theta parameter for the genotype likelihood model 1 (requires: -GL 1)\n");
-    fprintf(stderr, "         --platform [0]|1 ___________ 0: Do not use platform specification\n");
-    fprintf(stderr, "                                      1: NovaSeq 6000 (RTA3), qualities are binned into 4 values: 2, 12, 23 and 37\n");
-
+    fprintf(stderr, "         --qs-bins FILE __________ File containing the quality score binning to be used in the simulation\n");
     fprintf(stderr, "         --precise-gl [0]|1 _________ 0: Use the discrete phred-scaled error probabilities in the genotype likelihood calculation\n");
     fprintf(stderr, "                                      1: Use precise error probabilities in the genotype likelihood calculation (requires: -GL 2)\n");
     fprintf(stderr, "         --i16-mapq INT [20] ________ Mapping quality score for I16 tag (requires: -addI16 1)\n");
     fprintf(stderr, "         --gvcf-dps INT(,INT..) _____ Minimum per-sample read depth range(s) for constructing gVCF blocks (requires: -doGVCF 1)\n");
     fprintf(stderr, "                                      Example: `--gvcf-dps 5,10,20` will group invariable sites into three types of gVCF blocks: [5,10), [10,20) and [20,inf)\n");
     fprintf(stderr, "                                      Sites with minimum depth < 5 will be printed as regular VCF records.\n");
-    // fprintf(stderr, "         --adjust-qs INT+ [3] _______ 0: Do not adjust quality scores\n");
     fprintf(stderr, "         --adjust-qs INT+ [%d] _______ %d: Do not adjust quality scores\n", args->adjustQs, ARG_QS_ADJUST_DISABLED);
     fprintf(stderr, "                                      %d: Use adjusted quality scores in genotype likelihoods (requires: --precise-gl 0)\n", ARG_QS_ADJUST_FOR_GL);
     fprintf(stderr, "                                      %d: Use adjusted quality scores in calculating the quality score sum (QS) tag (requires: -addQS 1)\n", ARG_QS_ADJUST_FOR_QSUM);
@@ -178,15 +290,19 @@ void help_page() {
     fprintf(stderr, "         -printBasePickError [0]|1 __ 0: Disabled, 1: Print the base picking error probability to stdout.\n");
     fprintf(stderr, "                                      If --error-qs 1 is used, writes per-read base picking error probabilities to stdout.\n");
     fprintf(stderr, "                                      If --error-qs 0 or 2 is used, writes a single value which is used for all samples and sites.\n");
+    fprintf(stderr, "                                      The columns are: type, sample_id, contig, site, read_index, base_pick_error_prob\n");
     fprintf(stderr, "         -printQsError [0]|1 ________ 0: Disabled, 1: Print the error probability used in quality score calculations to stdout.\n");
     fprintf(stderr, "                                      If --error-qs 2 is used, writes per-read quality score error probabilities to stdout.\n");
     fprintf(stderr, "                                      If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.\n");
+    fprintf(stderr, "                                      The columns are: type, sample_id, contig, site, read_index, error_prob\n");
     fprintf(stderr, "         -printGlError [0]|1 ________ 0: Disabled, 1: Print the error probability used in genotype likelihood calculations to stdout. (requires: -GL 2)\n");
     fprintf(stderr, "                                      Since -GL 1 works directly with quality scores, this option is only available when -GL 2 is used.\n");
     fprintf(stderr, "                                      If --error-qs 2 is used, writes per-read error probabilities to stdout.\n");
     fprintf(stderr, "                                      If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.\n");
     fprintf(stderr, "                                      If --precise-gl 1 is used, the printed values are the same as those printed by -printQsError.\n");
+    fprintf(stderr, "                                      The columns are: type, sample_id, contig, site, read_index, error_prob\n");
     fprintf(stderr, "         -printQScores [0]|1 ________ 0: Disabled, 1: Print the quality scores to stdout.\n");
+    fprintf(stderr, "                                      The columns are: type, sample_id, contig, site, read_index, qScore\n");
 
     fprintf(stderr, "\n");
     fprintf(stderr, "Output VCF/BCF tags:                  0: Do not add, 1: Add\n");
@@ -238,11 +354,11 @@ argStruct* args_init() {
     args->beta_variance = -1.0;
     args->GL = 2;
     args->glModel1_theta = 0.83;
-    args->platform = 0;
+    args->qs_bins_fn = NULL;
     args->usePreciseGlError = 0;
     args->i16_mapq = ARG_I16_MAPQ_DEFAULT;
     args->gvcf_dps_str = NULL;
-    args->adjustQs = 3;
+    args->adjustQs = ARG_QS_ADJUST_DISABLED;
     args->adjustBy = 0.499;
 
     args->explode = 0;
@@ -303,6 +419,10 @@ argStruct* args_init() {
     args->preCalc = NULL;
 
     args->gl1errmod = NULL;
+
+    args->qs_bins = NULL;
+    args->n_qs_bins = 0;
+
 
     return(args);
 }
@@ -409,8 +529,8 @@ argStruct* args_get(int argc, char** argv) {
             args->glModel1_theta = atof(val);
         }
 
-        else if (strcasecmp("--platform", arv) == 0) {
-            args->platform = atoi(val);
+        else if (strcasecmp("--qs-bins", arv) == 0) {
+            args->qs_bins_fn = strdup(val);
         }
 
         else if (strcasecmp("--precise-gl", arv) == 0) {
@@ -639,7 +759,6 @@ argStruct* args_get(int argc, char** argv) {
 
     CHECK_ARG_INTERVAL_INT(args->GL, 1, 2, "--gl-model");
     CHECK_ARG_INTERVAL_DBL(args->glModel1_theta, 0.0, 1.0, "--gl1-theta");
-    CHECK_ARG_VALUES_LIST(args->platform, "--platform", ARG_PLATFORM_NONE, ARG_PLATFORM_RTA3);
     CHECK_ARG_INTERVAL_01(args->usePreciseGlError, "--precise-gl");
     CHECK_ARG_INTERVAL_INT(args->i16_mapq, 0, 60, "--i16-mapq");
     CHECK_ARG_INTERVAL_INT(args->adjustQs, 0, ARGMAX_QS_ADJUST, "--adjust-qs");
@@ -785,6 +904,12 @@ argStruct* args_get(int argc, char** argv) {
         args->mps_depths = args->read_depthsFile();
     }
 
+
+    if (args->qs_bins_fn != NULL) {
+        args->qs_bins = read_qs_bins_file();
+    }
+
+
     args->arg_fp = open_FILE(args->out_fnprefix, ".arg");
 
     args->datetime = (char*)malloc(256 * sizeof(char));
@@ -912,7 +1037,7 @@ argStruct* args_get(int argc, char** argv) {
 
     ASSERT(asprintf(
         &args->command,
-        "Command: vcfgl --verbose %d --threads %d --seed %d --input %s --source %d --output %s --output-mode %s %s --error-rate %f --error-qs %d %s %s --platform %d --precise-gl %d %s %s --adjust-qs %d %s -explode %d --rm-invar-sites %d --rm-empty-sites %d -doUnobserved %d -doGVCF %d -printPileup %d -printTruth %d  -printBasePickError %d -printQsError %d -printGlError %d -printQScores %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d -addFormatDP %d -addInfoDP %d -addFormatAD %d -addInfoAD %d -addFormatADF %d -addInfoADF %d -addFormatADR %d -addInfoADR %d",
+        "Command: vcfgl --verbose %d --threads %d --seed %d --input %s --source %d --output %s --output-mode %s %s --error-rate %f --error-qs %d %s %s %s %s --precise-gl %d %s %s --adjust-qs %d %s -explode %d --rm-invar-sites %d --rm-empty-sites %d -doUnobserved %d -doGVCF %d -printPileup %d -printTruth %d  -printBasePickError %d -printQsError %d -printGlError %d -printQScores %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d -addFormatDP %d -addInfoDP %d -addFormatAD %d -addInfoAD %d -addFormatADF %d -addInfoADF %d -addFormatADR %d -addInfoADR %d",
         args->verbose,
         args->n_threads,
         args->seed,
@@ -925,7 +1050,8 @@ argStruct* args_get(int argc, char** argv) {
         args->error_qs,
         beta_variance_str,
         gl_model_str,
-        args->platform,
+        (args->qs_bins_fn == NULL) ? "" : "--qs-bins",
+        (args->qs_bins_fn == NULL) ? "" : args->qs_bins_fn,
         args->usePreciseGlError,
         i16_mapq_str,
         gvcf_dps_val,
@@ -1223,5 +1349,8 @@ double* argStruct::read_depthsFile(void) {
     fclose(fp);
     return(ret);
 }
+
+
+
 
 

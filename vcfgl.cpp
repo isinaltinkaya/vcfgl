@@ -19,6 +19,20 @@ argStruct* args;
 const char* nonref_str;
 
 
+/// qs_bins[nRanges]
+/// qs_bins[i][0] = start of i-th range
+/// qs_bins[i][1] = end of i-th range
+/// qs_bins[i][2] = qs value to assign for i-th range
+static int apply_qs_bins(const int in_qs) {
+    for (size_t i = 0; i < args->n_qs_bins; ++i) {
+        if (in_qs >= args->qs_bins[i][0] && in_qs <= args->qs_bins[i][1]) {
+            return (args->qs_bins[i][2]);
+        }
+    }
+    ERROR("Could not find a range for qs value %d", in_qs);
+}
+
+
 int rec_alleles[5] = { -1, -1, -1, -1, -1 };
 int* true_gts_acgt_int = NULL;
 int* true_gts_alleles_idx = NULL;
@@ -470,12 +484,17 @@ int simulate_record_values(simRecord* sim) {
                         ERROR("Bad error probability value: %f", error_prob_forQs_i);
                     }
 
-                    qScore_i = (qScore_i > CAP_BASEQ) ? CAP_BASEQ : qScore_i;
-                    qScore_i = (ARG_PLATFORM_RTA3 == args->platform) ? APPLY_RTA3_QSCORE_BINNING(qScore_i) : qScore_i;
 
-                    if (PROGRAM_WILL_ADJUST_QS) {
-                        adjqScore_i = (adjqScore_i > CAP_BASEQ) ? CAP_BASEQ : adjqScore_i;
-                        adjqScore_i = (ARG_PLATFORM_RTA3 == args->platform) ? (APPLY_RTA3_QSCORE_BINNING(adjqScore_i)) : adjqScore_i;
+                    if (args->n_qs_bins != 0) {
+                        qScore_i = apply_qs_bins(qScore_i);
+                        if (PROGRAM_WILL_ADJUST_QS) {
+                            adjqScore_i = apply_qs_bins(adjqScore_i);
+                        }
+                    } else {
+                        qScore_i = (qScore_i > CAP_BASEQ) ? CAP_BASEQ : qScore_i;
+                        if (PROGRAM_WILL_ADJUST_QS) {
+                            adjqScore_i = (adjqScore_i > CAP_BASEQ) ? CAP_BASEQ : adjqScore_i;
+                        }
                     }
 
                     sim->base_qScores[s][read_i] = qScore_i;
@@ -1542,14 +1561,23 @@ int main(int argc, char** argv) {
             ERROR("Bad error probability value: %f", args->preCalc->error_prob_forQs);
         }
 
-        qs = (qs > CAP_BASEQ) ? CAP_BASEQ : qs;
-        qs = (ARG_PLATFORM_RTA3 == args->platform) ? APPLY_RTA3_QSCORE_BINNING(qs) : qs;
+        if (args->n_qs_bins != 0) {
+            qs = apply_qs_bins(qs);
+            if (PROGRAM_WILL_ADJUST_QS) {
+                adjqs = apply_qs_bins(adjqs);
+            }
+        } else {
+            qs = (qs > CAP_BASEQ) ? CAP_BASEQ : qs;
+            if (PROGRAM_WILL_ADJUST_QS) {
+                adjqs = (adjqs > CAP_BASEQ) ? CAP_BASEQ : adjqs;
+            }
+        }
+
+
         args->preCalc->qScore = qs;
         args->preCalc->q5 = args->preCalc->qScore << 5;
 
         if (PROGRAM_WILL_ADJUST_QS) {
-            adjqs = (adjqs > CAP_BASEQ) ? CAP_BASEQ : adjqs;
-            adjqs = (ARG_PLATFORM_RTA3 == args->platform) ? APPLY_RTA3_QSCORE_BINNING(adjqs) : adjqs;
             args->preCalc->adj_qScore = adjqs;
             args->preCalc->adj_q5 = args->preCalc->adj_qScore << 5;
         }
