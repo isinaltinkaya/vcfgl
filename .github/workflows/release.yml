@@ -24,7 +24,6 @@ jobs:
           git clone --depth 1 --branch "${tag}" https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY_OWNER}/${GITHUB_REPOSITORY#*/}.git
       - name: Build release tarball
         run: |
-          bash ./${GITHUB_REPOSITORY#*/}/.github/workflows/create_release_tarball.sh ${GITHUB_REPOSITORY_OWNER} ${GITHUB_REPOSITORY#*/} ${tag}
           HTSLIB_LATEST=$(curl -s https://api.github.com/repos/samtools/htslib/releases/latest | jq -r '.assets[].browser_download_url');
           printf "\n-> Using latest htslib release: ${HTSLIB_LATEST}\n"
           wget ${HTSLIB_LATEST}
@@ -55,3 +54,4 @@ jobs:
               --repo="${GITHUB_REPOSITORY}" \
               --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
               "${GITHUB_REPOSITORY#*/}-${tag#v}".tar.gz
+
