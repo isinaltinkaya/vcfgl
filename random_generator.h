@@ -9,7 +9,7 @@
 #define sample_uniform_rng0() drand48()
 #define sample_uniform_rng1() erand48(rng1_seeder)
 #define sample_uniform_rng2() erand48(rng2_seeder)
-#define sample_uniform_rng_rand ((double)rand() / (double)RAND_MAX)
+#define sample_uniform_rng_rand ((double)rand() / (double)RAND_MAX + 1.0)
 #define sample_from_range_rng_rand(min,max) ( (min) + (rand()) / (RAND_MAX / ((max) - (min) + 1) +1));
 
 #define SQUARE(x) (((x)*(x)))

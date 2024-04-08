@@ -199,23 +199,39 @@ DEP := $(OBJ:.o=.d)
 
 -include $(DEP)
 
+####################################################################################################
+## [install]
+.PHONY: install
+
+prefix          = /usr/local
+exec_prefix     = $(prefix)
+bindir          = $(exec_prefix)/bin
+
+INSTALL         = install
+INSTALL_DIR     = $(INSTALL) -dm0755
+INSTALL_PROGRAM = $(INSTALL) -m0755
+
+install: $(PROGRAM)
+	$(INSTALL_DIR) $(DESTDIR)$(bindir)
+	$(INSTALL_PROGRAM) $(PROGRAM) $(DESTDIR)$(bindir)
+
+####################################################################################################
 
 FLAGS := $(CPPFLAGS) $(CXXFLAGS)
 
 
+####################################################################################################
 # Versioning
-VERSION = v0.5
+VERSIONNO = 1.0.0
 
-ifneq ($(wildcard .git),)
-VERSION := $(VERSION)-$(shell git describe --always)
-endif
+VERSION := v$(VERSIONNO)-$(shell git describe --always)
 
 VERSIONH = version.h
 
 $(VERSIONH):
-	$(if $(wildcards version.h),$(if $(findstring "$(VERSION)",$(shell cat version.h)),,$(shell echo '#define VCFGL_VERSION "$(VERSION)"' > version.h)), $(shell echo '#define VCFGL_VERSION "$(VERSION)"' > version.h))
+	@echo '#define VCFGL_VERSION "$(VERSION)"' > $@
 
-
+####################################################################################################
 # Build info
 BUILDH = build.h
 
@@ -308,6 +324,7 @@ help:
 	@echo ""
 	@echo " Targets:"
 	@echo "   help    - Print this help message"
+	@echo "   install - Install the program to $(bindir)"
 	@echo "   dev     - Compile in developer/debug mode (activates flags: -g -Wall -O0)"
 	@echo "   clean   - Clean up the directory"
 	@echo "   test    - Run unit tests"

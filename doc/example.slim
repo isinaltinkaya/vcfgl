@@ -1,0 +1,22 @@
+initialize() {
+	setSeed(42);
+	defineConstant("L", 20);
+	initializeSLiMOptions(nucleotideBased=T);
+	initializeAncestralNucleotides(randomNucleotides(L));
+	initializeMutationTypeNuc("m1", 0.5, "f", 0.0);
+	initializeGenomicElementType("g1", m1, 1.0, mmJukesCantor(2.5e-5));
+	initializeGenomicElement(g1, 0, L-1);
+	initializeRecombinationRate(1e-8);
+}
+
+1 late() {
+	defineConstant("simID",getSeed());
+	sim.addSubpop("p1", 200);
+	sim.addSubpop("p2", 200);
+}
+
+5000 late() {
+	p1samples = p1.sampleIndividuals(5);
+	p2samples = p2.sampleIndividuals(5);
+	c(p1samples, p2samples).genomes.outputVCF(filePath="slim_out.vcf",simplifyNucleotides=T);
+}

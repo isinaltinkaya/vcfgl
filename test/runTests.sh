@@ -192,7 +192,7 @@ runTest(){
 		local vgFile=${outPref}.vg.log
 		local vgrun;
 		eval ${cmd}
-		exitCode=$?
+		local exitCode=$?
 
 		if [ ${exitCode} -eq 0 ]; then
 			printf "${GREEN}"
@@ -213,7 +213,7 @@ runTest(){
 
 	elif [ ${TESTTYPE} == "regular" ]; then
 		eval ${cmd}
-		exitCode=$?
+		local exitCode=$?
 
 		if [ ${exitCode} -eq 0 ]; then
 			printf "${GREEN}"

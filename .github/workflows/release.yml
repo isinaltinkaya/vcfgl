@@ -1,0 +1,57 @@
+name: "release"
+
+on:
+  push:
+    tags:
+      - "v*"
+env:
+  GITHUB_TOKEN: ${{ github.TOKEN }}
+  tag: ${{ github.ref_name }}
+jobs:
+  release:
+    name: Prepare for new release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      repository-projects: write
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update; sudo apt-get install libcurl4-openssl-dev
+      - name: Download the program version associated with this release
+        run: |
+          git clone --depth 1 --branch "${tag}" https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY_OWNER}/${GITHUB_REPOSITORY#*/}.git
+      - name: Build release tarball
+        run: |
+          bash ./${GITHUB_REPOSITORY#*/}/.github/workflows/create_release_tarball.sh ${GITHUB_REPOSITORY_OWNER} ${GITHUB_REPOSITORY#*/} ${tag}
+          HTSLIB_LATEST=$(curl -s https://api.github.com/repos/samtools/htslib/releases/latest | jq -r '.assets[].browser_download_url');
+          printf "\n-> Using latest htslib release: ${HTSLIB_LATEST}\n"
+          wget ${HTSLIB_LATEST}
+          HTSLIBDIR=${HTSLIB_LATEST##*/}
+          tar -xvkf ${HTSLIBDIR} 
+          mv -v ${HTSLIBDIR%.tar.bz2} htslib
+          TAR=${GITHUB_REPOSITORY#*/}-${tag#v}.tar.gz
+          tar --exclude='./.git*' -cvf ${TAR} ${GITHUB_REPOSITORY#*/} htslib/
+      - name: Test release tarball
+        run: |
+          TAR=${GITHUB_REPOSITORY#*/}-${tag#v}.tar.gz
+          TESTDIR=tarball_test
+          mkdir -pv ${TESTDIR}
+          cp ${TAR} ${TESTDIR}/
+          cd ${TESTDIR}
+          tar xf ${TAR} 
+          cd htslib
+          make 
+          cd ../${GITHUB_REPOSITORY#*/} 
+          make HTSSRC=../htslib
+          make test
+      - name: Create a new draft release with the release tarball
+        shell: bash
+        run: |
+          gh release create "${tag}" \
+              --draft \
+              --generate-notes \
+              --repo="${GITHUB_REPOSITORY}" \
+              --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
+              "${GITHUB_REPOSITORY#*/}-${tag#v}".tar.gz

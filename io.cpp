@@ -189,7 +189,10 @@ void version_page() {
     fprintf(stderr, "\t-> FLAGS=%s\n", VCFGL_MAKE_FLAGS);
     fprintf(stderr, "\t-> HTSSRC=%s\n", VCFGL_MAKE_HTSSRC);
     fprintf(stderr, "\n");
+}
 
+void version_number() {
+    fprintf(stderr, "%s\n", VCFGL_VERSION);
 }
 
 void help_page() {
@@ -253,7 +256,7 @@ void help_page() {
     fprintf(stderr, "                                      1: Genotype likelihood model with correlated errors (a.k.a. Li model, samtools model, angsd -GL 1)\n");
     fprintf(stderr, "                                      2: Canonical genotype likelihood model with independent errors (a.k.a. McKenna model, GATK model, angsd -GL 2)\n");
     fprintf(stderr, "         --gl1-theta FLOAT [0.83] ___ Theta parameter for the genotype likelihood model 1 (requires: -GL 1)\n");
-    fprintf(stderr, "         --qs-bins FILE __________ File containing the quality score binning to be used in the simulation\n");
+    fprintf(stderr, "         --qs-bins FILE _____________ File containing the quality score binning to be used in the simulation\n");
     fprintf(stderr, "         --precise-gl [0]|1 _________ 0: Use the discrete phred-scaled error probabilities in the genotype likelihood calculation\n");
     fprintf(stderr, "                                      1: Use precise error probabilities in the genotype likelihood calculation (requires: -GL 2)\n");
     fprintf(stderr, "         --i16-mapq INT [20] ________ Mapping quality score for I16 tag (requires: -addI16 1)\n");
@@ -448,6 +451,10 @@ argStruct* args_get(int argc, char** argv) {
 
         else if ((strcmp("--version", arv) == 0) || (strcmp("-v", arv) == 0)) {
             version_page();
+            exit(0);
+        }
+        else if ((strcmp("-vv", arv) == 0)){
+			version_number();
             exit(0);
         }
 
@@ -1218,6 +1225,11 @@ void args_destroy(argStruct* args) {
         args->mps_depths_fn = NULL;
     }
 
+    if (NULL != args->qs_bins_fn) {
+        free(args->qs_bins_fn);
+        args->qs_bins_fn = NULL;
+    }
+
     free(args->gvcf_dps_str);
     args->gvcf_dps_str = NULL;
 
@@ -1277,6 +1289,15 @@ void args_destroy(argStruct* args) {
 
     if (args->gl1errmod != NULL) {
         errmod_destroy(args->gl1errmod);
+    }
+
+    if(args->qs_bins != NULL) {
+        for(size_t i=0; i<args->n_qs_bins; ++i) {
+            free(args->qs_bins[i]);
+            args->qs_bins[i] = NULL;
+        }
+        free(args->qs_bins);
+        args->qs_bins = NULL;
     }
 
     free(args);

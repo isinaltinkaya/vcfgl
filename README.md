@@ -46,37 +46,53 @@ TODO:
       </ul>
     </li>
     <li><a href="#usage">Usage</a>
-    <ol>
+    <!-- <ol>
       <li><a href="#general-options">General Options</a></li>
       <li><a href="#inputoutput">Input/Output</a></li>
       <li><a href="#simulation-parameters">Simulation Parameters</a></li>
       <li><a href="#output-vcfbcf-tags">Output VCF/BCF Tags</a></li>
-    </ol>
+    </ol> -->
     </li>
       <li><a href="#tutorials">Tutorials</a>
       <ol>
-        <li><a href="#doGVCF">Simulating gVCF files</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/install.MD">Installation</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/depth.MD">Simulating read depths</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/error_qs.MD">Simulating quality score errors</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/simulate_unobserved.MD">Simulating unobserved sites</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/qs_binning.MD">Simulate quality score binning</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/with_msprime.MD">Using vcfgl with msprime</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/with_stdpopsim.MD">Using vcfgl with stdpopsim</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/with_SLiM.MD">Using vcfgl with SLiM</a></li>
       </ol>
+    <li><a href="#quickstart-for-mstoglf-users">Quickstart for msToGlf users</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#how-to-cite">How to cite</a></li>
   </ol>
 </details>
 
-## Overview
+# Overview
 
 **vcfgl** is a lightweight command-line program for simulating VCF/BCF and gVCF files. It allows you to simulate sequencing data with various parameters, such as read depth, base-calling error rates, quality score errors, and genotype likelihood models.
 
-## Installation
-
-<!-- ### Prerequisites
-
-HTSlib -->
+# Installation
 
 You can install **vcfgl** using one of the following methods:
 
-### &rarr; Method 1: Using HTSlib submodule
+### &rarr; Method 1: Using release tarball (recommended)
 
-This method uses the htslib submodule in the repository.
+You can download the latest release tarball from the [GitHub releases page](https://github.com/isinaltinkaya/vcfgl/releases/latest).
+
+```shell
+wget https://github.com/isinaltinkaya/vcfgl/releases/download/v1.0.0/vcfgl-1.0.0.tar.gz
+tar xf vcfgl-1.0.0.tar.gz
+cd htslib; make;
+cd ../vcfgl; 
+make HTSSRC=../htslib;
+```
+
+### &rarr; Method 2: Using HTSlib submodule
+
+This method uses the htslib submodule included in the repository.
 
 ```shell
 git clone https://github.com/isinaltinkaya/vcfgl.git;
@@ -84,7 +100,7 @@ cd vcfgl;
 make;
 ```
 
-### &rarr; Method 2: Using systemwide HTSlib installation
+### &rarr; Method 3: Using systemwide HTSlib installation
 
 This method assumes you have a systemwide htslib installation.
 
@@ -94,7 +110,7 @@ cd vcfgl;
 make HTSSRC="systemwide";
 ```
 
-### &rarr; Method 3: Using specified HTSlib path
+### &rarr; Method 4: Using specified HTSlib path
 
 This method allows you to specify the path to your htslib installation.
 
@@ -149,48 +165,13 @@ You can access the command-line help page using `vcfgl --help` or `vcfgl -h`:
 <details open>
 <summary> <code> vcfgl --help </code></summary>
 <pre>
-Program: vcfgl
-License: GNU GPLv3.0
-Version: v0.5-1b08819 (htslib: 1.15.1-20-g46c56fcc)
-Build: Mar 31 2024 12:56:59
+
+<pre>
 
 Usage: vcfgl -i &lt;input&gt; [options]
 
     -h, --help _____________________  Print this help message and exit
     -v, --version __________________  Print version and build information and exit
-
-Option descriptions:
-     -s, --long-option TYPE [X] _____ Description
-     -s                               Short option (if any)
-         --long-option                Long option
-                       TYPE           Type of the argument value, can be:
-                                        - INT (integer)
-                                        - INT+ (additive integer: sum values to use together
-                                        - FLOAT (floating point number)
-                                        - STRING (string)
-                                        - FILE (filename)
-                                        - x|y|z (one of the listed values x, y or z)
-                            [X]       Default argument value (if any)
-                                _____ Connector to the option description for better readability
-
-<pre>$ ./vcfgl -h
-
-Usage: vcfgl -i &lt;input&gt; [options]
-
-Option descriptions:
-     -s, --long-option TYPE [X] _____ Description
-     -s                               Short option (if any)
-         --long-option                Long option
-                       TYPE           Type of the argument value, can be:
-                                        - INT (integer)
-                                        - INT+ (additive integer: sum values to use together
-                                        - FLOAT (floating point number)
-                                        - STRING (string)
-                                        - FILE (filename)
-                                        - x|y|z (one of the listed values x, y or z)
-                            [X]       Default argument value (if any)
-                                _____ Connector to the option description for better readability
-
 
 General options:
     -V, --verbose INT [0] ___________ Verbosity level
@@ -282,9 +263,10 @@ Output VCF/BCF tags:                  0: Do not add, 1: Add
          -addInfoADF [0]|1 __________ Total forward-strand allelic read depth (INFO/ADF) tag
          -addInfoADR [0]|1 __________ Total reverse-strand allelic read depth (INFO/ADR) tag
 </pre>
+</pre>
 </details>
 
-<details> <summary> Option descriptions </summary>
+<details closed> <summary> <b> Option descriptions </b> </summary>
 
 Option format is `-s, --long-option TYPE [X]: Description` where `-s` is the short format of the option (if any), `--long-option` is the long option, `TYPE` is the type of the argument value, and `[X]` denotes that the default argument value is `X` (if any).
 
@@ -302,7 +284,7 @@ Type of the argument values can be:
 
 </details>
 
-## General Options
+<details closed> <summary> <b> General options </b> </summary>
 
 - `-v, --verbose INT [0]`: Verbosity level.
 - `-@, --threads INT [1]`: Number of threads.
@@ -310,7 +292,9 @@ Type of the argument values can be:
 
   N.B. If multiple simulations are run in parallel and the seed is not defined, the random number generator may be initialized with the same seed for all of the simulations, given that it is likely that the simulations start at the same time. Therefore, it is highly recommended to set the seed manually when running multiple simulations in parallel.
 
-## Input/Output
+</details>
+
+<details closed> <summary> <b> Input/Output </b> </summary>
 
 - `-i, --input FILE`: Input filename.
 - `-o, --output STRING ['output']`: Output filename prefix. If not defined, the output filename prefix will be set to `output`. The program will append the suffix to the output filename prefix based on the given options. A simulation argument values log file (ending with `.arg`) is always generated.
@@ -325,7 +309,11 @@ Type of the argument values can be:
   - `z`: Compressed VCF (`.vcf.gz`)
   - `v`: Uncompressed VCF (`.vcf`)
 
-## Simulation Parameters
+</details>
+
+
+<details closed> <summary> <b> Simulation parameters </b> </summary>
+
 
 - `-d, --depth FLOAT|'inf'`: Mean per-site read depth
 - `-df, --depths-file FILE`: File containing mean per-site read depth values for each sample (one value per line)
@@ -356,8 +344,10 @@ Type of the argument values can be:
 - `-printGlError [0]|1`: Print the error probability used in genotype likelihood calculations to stdout. The columns are: type, sample_id, contig, site, read_index, error_prob
 - `-printQScores [0]|1`: Print the quality scores to stdout. The columns are: type, sample_id, contig, site, read_index, qScore
 
+</details>
 
-## Output VCF/BCF Tags
+<details closed> <summary> <b> Output VCF/BCF tags </b> </summary>
+
 
 Control which tags are added to the output VCF/BCF files.
 
@@ -375,145 +365,27 @@ Control which tags are added to the output VCF/BCF files.
 - `-addInfoADF [0]|1`: Total forward-strand allelic read depth (INFO/ADF) tag
 - `-addInfoADR [0]|1`: Total reverse-strand allelic read depth (INFO/ADR) tag
 
+</details>
+
 # Tutorials
 
-# Contact
-
-If you have any questions about the program, feature requests, or bug reports, you can open a new issue at [GitHub Issues](https://github.com/isinaltinkaya/vcfgl/issues). Alternatively, you can contact the main developer using the contact information at [isinaltinkaya.com](http://isinaltinkaya.com/).
-
-# How to cite
-
-<!-- For more details, please refer to the documentation at [](). -->
-
-<!--
-
-1. For each site; for each haplotype; sample number of reads from Poisson distribution with mean equal to given depth value
-
-2. Simulating error
-
-(2.1) Probability of error: e
-
-(2.2) Probability of sampling an incorrect allele due to error: error rate × 1/3
-
-(2.3) Probability of sampling correct allele: 1 − error rate
-
-4. Normalize the log10 genotype likelihood by substracting the maximum genotype likelihood value
-observed at site. -->
-
-<!--
-## Installation
-
-To install **vcfgl**, simply download the binary executable for your platform from the [latest releases](https://github.com/your-username/vcfgl/releases) on GitHub.
-### Method 0: Using release tarball
-
-//// TODO
-
- -->
-<!--
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/install.MD">Installation</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/depth.MD">Simulating read depths</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/error_qs.MD">Simulating quality score errors</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/simulate_unobserved.MD">Simulating unobserved sites</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/qs_binning.MD">Simulate quality score binning</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/with_msprime.MD">Using vcfgl with msprime</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/with_stdpopsim.MD">Using vcfgl with stdpopsim</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/with_SLiM.MD">Using vcfgl with SLiM</a></li>
 
 
-## Input file
+# Quickstart for msToGlf users
 
-Input is typically a VCF/BCF file obtained by `tskit.write_vcf`.
-
-Input file shoud have binary haplotypes set as REF and ALT alleles. For obtaining this format from mutation simulations, you can use the binary model with `sim_mutations`:
-
-```python
-mut_ts = msprime.sim_mutations(ts, ..., model="binary")
-with open("simulated.vcf","w") as vcf:
-    mut_ts.write_vcf(vcf)
-```
-
-For more information about the python code please refer to <https://tskit.dev/tskit/docs/stable/python-api.html>.
-
-
-
-## Simulate unobserved invariable sites (`-explode 1`)
-
-You can use `-explode 1` to expand simulations to the sites not observed in the input VCF file.
-
-
-Example command:
-```shell
-./vcfgl -i example.vcf -e 0.01 -d 5 -O v -d 3 --seed 42 -explode 1
-```
-
-Example input: `example.vcf`
-
-Our input file contains two sites, and its header contains one chromosome named "chr22" with length 5.
-```
-##fileformat=VCFv4.2
-##FILTER=<ID=PASS,Description="All filters passed">
-##contig=<ID=chr22,length=5>
-##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind1	ind2
-chr22	1	.	0	1	.	PASS	.	GT	0|0	0|0
-chr22	3	.	0	1	.	PASS	.	GT	1|1	1|1
-```
-
-
-Example output: `output.vcf`
-
-The missing 3 sites (at position 2,4, and 5) are generated by `-explode 1` by setting all individuals' genotypes to `0|0`. Thus the output file contains information for all sites.
-```
-##fileformat=VCFv4.2
-##FILTER=<ID=PASS,Description="All filters passed">
-##contig=<ID=chr22,length=5>
-##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-##fileDate=Tue Sep 12 15:46:49 2023
-##source=vcfgl --input example.vcf --output output --output-mode v --error-rate 0.010000 --depth 3.000000 --depths-file (null) --seed 42 -explode 1 -printBaseCounts 0 -addGP 0 -addPL 0 -addI16 0 -addQS 0
-##source=vcfgl version: v0.3.0 ee51b23-dirty
-##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihood in log10 likelihood ratio format">
-##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Simulated per-sample read depth">
-#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind1	ind2
-chr22	1	.	A	C,G,T	.	PASS	.	GT:DP:GL	0|0:2:0,-0.59914,-4.94551,-0.59914,-4.94551,-4.94551,-0.59914,-4.94551,-4.94551,-4.94551	0|0:5:0,-1.49785,-12.3638,-1.49785,-12.3638,-12.3638,-1.49785,-12.3638,-12.3638,-12.3638
-chr22	2	.	A	C,G,T	.	PASS	.	GT:DP:GL	0|0:3:0,-0.898711,-7.41827,-0.898711,-7.41827,-7.41827,-0.898711,-7.41827,-7.41827,-7.41827	0|0:2:0,-0.59914,-4.94551,-0.59914,-4.94551,-4.94551,-0.59914,-4.94551,-4.94551,-4.94551
-chr22	3	.	A	C,G,T	.	PASS	.	GT:DP:GL	1|1:1:-2.47276,-0.29957,0,-2.47276,-0.29957,-2.47276,-2.47276,-0.29957,-2.47276,-2.47276	1|1:4:-9.89103,-1.19828,0,-9.89103,-1.19828,-9.89103,-9.89103,-1.19828,-9.89103,-9.89103
-chr22	4	.	A	C,G,T	.	PASS	.	GT:DP:GL	0|0:5:0,-1.49785,-12.3638,-1.49785,-12.3638,-12.3638,-1.49785,-12.3638,-12.3638,-12.3638	0|0:2:0,-0.59914,-4.94551,-0.59914,-4.94551,-4.94551,-0.59914,-4.94551,-4.94551,-4.94551
-chr22	5	.	A	C,G,T	.	PASS	.	GT:DP:GL	0|0:4:0,-1.19828,-9.89103,-1.19828,-9.89103,-9.89103,-1.19828,-9.89103,-9.89103,-9.89103	0|0:4:0,-1.19828,-9.89103,-1.19828,-9.89103,-9.89103,-1.19828,-9.89103,-9.89103,-9.89103
-```
-
-
-## Define different depths for individuals using `--depths-file <filename>`
-
-Example: You want to set the average per-site read depth of different individuals to the target read depths as:
-
-sample | target depth
--- | --
-ind1 | 1
-ind2 | 5
-ind3 | 0.4
-ind4 | 4
-
-Your depths file should contain one line per individual.
-
-Example depths file: `depths.txt`
-```
-1
-5
-0.4
-4
-```
-
-Then, you can run vcfgl using
-```shell
-./vcfgl -i input.vcf --depths-file depths.txt
-```
-
-
-## Set the values to known true variables using `--depth inf`
-
-This is useful for comparing the genotype calling-based methods with genotype likelihood-based methods. It will set the values in GL, GP, and PL tags to the best possible values corresponding to the input genotypes. Therefore, instead of using `--depth 100`, you can simulate the best possible values quickly.
-
-___
-
-## Notes for ANGSD/msToGlf users
-
-The basic functionality of the program (`--error-qs 0`) is designed to simulate data equivalent to those simulated using [msToGlf](https://github.com/ANGSD/angsd/blob/master/misc/msToGlf.c).
+The basic functionality of the program (i.e. simulation without errors in quality scores, `--error-qs 0`) is designed to simulate data equivalent to those simulated using [msToGlf](https://github.com/ANGSD/angsd/blob/master/misc/msToGlf.c).
 Similar to msToGlf, vcfgl can simulate the genotype likelihoods using direct genotype likelihood model via `-GL 2`, and output pileup format via `-printPileup 1`.
 
 
-```shell
+```
 msToGlf -in input.ms -out output -err 0.01 -depth 1 -pileup 1
 ```
 
@@ -522,164 +394,11 @@ is equivalent to
 ```shell
 vcfgl -i input.vcf -o output --error-qs 0 -e 0.01 -d 1 -GL 2 -printPileup 1
 ```
-## Errors in quality scores
 
-You can use `--error-qs 1` to simulate errors in quality scores by simulating the site-specific errors in the probability of wrong base calls not accounted in the reported quality scores and genotype likelihoods. The error-base choosing uses the beta distribution-sampled error rates and the reported quality scores use the beta distribution mean (i.e. the error rate).
+# Contact
 
-You can use `--error-qs 2` to simulate errors in quality scores by simulating the errors in the reported quality scores and genotype likelihoods. The error-base choosing uses the beta distribution mean (i.e. the error rate) and the reported quality scores use the beta distribution-sampled error rates.
+If you have any questions about the program, feature requests, or bug reports, you can open a new issue at [GitHub Issues](https://github.com/isinaltinkaya/vcfgl/issues). Alternatively, you can contact the main developer using the contact information at [isinaltinkaya.com](http://isinaltinkaya.com/).
 
+# How to cite
 
-## Simulate quality score binning
-
-/// @brief read_qs_bins_file - read the file containing the quality score binning description
-/// @return uint8_t** - array of quality score binning ranges 
-/// @details
-/// The file should contain lines with the following format:
-/// [RangeStart],[RangeEnd],[QualityScoreToAssign]
-/// where the ranges are inclusive. All values should be comma-separated, >=0 and <=255.
-/// The file is assumed to be sorted. 
-/// The ranges must cover the entire range from the first RangeStart to the last RangeEnd.
-///
-/// (1) Example file for NovaSeq 6000 RTA3 binning:
-///
-/// 0,2,2
-/// 3,14,12
-/// 15,30,23
-/// 31,40,37
-///
-/// Assigns quality score 2 to reads with quality scores 0-2, 12 to reads with quality scores 3-14, etc. Any quality score above 40 will be assigned 37. First range start must be 0.
-///
-/// (2) Example 2:
-///
-/// 0,0,2
-/// 1,14,11
-/// 15,30,25
-/// 31,40,37
-/// 
-/// This example demonstrates how to assign a specific quality score to a single quality score value. In this example, quality score 2 is assigned when the simulated quality score is exactly 0.
-uint8_t** read_qs_bins_file(void) {
-
-
-You can simulate the base quality score binning by using the `--qs-bins <FILE>` option. The file should contain lines with the following format:
-```
-[RangeStart],[RangeEnd],[QualityScoreToAssign]
-```
-where the ranges are inclusive. All values should be comma-separated, >=0 and <=255. The ranges must cover the entire range from the first RangeStart to the last RangeEnd. The first range start must be 0, and the file is assumed to be sorted. 
-
-Following is an example file for NovaSeq 6000 (RTA3) binning. Please note that these values may change depending on the sequencing platform and the provider.
-
-```
-0,2,2
-3,14,12
-15,30,23
-31,40,37
-```
-
-Assigns quality score 2 to reads with quality scores 0-2, 12 to reads with quality scores 3-14, etc. Any quality score above 40 will be assigned 37. 
-
-To assign a specific quality score to a single quality score value, simply use the same value for the range start and end. For example:
-
-```
-0,0,2
-```
-
-Will assign quality score 2 to reads with quality score 0.
-
-## Example
-
-```shell
-./vcfgl -i test/t1.vcf -o test/t1_out -e 0.01 --seed 42 --depth 1
-```
-
-Input file: `test/t1.vcf`
-
-```
-##fileformat=VCFv4.2
-##source=tskit 0.4.1
-##FILTER=<ID=PASS,Description="All filters passed">
-##contig=<ID=chr22,length=100>
-##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind
-chr22	2	.	0	1	.	PASS	.	GT	0|0
-chr22	10	.	0	1	.	PASS	.	GT	1|0
-chr22	42	.	0	1	.	PASS	.	GT	0|1
-chr22	98	.	0	1	.	PASS	.	GT	1|1
-```
-
-Output file: `test/t1_out.bcf`
-
-```
-##fileformat=VCFv4.2
-##FILTER=<ID=PASS,Description="All filters passed">
-##source=tskit 0.4.1
-##contig=<ID=chr22,length=100>
-##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-##fileDate=Tue Nov 21 09:56:50 2023
-##source=vcfgl [version: v0.3.3 bb8df2d-dirty] [build: Nov 21 2023 09:56:39] [htslib: 1.15.1-20-g46c56fc]
-##source=vcfgl --verbose 0 --threads 1 --input test/t1.vcf --output test/t1_out --output-mode b --depth 1.000000 --error-rate 0.010000 --error-qs 0 --beta-variance -1.000000e+00 --precise-gl 1 --seed 42 --rm-invar-sites 0 --rm-empty-sites 0 -doUnobserved 1 -doGVCF 0 -explode 0 -addGL 1 -addGP 0 -addPL 0 -addI16 0 -addQS 0 -addFormatDP 0 -addFormatAD 0 -addFormatADF 0 -addFormatADR 0 -addInfoDP 0 -addInfoAD 0 -addInfoADF 0 -addInfoADR 0
-##FORMAT=<ID=GL,Number=G,Type=Float,Description="Genotype likelihood in log10 likelihood ratio format">
-##bcftools_viewVersion=1.18+htslib-1.18
-##bcftools_viewCommand=view test/t1_out.bcf; Date=Tue Nov 21 09:56:53 2023
-#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind
-chr22	2	.	A	C,G,T	.	PASS	.	GT:GL	0|0:0,-0.29957,-2.47276,-0.29957,-2.47276,-2.47276,-0.29957,-2.47276,-2.47276,-2.47276
-chr22	10	.	A	C,G,T	.	PASS	.	GT:GL	1|0:.,.,.,.,.,.,.,.,.,.
-chr22	42	.	A	C,G,T	.	PASS	.	GT:GL	0|1:-1.87362,0,-1.87362,-2.17319,-2.17319,-4.34637,-2.17319,-2.17319,-4.34637,-4.34637
-chr22	98	.	C	A,G,T	.	PASS	.	GT:GL	0|0:0,-0.29957,-2.47276,-0.29957,-2.47276,-2.47276,-0.29957,-2.47276,-2.47276,-2.47276
-```
-
-MS equivalent:
-
-```
-$ cat test/t1.ms
-ms 2 1
-0
-
-//
-segsites: 4
-positions: 0.0000 0.0000 0.0000 0.0000
-0101
-0011
-```
-
-### - Ancestral and derived alleles
-
-By default, `vcfgl` treats the allelic state `0` in input file as `A`, and `1` as `C`. Therefore a genotype of `00` corresponds to `AA`, `01` to `AC`, `10` to `CA`, and `11` to `CC`.
-
-Binary representation | Allele
--- | --
-0 | A
-1 | C
-
-### - Sampling strands
-
-The following options require strand information:
-* `-addI16 1`
-* `-addFormatADF 1`
-* `-addFormatADR 1`
-* `-addInfoADF 1`
-* `-addInfoADR 1`
-
-These options will trigger the random sampling of strands. The strands are sampled as forward and reverse strands from a binomial distribution with equal probability.
-
-
-### - Unobserved alleles
-
-Unobserved alleles are defined as the alleles that are not observed at a site, and is represented by `<*>` in BCFtools and `NON_REF` in GATK. In vcfgl, there are 6 options for handling unobserved alleles:
-
-* `-doUnobserved 0`: Trim the unobserved alleles
-* `-doUnobserved 1`: Use symbolic alternate allele notation `<*>` for unobserved alleles. This notation is often used by BCFtools.
-* `-doUnobserved 2`: Use `<NON_REF>` notation for unobserved alleles. This notation is often used by GATK.
-* `-doUnobserved 3`: Enumerate the unobserved alleles as `A`, `C`, `G`, and `T`.
-* `-doUnobserved 4`: Use symbolic alternate allele notation `<*>` for unobserved alleles and enumerate the unobserved alleles as `A`, `C`, `G`, and `T`.
-* `-doUnobserved 5`: Use `<NON_REF>` notation for unobserved alleles and enumerate the unobserved alleles as `A`, `C`, `G`, and `T`.
-
-For example, if we observe 10 reads for `A` and 4 reads for `C` at a site, the following table shows the output for different `-doUnobserved` options:
-
-Option | REF field | ALT field
--- | -- | --
-`-doUnobserved 0` | `A` | `C`
-`-doUnobserved 1` | `A` | `C,<*>`
-`-doUnobserved 2` | `A` | `C,<NON_REF>`
-`-doUnobserved 3` | `A` | `C,G,T`
-`-doUnobserved 4` | `A` | `C,G,T,<*>`
-`-doUnobserved 5` | `A` | `C,G,T,<NON_REF>` -->
+To be announced
