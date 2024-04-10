@@ -224,7 +224,7 @@ FLAGS := $(CPPFLAGS) $(CXXFLAGS)
 # Versioning
 VERSIONNO = 1.0.0
 
-VERSION := v$(VERSIONNO)-$(shell git describe --always)
+VERSION := v$(VERSIONNO)-$(shell git describe --always --exclude '*')
 
 VERSIONH = version.h
 

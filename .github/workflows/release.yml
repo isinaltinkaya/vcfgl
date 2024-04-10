@@ -9,7 +9,7 @@ env:
   tag: ${{ github.ref_name }}
 jobs:
   release:
-    name: Prepare for new release
+    name: Prepare new release
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -21,7 +21,7 @@ jobs:
           sudo apt-get update; sudo apt-get install libcurl4-openssl-dev
       - name: Download the program version associated with this release
         run: |
-          git clone --depth 1 --branch "${tag}" https://oauth2:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY_OWNER}/${GITHUB_REPOSITORY#*/}.git
+          git clone --depth 1 --branch "${tag}" https://oauth2:"${GITHUB_TOKEN}"@github.com/"${GITHUB_REPOSITORY_OWNER}"/"${GITHUB_REPOSITORY#*/}".git
       - name: Build release tarball
         run: |
           HTSLIB_LATEST=$(curl -s https://api.github.com/repos/samtools/htslib/releases/latest | jq -r '.assets[].browser_download_url');
@@ -30,21 +30,24 @@ jobs:
           HTSLIBDIR=${HTSLIB_LATEST##*/}
           tar -xvkf ${HTSLIBDIR} 
           mv -v ${HTSLIBDIR%.tar.bz2} htslib
-          TAR=${GITHUB_REPOSITORY#*/}-${tag#v}.tar.gz
-          tar --exclude='./.git*' -cvf ${TAR} ${GITHUB_REPOSITORY#*/} htslib/
+          PROGRAM=${GITHUB_REPOSITORY#*/} 
+          TAR=${PROGRAM}-${tag#v}.tar.gz
+          tar --exclude="./${PROGRAM}/.git" --exclude="${PROGRAM}/.github" --exclude="${PROGRAM}/.htslib" -cvf ${TAR} ${PROGRAM}/ htslib/
       - name: Test release tarball
         run: |
           TAR=${GITHUB_REPOSITORY#*/}-${tag#v}.tar.gz
           TESTDIR=tarball_test
+          MAINDIR=${PWD}
           mkdir -pv ${TESTDIR}
           cp ${TAR} ${TESTDIR}/
           cd ${TESTDIR}
-          tar xf ${TAR} 
+          tar xf ${TAR}
           cd htslib
-          make 
-          cd ../${GITHUB_REPOSITORY#*/} 
+          make
+          cd ../${GITHUB_REPOSITORY#*/}
           make HTSSRC=../htslib
           make test
+          cd ${MAINDIR}
       - name: Create a new draft release with the release tarball
         shell: bash
         run: |
@@ -54,4 +57,40 @@ jobs:
               --repo="${GITHUB_REPOSITORY}" \
               --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
               "${GITHUB_REPOSITORY#*/}-${tag#v}".tar.gz
-
+      - name: Edit the release text
+        shell: bash
+        run: |
+          PROGRAM=${GITHUB_REPOSITORY#*/} 
+          printf '%b' "## Installation:\n" >> release_note.MD
+          printf '%b' "###  Step 1:  Download the release \n" >> release_note.MD
+          printf '%b' "\n" >> release_note.MD
+          printf '%b' "> [!TIP] \n" >> release_note.MD
+          printf '%b' "> * Download the release by clicking the link below :\n" >> release_note.MD
+          printf '%b' "> [""${PROGRAM}""-""${tag#v}"".tar.gz](https://github.com/""${GITHUB_REPOSITORY_OWNER}""/""${PROGRAM}""/releases/download/""${tag}""/""${PROGRAM}""-""${tag#v}"".tar.gz)\n" >> release_note.MD 
+          printf '%b' "> > or\n" >> release_note.MD
+          printf '%b' "> * Download the release from command-line: \n" >> release_note.MD
+          printf '%b' "> \`\`\`\n" >> release_note.MD
+          printf '%b' "> wget https://github.com/""${GITHUB_REPOSITORY_OWNER}""/""${PROGRAM}""/releases/download/""${tag}""/""${PROGRAM}""-""${tag#v}"".tar.gz\n" >> release_note.MD 
+          printf '%b' "> \`\`\`\n" >> release_note.MD
+          printf '%b' "\n" >> release_note.MD
+          printf '%b' "### Step 2: Build\n" >> release_note.MD
+          printf '%b' "\n" >> release_note.MD
+          printf '%b' "\n" >> release_note.MD
+          printf '%b' ">[!TIP]\n" >> release_note.MD
+          printf '%b' "> \`\`\`\n" >> release_note.MD
+          printf '%b' "> tar xf ""${PROGRAM}""-""${tag#v}"".tar.gz;\n" >> release_note.MD 
+          printf '%b' "> cd htslib; \n" >> release_note.MD
+          printf '%b' "> make;\n" >> release_note.MD
+          printf '%b' "> cd ../""${PROGRAM}"";\n" >> release_note.MD
+          printf '%b' "> make HTSSRC=../htslib;\n" >> release_note.MD
+          printf '%b' "> \`\`\`\n" >> release_note.MD
+          printf '%b' "\n" >> release_note.MD
+          printf '%b' "___ \n" >> release_note.MD
+          printf '%b' "\n" >> release_note.MD
+          printf '%b' "\n" >> release_note.MD
+          gh release edit "${tag}" \
+              --repo="${GITHUB_REPOSITORY}" \
+              --verify-tag \
+              --latest \
+              --draft=false \
+              --notes-file release_note.MD

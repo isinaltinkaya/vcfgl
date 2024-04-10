@@ -1,18 +1,16 @@
-<!--
-TODO:
-- [ ] Move examples etc (commented out stuff at the end of this file) to documentation
-- [ ] Add issue template etc
--->
-
 <a name="readme-top"></a>
 
 <h3 align="center">vcfgl</h3>
 
 <p align="center">
-<a href="https://github.com/isinaltinkaya/vcfgl/actions/workflows/test.yml"><img src="https://github.com/isinaltinkaya/vcfgl/actions/workflows/test.yml/badge.svg" /></a> 
-<a href="https://github.com/isinaltinkaya/vcfgl/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GNU%20GPLv3.0-purple.svg"/></a>
+<a href="https://github.com/isinaltinkaya/vcfgl/releases/latest"><img src="https://img.shields.io/github/v/release/isinaltinkaya/vcfgl?labelColor=white&color=blue"/></a>
+  <a href="https://github.com/isinaltinkaya/vcfgl/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GPLv3.0-purple.svg?labelColor=white"/></a>
+<img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/isinaltinkaya/vcfgl/test.yml?labelColor=white">
+  <a href="https://bio.tools/vcfgl"><img src="https://img.shields.io/badge/bio.tools-vcfgl-orange?labelColor=white"/></a>
+<a href="https://doi.org/10.1101/2024.04.09.586324"><img src="https://img.shields.io/badge/bioRxiv-10.1101%2F2024.04.09.586324-black?labelColor=white&color=darkred"/></a>
+<!-- <a href="https://github.com/isinaltinkaya/vcfgl/actions/workflows/test.yml"><img src="https://github.com/isinaltinkaya/vcfgl/actions/workflows/test.yml/badge.svg" /></a>  -->
 </p>
-<!-- ![vcfgl](https://img.shields.io/badge/version-v0.3.3-brightgreen.svg)  -->
+
 
   <p align="center">
     Genotype likelihood simulator for VCF/BCF files
@@ -21,12 +19,14 @@ TODO:
     <br />
     <br />
     <a href="https://github.com/isinaltinkaya/vcfgl">Installation</a>
-    ·
+    <b>·</b>
     <a href="https://github.com/isinaltinkaya/vcfgl/doc/tutorial.MD">Tutorial</a>
-    ·
-    <a href="https://github.com/isinaltinkaya/vcfgl/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/isinaltinkaya/vcfgl/issues">Request Feature</a>
+    <b>·</b>
+    <a href="https://github.com/isinaltinkaya/vcfgl/issues/new?assignees=&labels=bug&projects=&template=report-a-bug.md&title=%5BBUG%5D">Report Bug</a>
+    <b>·</b>
+    <a href="https://github.com/isinaltinkaya/vcfgl/issues/new?assignees=&labels=enhancement&projects=&template=feature_request.md&title=%5BFR%5D">Request Feature</a>
+    <b>·</b>
+    <a href="#how-to-cite">Cite</a>
   </p>
 </div>
 
@@ -53,17 +53,7 @@ TODO:
       <li><a href="#output-vcfbcf-tags">Output VCF/BCF Tags</a></li>
     </ol> -->
     </li>
-      <li><a href="#tutorials">Tutorials</a>
-      <ol>
-  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/install.MD">Installation</a></li>
-  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/depth.MD">Simulating read depths</a></li>
-  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/error_qs.MD">Simulating quality score errors</a></li>
-  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/simulate_unobserved.MD">Simulating unobserved sites</a></li>
-  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/qs_binning.MD">Simulate quality score binning</a></li>
-  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/with_msprime.MD">Using vcfgl with msprime</a></li>
-  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/with_stdpopsim.MD">Using vcfgl with stdpopsim</a></li>
-  <li><a href="https://github.com/isinaltinkaya/vcfgl/doc/with_SLiM.MD">Using vcfgl with SLiM</a></li>
-      </ol>
+    <li> <a href="#tutorials">Tutorials</a></li>
     <li><a href="#quickstart-for-mstoglf-users">Quickstart for msToGlf users</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#how-to-cite">How to cite</a></li>
@@ -81,14 +71,6 @@ You can install **vcfgl** using one of the following methods:
 ### &rarr; Method 1: Using release tarball (recommended)
 
 You can download the latest release tarball from the [GitHub releases page](https://github.com/isinaltinkaya/vcfgl/releases/latest).
-
-```shell
-wget https://github.com/isinaltinkaya/vcfgl/releases/download/v1.0.0/vcfgl-1.0.0.tar.gz
-tar xf vcfgl-1.0.0.tar.gz
-cd htslib; make;
-cd ../vcfgl; 
-make HTSSRC=../htslib;
-```
 
 ### &rarr; Method 2: Using HTSlib submodule
 
@@ -401,4 +383,21 @@ If you have any questions about the program, feature requests, or bug reports, y
 
 # How to cite
 
-To be announced
+The preprint is freely available on bioRxiv through the following link: [bioRxiv Preprint](https://doi.org/10.1101/2024.04.09.586324)
+
+You can use the BibTex entry below for referencing this program in your work:
+
+```BibTex
+@article {Altinkaya2024.04.09.586324,
+	author = {Isin Altinkaya and Rasmus Nielsen and Thorfinn Sand Korneliussen},
+	title = {vcfgl: A flexible genotype likelihood simulator for VCF/BCF files},
+	elocation-id = {2024.04.09.586324},
+	year = {2024},
+	doi = {10.1101/2024.04.09.586324},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2024/04/09/2024.04.09.586324},
+	eprint = {https://www.biorxiv.org/content/early/2024/04/09/2024.04.09.586324.full.pdf},
+	journal = {bioRxiv}
+}
+```
+
