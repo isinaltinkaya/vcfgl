@@ -1,8 +1,10 @@
-*d
-*o
+*.d
+*.o
 vcfgl
-*arg
+*.arg
 output*
+test/testwd/
+misc/testwd/
 test/*arg
 test/*_test*
 *.swp
