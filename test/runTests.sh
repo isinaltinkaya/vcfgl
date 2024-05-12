@@ -116,6 +116,46 @@ runTestDiff(){
 	fi
 }
 
+runTestDiffPileup(){
+        if [ ${TESTTYPE} == "regular" ]  || [ ${TESTTYPE} == "all" ]; then
+                local id=${1}
+                local outFile=${2}
+                local refFile=${3}
+                local outPref=${TESTWD}/${id}
+                local logFile=${outPref}.log
+                local diffFile=${outPref}.diff
+
+                local diffcmd="diff -s <(zcat ${outFile}) <(zcat ${refFile}) > ${diffFile} 2>&1"
+
+                printf "# ${id} -> Running diff\n"
+                printf "# Command:\n${diffcmd}\n"
+
+                eval ${diffcmd}
+
+                if [ $? -eq 0 ]; then
+                        printf "${GREEN}"
+                        printf "# ${id} -> Diff: OK\n"
+                        printf "${NOCOLOR}"
+                        printf "\n\n"
+                else
+                        printf "\n\n"
+                        printf "${RED}"
+                        printf "###############################################################################\n"
+                        printf "# ${id} FAILED\n"
+
+                        printf "\n# Command:\n${diffcmd}\n"
+                        printf "\n# Output file:\n${outFile}\n"
+                        printf "\n# Reference file:\n${refFile}\n"
+                        printf "\n# Log file:\n${logFile}\n"
+                        printf "\n# Diff file:\n${diffFile}\n"
+                        printf "###############################################################################\n"
+                        printf "${NOCOLOR}"
+                        printf "\n\n"
+                        exit 1
+                fi
+        fi
+}
+
 
 runTestDiffVcf(){
 	if [ ${TESTTYPE} == "regular" ]  || [ ${TESTTYPE} == "all" ]; then
@@ -594,7 +634,8 @@ ARGS="
 
 runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
-diff -s <(zcat ${TESTWD}/${ID}.pileup.gz) <(zcat ${SCRIPTDIR}/reference/${ID}/${ID}.pileup.gz)
+runTestDiffPileup ${ID} ${TESTWD}/${ID}.pileup.gz ${SCRIPTDIR}/reference/${ID}/${ID}.pileup.gz
+
 
 
 ################################################################################

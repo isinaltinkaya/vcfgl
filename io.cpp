@@ -105,16 +105,22 @@ uint8_t** read_qs_bins_file(void) {
     }
 
 
+	if(i < 0){
+		NEVER;
+	}
     const size_t nRanges = i;
     if (nRanges == 0) {
         ERROR("Could not read any quality score binning ranges from file: %s\n", args->qs_bins_fn);
     }
+	if(nRanges > 255){
+        ERROR("Number of ranges in file %s is bigger than expected. If you believe there is an issue please get in contact with the developers",args->qs_bins_fn);
+	}
 
     /// qs_bins[nRanges]
     /// qs_bins[i][0] = start of i-th range
     /// qs_bins[i][1] = end of i-th range
     /// qs_bins[i][2] = qs value to assign for i-th range
-    args->n_qs_bins = nRanges;
+    args->n_qs_bins = (uint8_t) nRanges;
     uint8_t** ret = (uint8_t**)malloc(nRanges * sizeof(uint8_t*));
     ASSERT(NULL != ret);
     for (size_t j = 0;j < nRanges;j++) {
@@ -273,7 +279,7 @@ void help_page() {
     fprintf(stderr, "         -explode [0]|1 _____________ 1: Explode to sites that are not in input file.\n");
     fprintf(stderr, "                                      Useful for simulating invariable sites when the input file only contains variable sites.\n");
     fprintf(stderr, "                                      Sets all genotypes in exploded sites to homozygous reference.\n");
-    fprintf(stderr, "         --rm-invar-sites INT+ [%s]___ %d: Do not remove invariable sites\n", ARG_RM_INVAR_DISABLED, ARG_RM_INVAR_DISABLED);
+    fprintf(stderr, "         --rm-invar-sites INT+ [%d]___ %d: Do not remove invariable sites\n", ARG_RM_INVAR_DISABLED, ARG_RM_INVAR_DISABLED);
     fprintf(stderr, "                                      %d: Remove sites where all individuals' true genotypes in the input file are homozygous reference\n", ARG_RM_INVAR_INPUT_HOMOREFGT);
     fprintf(stderr, "                                      %d: Remove sites where all individuals' true genotypes in the input file are homozygous alternative\n", ARG_RM_INVAR_INPUT_HOMOALTGT);
     fprintf(stderr, "                                      %d: Remove sites where the all simulated reads among all individuals are the same base\n", ARG_RM_INVAR_INPUT_SIM_INVAR);
@@ -1292,7 +1298,7 @@ void args_destroy(argStruct* args) {
     }
 
     if(args->qs_bins != NULL) {
-        for(size_t i=0; i<args->n_qs_bins; ++i) {
+        for(size_t i=0; i<(size_t) args->n_qs_bins; ++i) {
             free(args->qs_bins[i]);
             args->qs_bins[i] = NULL;
         }

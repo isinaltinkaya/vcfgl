@@ -959,7 +959,7 @@ gvcfData* gvcfData_init(void) {
 
     gvcfd->grec = bcf_init();
 
-    gvcfd->alleles = KS_INITIALIZE;
+    gvcfd->alleles = KS_INIT;
 
     const char* dp_ranges = args->gvcf_dps_str;
 

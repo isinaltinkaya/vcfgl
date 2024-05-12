@@ -32,7 +32,7 @@ jobs:
           mv -v ${HTSLIBDIR%.tar.bz2} htslib
           PROGRAM=${GITHUB_REPOSITORY#*/} 
           TAR=${PROGRAM}-${tag#v}.tar.gz
-          tar --exclude="./${PROGRAM}/.git" --exclude="${PROGRAM}/.github" --exclude="${PROGRAM}/.htslib" -cvf ${TAR} ${PROGRAM}/ htslib/
+          tar --exclude="${PROGRAM}/.git" --exclude="${PROGRAM}/.github" --exclude="${PROGRAM}/htslib" -cvf ${TAR} ${PROGRAM}/ htslib/
       - name: Test release tarball
         run: |
           TAR=${GITHUB_REPOSITORY#*/}-${tag#v}.tar.gz

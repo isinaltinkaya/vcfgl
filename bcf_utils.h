@@ -97,7 +97,7 @@ typedef struct simRecord {
 
     kstring_t* pileup = NULL;
 
-    kstring_t alleles = KS_INITIALIZE;
+    kstring_t alleles = KS_INIT;
 
 
     // a single bcf record object to be reused at each site

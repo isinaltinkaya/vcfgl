@@ -144,7 +144,7 @@ struct argStruct {
     /// qs_bins[i][1] = end of i-th range
     /// qs_bins[i][2] = qs value to assign for i-th range
     uint8_t** qs_bins;
-    int n_qs_bins;
+    uint8_t n_qs_bins;
 
     // functions:
     double* read_depthsFile(void);

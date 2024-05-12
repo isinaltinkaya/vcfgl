@@ -21,6 +21,8 @@
 /// init to { VCFGL_RAND48_SEED_0, VCFGL_RAND48_SEED_1, VCFGL_RAND48_SEED_2 };
 #define SEEDER_INIT { 0x330e, 0xabcd, 0x1234 }
 
+#define KS_INIT { 0, 0, NULL } 
+
 
 #ifndef __USE_PRECISE_GAMMA__
 #define __USE_PRECISE_GAMMA__ 0
