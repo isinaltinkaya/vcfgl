@@ -38,8 +38,8 @@
 
 const double NEG_INF = -std::numeric_limits<double>::infinity();
 
-/// precalculated value for log10(3)
-#define PRE_CALC_LOG10_3 0.47712125471966244
+#define PRE_CALC_LOG10_3 (0.47712125471966244)
+#define PRE_CALC_LN_3 (1.0986122886681098)
 
 #define QSCORE_PHRED_ENCODING_OFFSET 33
 
@@ -245,6 +245,9 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 
 
 /* -> FUNCTION-LIKE MACROS ---------------------------------------------------*/
+
+#define LOG2LN(x) ((((x)) / (M_LOG10E)))
+
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -522,6 +525,22 @@ extern const double qScore_to_ln_gl[3][257];
 /// print(gsub("-Inf", "NEG_INF", paste0("qScore_to_log10_gl[3][", arrSize, "]=", "{", paste(x1, x2, x3, sep = ","), "};")))
 extern const double qScore_to_log10_gl[3][257];
 
+/// @brief qScore_to_gl - lookup table for mapping quality score to genotype likelihoods
+/// [R]
+/// qToP <- function(q) { 10 ^ (-q / 10) }
+/// CAP_BASEQ = 256
+/// arrSize = CAP_BASEQ + 1
+/// generate_likelihoods_homhit_ln < -function(i) { p = 1 - qToP(i);ret = ((p * 0.5) + (p * 0.5));return(ret); }
+/// generate_likelihoods_hethit_ln < -function(i) { p = 1 - qToP(i);p3 = (1 - p) / 3.0;ret = ((p * 0.5) + (p3 * 0.5));return(ret); }
+/// generate_likelihoods_homnonhit_ln < -function(i) { p = 1 - qToP(i);p3 = (1 - p) / 3.0;ret = ((0.5 * p3) + (0.5 * p3));return(ret); }
+/// fn = generate_likelihoods_homhit_ln
+/// x1 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+/// fn = generate_likelihoods_hethit_ln
+/// x2 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+/// fn = generate_likelihoods_homnonhit_ln
+/// x3 = paste0("{", paste(unlist(format(lapply(0:CAP_BASEQ, FUN = fn), scientific = F)), collapse = ","), "}")
+/// print(gsub("-Inf", "NEG_INF", paste0("qScore_to_gl[3][", arrSize, "]=", "{", paste(x1, x2, x3, sep = ","), "};")))
+extern const double qScore_to_gl[3][257];
 
 extern float bcf_float_missing_union_f;
 

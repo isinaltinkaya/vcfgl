@@ -10,13 +10,44 @@
 
 #include "shared.h"
 #include "io.h"
-#include "random_generator.h"
+#include "rng.h"
 #include "bcf_utils.h"
 #include "gl_methods.h"
 
 argStruct* args;
-
 const char* nonref_str;
+
+static int allele_char_to_int(const char* allele){
+    // A = 0, C = 1, G = 2, T = 3
+    // '<*>' '<NON_REF> = 4
+    // '.' = should never be passed since n_alleles excludes '.'
+    // others = -1
+    if(allele[1] != '\0'){
+        if(allele[0] == '<'){
+            if(allele[1] == '*' && allele[2] == '>'){
+                return(4);
+            }else if (allele[1] == 'N' && allele[2] == 'O' && allele[3] == 'N' && allele[4] == '_' && allele[5] == 'R' && allele[6] == 'E' && allele[7] == 'F' && allele[8] == '>'){
+                return(4);
+            }
+        }
+    }else{
+        switch(allele[0]){
+            case 'A':
+                return(0);
+            case 'C':
+                return(1);
+            case 'G':
+                return(2);
+            case 'T':
+                return(3);
+            case '.':
+                NEVER;
+            default:
+                return(-1);
+        }
+    }
+    return(-1);
+}
 
 
 /// qs_bins[nRanges]
@@ -32,10 +63,7 @@ static int apply_qs_bins(const int in_qs) {
     ERROR("Could not find a range for qs value %d", in_qs);
 }
 
-
-int rec_alleles[5] = { -1, -1, -1, -1, -1 };
 int* true_gts_acgt_int = NULL;
-int* true_gts_alleles_idx = NULL;
 int* n_sim_reads_arr = NULL;
 
 // return value < 0		 skip the site
@@ -44,7 +72,8 @@ int* n_sim_reads_arr = NULL;
 // -1   all input true genotypes at position are homozygous ref (iff PROGRAM_WILL_SKIP_INPUT_HOMOREFGT_SITES)
 // -2   all input true genotypes at position are homozygous alt (iff PROGRAM_WILL_SKIP_INPUT_HOMOALTGT_SITES)
 /// @note skips the site in truth VCF as well
-inline int check_rec_alleles(simRecord* sim) {
+static int check_rec_alleles(simRecord* sim) {
+    static const int nSamples = sim->nSamples;
 
     // -------------------------------------------- //
     // read genotypes
@@ -60,35 +89,19 @@ inline int check_rec_alleles(simRecord* sim) {
         ERROR("Multiallelic sites with more than 4 alleles are not supported. If this is a feature you need, please contact the developers or create a feature request on the GitHub page.");
     }
 
-    const int nSamples = sim->nSamples;
+    int rec_alleles[5] = { -1, -1, -1, -1, -1 };
 
-    // -> clear
-    // rec_alleles[0] = -1;
-    // rec_alleles[1] = -1;
-    // rec_alleles[2] = -1;
-    // rec_alleles[3] = -1;
-    // rec_alleles[4] = -1;
-
-    char* allele = NULL;
-    int x;
     for (int i = 0;i < n_alleles;++i) {
 
-        allele = sim->rec->d.allele[i];
-
-        if (allele[0] == '<') {
-            ERROR("Allele '%s' at position %ld is not a valid base.", allele, sim->rec->pos + 1);
-        }
-        if (allele[1] != '\0') {
-            ERROR("Allele '%s' at position %ld is not a single base. If this is on purpose and this is a feature you want to use, please contact the developers or create a feature request on the GitHub page.", allele, sim->rec->pos + 1);
-        }
-
+        char* allele = sim->rec->d.allele[i];
 
         if (PROGRAM_WILL_USE_ACGT_GTSOURCE) {
-            if (-1 == (rec_alleles[i] = ACGT_CHAR2INT(allele[0]))) {
+            if (-1 == (rec_alleles[i] = allele_char_to_int(allele))) {
                 ERROR("Allele '%s' at position %ld is not a valid base.", allele, sim->rec->pos + 1);
             }
 
         } else if (PROGRAM_WILL_USE_BINARY_GTSOURCE) {
+
             // assume: input vcf always have REF=0 ALT=1 
             // #CHROM	POS	ID	REF	ALT	QUAL    FILTER  INFO    FORMAT  ind
             // chr	    1   .   0   1   .       PASS    .       GT      0|1
@@ -96,13 +109,13 @@ inline int check_rec_alleles(simRecord* sim) {
             // chr	    1   .   A   C   .       PASS    .       GT      0|1
 
             // make sure REF and ALT are binary
-            x = allele[0] - '0';
+            int x = allele[0] - '0';
             if (x != 0 && x != 1) {
                 ERROR("[--source %d] Found allele '%s' at position %ld. Only 0 and 1 are allowed when using binary GT source. Please change the source or check your input file.", args->gtSource, allele, sim->rec->pos + 1);
             }
             rec_alleles[i] = x;
-        }
 
+        }
     }
 
     if (PROGRAM_WILL_USE_BINARY_GTSOURCE) {
@@ -120,18 +133,17 @@ inline int check_rec_alleles(simRecord* sim) {
         true_gts_acgt_int[i] = -1; // clear
 
         a = bcf_gt_allele(sim->gt_arr[i]);
-        true_gts_alleles_idx[i] = a;
         allelesum += a;
 
-        true_gts_acgt_int[i] = ACGT_CHAR2INT(sim->rec->d.allele[a][0]);
+        true_gts_acgt_int[i] = rec_alleles[a];
     }
 
     if (PROGRAM_WILL_SKIP_INPUT_HOMOREFGT_SITES && (0 == allelesum)) {
         return(-1);
     }
 
-    // for each alt, check if all inds are homozygous alt
     if (PROGRAM_WILL_SKIP_INPUT_HOMOALTGT_SITES) {
+        // for each alt, check if all inds are homozygous alt
         for (a = 1; a < n_alleles; ++a) {
             if ((a * nSamples * SIM_PLOIDY) == allelesum) {
                 return(-2);
@@ -139,20 +151,12 @@ inline int check_rec_alleles(simRecord* sim) {
         }
     }
 
-#if 0
-    for (int i = 0;i < n_alleles;++i) {
-        fprintf(stderr, "Found %s allele: %s with int value %d\n", i == 0 ? "REF" : (i == 1 ? "ALT_1" : (i == 2 ? "ALT_2" : (i == 3 ? "ALT_3" : "ALT_4"))), sim->rec->d.allele[i], rec_alleles[i]);
-    }
-#endif
-
-
     return(0);
-
 }
 
 
 
-inline void write_record_values(htsFile* out_fp, simRecord* sim) {
+static void write_record_values(htsFile* out_fp, simRecord* sim) {
 
     int ret;
 
@@ -213,11 +217,11 @@ void(*calculate_gls)(simRecord* sim);
 /// @brief simulate a position with no reads for any of the individuals
 /// @param sim 
 /// @return 
-inline int simulate_site_with_no_reads(simRecord* sim) {
+static int simulate_site_with_no_reads(simRecord* sim) {
 
     if (args->printPileup) {
         ksprintf(sim->pileup, "%s\t%ld\t%c", sim->hdr->id[BCF_DT_CTG][sim->rec->rid].key, sim->rec->pos + 1, sim->rec->d.allele[0][0]);
-        for (int s = 0; s < sim->nSamples; s++) {
+        for (int s = 0; s < sim->nSamples; ++s) {
             ksprintf(sim->pileup, "\t0\t*\t*");
         }
         kputc('\n', sim->pileup);
@@ -312,7 +316,7 @@ inline int simulate_site_with_no_reads(simRecord* sim) {
 // skip position reasons:
 // -3	observed only 1 simulated allele at position (iff PROGRAM_WILL_SKIP_SIM_INVAR_SITES)
 // -4	no alleles were observed at position (iff 1==args->rmEmptySites)
-int simulate_record_values(simRecord* sim) {
+static int simulate_record_values(simRecord* sim) {
 
     bcf1_t* rec = sim->rec;
 
@@ -394,6 +398,7 @@ int simulate_record_values(simRecord* sim) {
         ksprintf(sim->pileup, "%s\t%ld\t%c", sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1, rec->d.allele[0][0]);
     }
 
+
     int32_t* sample_acgt_fmt_ad_arr = NULL;
     int32_t* sample_acgt_fmt_adf_arr = NULL;
     int32_t* sample_acgt_fmt_adr_arr = NULL;
@@ -426,7 +431,6 @@ int simulate_record_values(simRecord* sim) {
             if (args->printPileup) {
                 ksprintf(sim->pileup, "\t0\t*\t*");
             }
-
         } else {
 
             sample_true_gts = true_gts_acgt_int + (s * SIM_PLOIDY);
@@ -606,8 +610,6 @@ int simulate_record_values(simRecord* sim) {
                     }
                 }
             }
-
-
             for (b = 0; b < 4;++b) {
                 sim->acgt_info_ad_arr[b] += sample_acgt_fmt_ad_arr[b];
             }
@@ -901,7 +903,7 @@ int simulate_record_values(simRecord* sim) {
                     continue;
                 }
 
-                // when max threshold disabled, vcfgl gives same results as bcftools
+                // NB when max threshold disabled, vcfgl gives same results as bcftools
                 // +tag2tag -- --GL-to-PL
 
                 x = lroundf(-10.0 * sim->gl_arr[i]);
@@ -930,12 +932,12 @@ int simulate_record_values(simRecord* sim) {
     // prepare I16 tag
 
 
-// requires:
-// acgt_n_bases_forI16
-// acgt_fmt_qsum_arr
-// acgt_fmt_qsum_sq_arr
-// acgt_sum_taildist
-// acgt_sum_taildist_sq
+    // requires:
+    // acgt_n_bases_forI16
+    // acgt_fmt_qsum_arr
+    // acgt_fmt_qsum_sq_arr
+    // acgt_sum_taildist
+    // acgt_sum_taildist_sq
     if (1 == args->addI16) {
         // ------------------------------------------------------- //
         // I16 REF fields
@@ -1039,14 +1041,14 @@ int simulate_record_values(simRecord* sim) {
         FLUSH_BGZF_KSTRING_BUFFER(args->out_pileup_fp, sim->pileup);
     }
 
+    fflush(stdout);
     return (0);
 }
 
-inline int simulate_record_true_values(simRecord* sim) {
+static int simulate_record_true_values(simRecord* sim) {
 
     bcf1_t* rec = sim->rec;
     const int nSamples = sim->nSamples;
-
 
     // -------------------------------------------- //
     // reset reused objects for the current rec
@@ -1082,9 +1084,9 @@ inline int simulate_record_true_values(simRecord* sim) {
         kputc("ACGT"[acgtidx], &sim->alleles);
         ++k;
     }
+
     if (PROGRAM_WILL_EXPLODE_ACGT) {
         for (int i = sim->nAllelesObserved;i < 4;++i) {
-            // desc_order_indices[i]
             acgtidx = desc_order_indices[i];
             kputc(',', &sim->alleles);
             kputc("ACGT"[acgtidx], &sim->alleles);
@@ -1099,8 +1101,6 @@ inline int simulate_record_true_values(simRecord* sim) {
         sim->alleles2acgt[sim->allele_unobserved] = BASE_NONREF;
         sim->acgt2alleles[BASE_NONREF] = sim->allele_unobserved;
     }
-
-
 
     if (PROGRAM_WILL_EXPLODE_ACGT) {
 
@@ -1138,21 +1138,38 @@ inline int simulate_record_true_values(simRecord* sim) {
     DEVASSERT(sim->current_size_bcf_tag_number[INFO_NUMBER_R] <= sim->max_size_bcf_tag_number[INFO_NUMBER_R]);
 
     ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, sim->alleles.s)));
+
+    int acgtx_to_alleles_idx[5]={-1};
+    for (int i = 0;i < sim->rec->n_allele;++i) {
+        acgtx_to_alleles_idx[allele_char_to_int(sim->rec->d.allele[i])]=i;
+    }
+
+    int* true_gts_alleles_idx = NULL;
+    true_gts_alleles_idx = (int*)malloc(sim->nSamples * SIM_PLOIDY * sizeof(int));
+    ASSERT(NULL != true_gts_alleles_idx);
+    // set true_gts_alleles_idx with the new rec->alleles
+    for (int i = 0;i < nSamples * SIM_PLOIDY;++i) {
+        int x=true_gts_acgt_int[i];
+        ASSERT(x >= 0);
+        if(4==x){
+            ERROR("True genotype is set to non-ref allele at site %s:%ld.", sim->rec->d.id, sim->rec->pos + 1);
+        }
+        true_gts_alleles_idx[i]=acgtx_to_alleles_idx[x];
+    }
+
     int true_gt_idx;
-    // get 0-based allele indices from the GT tag
     for (int s = 0; s < nSamples; s++) {
 
-        // most likely value should be at the genotype combination for true
-        // genotype
+        // printf("%c%c", "ACGTX"[true_gts_acgt_int[s * SIM_PLOIDY]], "ACGTX"[true_gts_acgt_int[s * SIM_PLOIDY + 1]]);
+        true_gt_idx = bcf_alleles2gt(true_gts_alleles_idx[s * SIM_PLOIDY], true_gts_alleles_idx[s * SIM_PLOIDY + 1]);
 
-        true_gt_idx = bcf_alleles2gt(true_gts_alleles_idx[s * SIM_PLOIDY], true_gts_acgt_int[s * SIM_PLOIDY + 1]);
-
+        // most likely value should be at the genotype combination for true genotype
         for (int i = 0; i < sim->nGenotypes; ++i) {
             if (i == true_gt_idx) {
                 sim->gl_arr[s * sim->nGenotypes + i] = MAXGL;
 
                 if (NULL != sim->pl_arr) {
-                    sim->pl_arr[s * sim->nGenotypes + i] = MAXPL;
+                    sim->pl_arr[s * sim->nGenotypes + i] = MINPL;
                 }
                 if (NULL != sim->gp_arr) {
                     sim->gp_arr[s * sim->nGenotypes + i] = MAXGP;
@@ -1161,7 +1178,7 @@ inline int simulate_record_true_values(simRecord* sim) {
                 sim->gl_arr[s * sim->nGenotypes + i] = MINGL;
 
                 if (NULL != sim->pl_arr) {
-                    sim->pl_arr[s * sim->nGenotypes + i] = MINPL;
+                    sim->pl_arr[s * sim->nGenotypes + i] = MAXPL;
                 }
                 if (NULL != sim->gp_arr) {
                     sim->gp_arr[s * sim->nGenotypes + i] = MINGP;
@@ -1170,6 +1187,9 @@ inline int simulate_record_true_values(simRecord* sim) {
         }
 
     }
+
+    free(true_gts_alleles_idx);
+    true_gts_alleles_idx = NULL;
 
 
     // -------------------------------------------- //
@@ -1197,29 +1217,37 @@ inline int simulate_record_true_values(simRecord* sim) {
             sim->current_size_bcf_tag_number[bcf_tags[PL].n])));
     }
 
-
     return (0);
 }
 
 
 
-inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_t* in_rec) {
+static void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_t* in_rec) {
 
     int nSites = 0;
     int nSitesSkipped = 0;
     int nSitesTotal = 0;
+    int nSitesTotalInContig=0;
     int ret;
 
     bcf1_t* explode_rec = NULL;
 
+    bool contig_changed=false;
+    char last_contig[1024]={'\0'};
 
     while (0 == bcf_read(args->in_fp, in_hdr, in_rec)) {
+
+        contig_changed=strcmp(last_contig,in_hdr->id[BCF_DT_CTG][in_rec->rid].key);
+        if (contig_changed){
+            nSitesTotalInContig=0;
+            strcpy(last_contig,in_hdr->id[BCF_DT_CTG][in_rec->rid].key);
+        }
 
         bcf_unpack(in_rec, BCF_UN_ALL);
 
         while (1 == args->explode) {
 
-            if (nSitesTotal == in_rec->pos) {
+            if (nSitesTotalInContig == in_rec->pos) {
                 break; // out of while(1==args->explode) == out of explode
             }
 
@@ -1241,7 +1269,7 @@ inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
             }
 
             // -- runs for every unobserved position exploding --
-            explode_rec->pos = nSitesTotal;
+            explode_rec->pos = nSitesTotalInContig;
 
             // set explode record as the record to use in simulation
             sim->rec = bcf_copy(sim->rec, explode_rec);
@@ -1251,6 +1279,7 @@ inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
             if (ret < 0) {
                 nSitesSkipped++;
                 nSitesTotal++;
+                nSitesTotalInContig++;
                 continue;
             } else {
                 if (args->printTruth) {
@@ -1261,6 +1290,7 @@ inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
                 if (ret < 0) {
                     nSitesSkipped++;
                     nSitesTotal++;
+                    nSitesTotalInContig++;
                     continue;
                 }
             }
@@ -1268,6 +1298,7 @@ inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
             ASSERT(0 == bcf_write(args->out_fp, sim->hdr, sim->rec));
             nSites++;
             nSitesTotal++;
+            nSitesTotalInContig++;
 
         }
 
@@ -1278,6 +1309,7 @@ inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
         if (ret < 0) {
             nSitesSkipped++;
             nSitesTotal++;
+            nSitesTotalInContig++;
             continue;
         } else {
             if (args->printTruth) {
@@ -1288,6 +1320,7 @@ inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
             if (ret < 0) {
                 nSitesSkipped++;
                 nSitesTotal++;
+                nSitesTotalInContig++;
                 continue;
             }
         }
@@ -1297,6 +1330,7 @@ inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
         ASSERT(0 == bcf_write(args->out_fp, sim->hdr, sim->rec));
         nSites++;
         nSitesTotal++;
+        nSitesTotalInContig++;
 
     }
 
@@ -1307,12 +1341,12 @@ inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
     const int contigsize = in_hdr->id[BCF_DT_CTG][in_rec->rid].val->info[0];
     while (1 == args->explode) {
 
-        if (nSitesTotal == contigsize) {
+        if (nSitesTotalInContig == contigsize) {
             bcf_destroy(explode_rec);
             break;
         }
 
-        explode_rec->pos = nSitesTotal;
+        explode_rec->pos = nSitesTotalInContig;
 
         sim->rec = bcf_copy(sim->rec, explode_rec);
         bcf_unpack(sim->rec, BCF_UN_ALL);
@@ -1322,6 +1356,7 @@ inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
         if (ret < 0) {
             nSitesSkipped++;
             nSitesTotal++;
+            nSitesTotalInContig++;
             continue;
         } else {
             if (args->printTruth) {
@@ -1332,16 +1367,15 @@ inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
             if (ret < 0) {
                 nSitesSkipped++;
                 nSitesTotal++;
+                nSitesTotalInContig++;
                 continue;
             }
         }
 
-
-
-
         ASSERT(0 == bcf_write(args->out_fp, sim->hdr, sim->rec));
         nSites++;
         nSitesTotal++;
+        nSitesTotalInContig++;
     }
 
 
@@ -1350,34 +1384,43 @@ inline void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
     sim->rec = NULL;
 
 
-    // /END/ main sites loop -----------------------------------------------
-
     fprintf(stderr, "\n\n-> Simulation finished successfully.\n\nSummary:\n\tNumber of samples: %i\n\tNumber of contigs: %d\n\tTotal number of sites simulated: %i\n\tNumber of sites included in simulation output file: %i\n\tNumber of sites skipped: %i\n", sim->nSamples, sim->nContigs, nSitesTotal, nSites, nSitesSkipped);
     fprintf(args->arg_fp, "\n\n-> Simulation finished successfully.\n\nSummary:\n\tNumber of samples: %i\n\tNumber of contigs: %d\n\tTotal number of sites simulated: %i\n\tNumber of sites included in simulation output file: %i\n\tNumber of sites skipped: %i\n", sim->nSamples, sim->nContigs, nSitesTotal, nSites, nSitesSkipped);
+    fflush(stderr);
 
-    // /END/ main sites loop -----------------------------------------------
+    // /END/ truth sites loop -----------------------------------------------
 
 
+    return;
 }
 
-inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_t* in_rec) {
+static void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_t* in_rec) {
 
     int nSites = 0;
     int nSitesSkipped = 0;
     int nSitesTotal = 0;
+    int nSitesTotalInContig=0;
     int ret;
 
     bcf1_t* explode_rec = NULL;
 
+    bool contig_changed=false;
+    char last_contig[1024]={'\0'};
 
     while (0 == bcf_read(args->in_fp, in_hdr, in_rec)) {
 
-        bcf_unpack(in_rec, BCF_UN_ALL);
+        contig_changed=strcmp(last_contig,in_hdr->id[BCF_DT_CTG][in_rec->rid].key);
+        if (contig_changed){
+            nSitesTotalInContig=0;
+            strcpy(last_contig,in_hdr->id[BCF_DT_CTG][in_rec->rid].key);
+        }
 
+
+        bcf_unpack(in_rec, BCF_UN_ALL);
 
         while (1 == args->explode) {
 
-            if (nSitesTotal == in_rec->pos) {
+            if (nSitesTotalInContig == in_rec->pos) {
                 break; // out of while(1==args->explode) == out of explode
             }
 
@@ -1398,7 +1441,8 @@ inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
             }
 
             // -- runs for every unobserved position exploding --
-            explode_rec->pos = nSitesTotal;
+            explode_rec->pos = nSitesTotalInContig;
+
 
             // set explode record as the record to use in simulation
             sim->rec = bcf_copy(sim->rec, explode_rec);
@@ -1409,6 +1453,7 @@ inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
             if (ret < 0) {
                 nSitesSkipped++;
                 nSitesTotal++;
+                nSitesTotalInContig++;
                 continue;
             } else {
                 if (args->printTruth) {
@@ -1419,16 +1464,15 @@ inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
                 if (ret < 0) {
                     nSitesSkipped++;
                     nSitesTotal++;
+                    nSitesTotalInContig++;
                     continue;
                 }
             }
 
-
-
             write_record_values(args->out_fp, sim);
             nSites++;
             nSitesTotal++;
-
+            nSitesTotalInContig++;
         }
 
         sim->rec = bcf_copy(sim->rec, in_rec);
@@ -1439,6 +1483,7 @@ inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
         if (ret < 0) {
             nSitesSkipped++;
             nSitesTotal++;
+            nSitesTotalInContig++;
             continue;
         } else {
             if (args->printTruth) {
@@ -1449,15 +1494,14 @@ inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
             if (ret < 0) {
                 nSitesSkipped++;
                 nSitesTotal++;
+                nSitesTotalInContig++;
                 continue;
             }
         }
-
-
-
         write_record_values(args->out_fp, sim);
         nSites++;
         nSitesTotal++;
+        nSitesTotalInContig++;
 
     }
 
@@ -1468,12 +1512,12 @@ inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
     const int contigsize = in_hdr->id[BCF_DT_CTG][in_rec->rid].val->info[0];
     while (1 == args->explode) {
 
-        if (nSitesTotal == contigsize) {
+        if (nSitesTotalInContig == contigsize) {
             bcf_destroy(explode_rec);
             break;
         }
 
-        explode_rec->pos = nSitesTotal;
+        explode_rec->pos = nSitesTotalInContig;
 
         sim->rec = bcf_copy(sim->rec, explode_rec);
         bcf_unpack(sim->rec, BCF_UN_ALL);
@@ -1482,6 +1526,7 @@ inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
         if (ret < 0) {
             nSitesSkipped++;
             nSitesTotal++;
+            nSitesTotalInContig++;
             continue;
         } else {
             if (args->printTruth) {
@@ -1492,6 +1537,7 @@ inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
             if (ret < 0) {
                 nSitesSkipped++;
                 nSitesTotal++;
+                nSitesTotalInContig++;
                 continue;
             }
         }
@@ -1499,8 +1545,8 @@ inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
         write_record_values(args->out_fp, sim);
         nSites++;
         nSitesTotal++;
+        nSitesTotalInContig++;
     }
-
 
     // last write for flushing the gvcf block if any
     bcf_destroy(sim->rec); // first destroy the old rec
@@ -1509,13 +1555,11 @@ inline void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
         write_record_values(args->out_fp, sim);
     }
 
-    // /END/ main sites loop -----------------------------------------------
-
     fprintf(stderr, "\n\n-> Simulation finished successfully.\n\nSummary:\n\tNumber of samples: %i\n\tNumber of contigs: %d\n\tTotal number of sites simulated: %i\n\tNumber of sites included in simulation output file: %i\n\tNumber of sites skipped: %i\n", sim->nSamples, sim->nContigs, nSitesTotal, nSites, nSitesSkipped);
     fprintf(args->arg_fp, "\n\n-> Simulation finished successfully.\n\nSummary:\n\tNumber of samples: %i\n\tNumber of contigs: %d\n\tTotal number of sites simulated: %i\n\tNumber of sites included in simulation output file: %i\n\tNumber of sites skipped: %i\n", sim->nSamples, sim->nContigs, nSitesTotal, nSites, nSitesSkipped);
+    fflush(stderr);
 
     // /END/ main sites loop -----------------------------------------------
-
 
 }
 
@@ -1533,6 +1577,7 @@ int main(int argc, char** argv) {
 
     fprintf(stderr, "\n%s\n\n", args->command);
     fprintf(stderr, "\n[Program start] %s\n", args->datetime);
+    fflush(stderr);
 
     fprintf(args->arg_fp, "\n%s\n\n", args->command);
     fprintf(args->arg_fp, "\n[Program start] %s\n", args->datetime);
@@ -1607,7 +1652,7 @@ int main(int argc, char** argv) {
                 args->preCalc->error_prob_forGl = args->preCalc->error_prob_forQs;
                 if (0.0 == args->preCalc->error_prob_forGl) {
                     args->preCalc->homT = 0;
-                    args->preCalc->het = -0.30103;
+                    args->preCalc->het = -0.3010299956639812;
                     args->preCalc->homF = NEG_INF;
                 } else if (args->preCalc->error_prob_forGl > 0.0) {
                     // prepare for gl calculation with pre-calculated terms
@@ -1655,9 +1700,6 @@ int main(int argc, char** argv) {
 
     true_gts_acgt_int = (int*)malloc(sim->nSamples * SIM_PLOIDY * sizeof(int));
     ASSERT(NULL != true_gts_acgt_int);
-
-    true_gts_alleles_idx = (int*)malloc(sim->nSamples * SIM_PLOIDY * sizeof(int));
-    ASSERT(NULL != true_gts_alleles_idx);
 
     n_sim_reads_arr = (int*)malloc(sim->nSamples * sizeof(int));
     ASSERT(NULL != n_sim_reads_arr);
@@ -1707,15 +1749,17 @@ int main(int argc, char** argv) {
 
 
     if (args->printPileup) {
+        ASSERT(sim->pileup != NULL);
         if (sim->pileup->l > 0) {
             write_BGZF(args->out_pileup_fp, sim->pileup->s, sim->pileup->l);
-            sim->pileup->l = 0;
+            ks_free(sim->pileup);
         }
         if (NULL != args->out_pileup_fp) {
             ASSERT(0 == bgzf_close(args->out_pileup_fp));
             args->out_pileup_fp = NULL;
         }
     }
+
 
     if (NULL != tpool.pool) {
         hts_tpool_destroy(tpool.pool);
@@ -1725,9 +1769,6 @@ int main(int argc, char** argv) {
 
     free(true_gts_acgt_int);
     true_gts_acgt_int = NULL;
-
-    free(true_gts_alleles_idx);
-    true_gts_alleles_idx = NULL;
 
     free(n_sim_reads_arr);
     n_sim_reads_arr = NULL;
@@ -1741,6 +1782,39 @@ int main(int argc, char** argv) {
     fprintf(stderr, "\tElapsed time (Real): %f seconds\n", difftime(end_time, start_time));
     fprintf(args->arg_fp, "\tElapsed time (Real): %f seconds\n", difftime(end_time, start_time));
 
+
+    fprintf(stderr, "\n-> Log file: %s.arg\n", args->out_fnprefix);
+    fprintf(args->arg_fp, "\n-> Log file: %s.arg\n", args->out_fnprefix);
+    fprintf(stderr, "-> Simulation output file: %s\n", args->out_fn);
+    fprintf(args->arg_fp, "-> Simulation output file: %s\n", args->out_fn);
+    if (args->printPileup) {
+        fprintf(stderr, "-> Pileup output file: %s\n", args->out_pileup_fn);
+        fprintf(args->arg_fp, "-> Pileup output file: %s\n", args->out_pileup_fn);
+    }
+    if (args->printTruth) {
+        fprintf(stderr, "-> True genotypes output file: %s\n", args->out_truth_fn);
+        fprintf(args->arg_fp, "-> True genotypes output file: %s\n", args->out_truth_fn);
+    }
+    if (args->printBasePickError) {
+        fprintf(stderr, "-> Base pick error output: stdout\n");
+        fprintf(args->arg_fp, "-> Base pick error output: stdout\n");
+    }
+    if (args->printQsError) {
+        fprintf(stderr, "-> QS error output: stdout\n");
+        fprintf(args->arg_fp, "-> QS error output: stdout\n");
+    }
+    if (args->printGlError) {
+        fprintf(stderr, "-> GL error output: stdout\n");
+        fprintf(args->arg_fp, "-> GL error output: stdout\n");
+    }
+    if (args->printQScores) {
+        fprintf(stderr, "-> Qscores output: stdout\n");
+        fprintf(args->arg_fp, "-> Qscores output: stdout\n");
+    }
+
+    fprintf(stderr, "\n[Program end] %s\n", args->datetime);
+
+    fflush(stderr);
 
     args_destroy(args);
 

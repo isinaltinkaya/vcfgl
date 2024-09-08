@@ -150,10 +150,25 @@ You can access the command-line help page using `vcfgl --help` or `vcfgl -h`:
 
 <pre>
 
-Usage: vcfgl -i &lt;input&gt; [options]
+Usage: vcfgl -i <input> [options]
 
     -h, --help _____________________  Print this help message and exit
     -v, --version __________________  Print version and build information and exit
+
+Option descriptions:
+     -s, --long-option TYPE [X] _____ Description
+     -s                               Short option (if any)
+         --long-option                Long option
+                       TYPE           Type of the argument value, can be:
+                                        - INT (integer)
+                                        - INT+ (additive integer: sum values to use together
+                                        - FLOAT (floating point number)
+                                        - STRING (string)
+                                        - FILE (filename)
+                                        - x|y|z (one of the listed values x, y or z)
+                            [X]       Default argument value (if any)
+                                _____ Connector to the option description for better readability
+
 
 General options:
     -V, --verbose INT [0] ___________ Verbosity level
@@ -164,12 +179,12 @@ Input/Output:
     -i, --input FILE ________________ Input VCF/BCF file
         --source [0]|1 ______________ 0: Input REF/ALT alleles are in binary format (REF=0, ALT=1; typically outputted from msprime BinaryMutationModel)
                                       1: Input REF/ALT alleles are in VCF format (REF=i, ALT=j(,k..); i, j and k from {A,C,G,T}; i.e. the regular VCF format)
-    -o, --output STRING [&apos;output&apos;] __ Output filename prefix
+    -o, --output STRING ['output'] __ Output filename prefix
     -O, --output-mode [b]|u|z|v _____ b: Compressed BCF (.bcf), u: uncompressed BCF (.bcf), z: compressed VCF (.vcf.gz), v: uncompressed VCF (.vcf)
 
 Simulation parameters:
-    -d, --depth FLOAT|&apos;inf&apos; _________ Mean per-site read depth
-                                      (&apos;inf&apos;) Simulate true values (requires: -addFormatDP 0 -addInfoDP 0)
+    -d, --depth FLOAT|'inf' _________ Mean per-site read depth
+                                      ('inf') Simulate true values (requires: -addFormatDP 0 -addInfoDP 0)
    -df, --depths-file FILE __________ File containing mean per-site read depth values for each sample. One value per line.
     -e, --error-rate FLOAT __________ Base-calling error probability
    -eq, --error-qs [0]|1|2 __________ 0: Do not simulate errors in quality scores. Assumes all quality score assignments are correct
@@ -180,39 +195,59 @@ Simulation parameters:
                                       1: Genotype likelihood model with correlated errors (a.k.a. Li model, samtools model, angsd -GL 1)
                                       2: Canonical genotype likelihood model with independent errors (a.k.a. McKenna model, GATK model, angsd -GL 2)
          --gl1-theta FLOAT [0.83] ___ Theta parameter for the genotype likelihood model 1 (requires: -GL 1)
-         --qs-bins FILE __________ File containing the quality score binning to be used in the simulation
+         --qs-bins FILE _____________ File containing the quality score binning to be used in the simulation
          --precise-gl [0]|1 _________ 0: Use the discrete phred-scaled error probabilities in the genotype likelihood calculation
                                       1: Use precise error probabilities in the genotype likelihood calculation (requires: -GL 2)
          --i16-mapq INT [20] ________ Mapping quality score for I16 tag (requires: -addI16 1)
          --gvcf-dps INT(,INT..) _____ Minimum per-sample read depth range(s) for constructing gVCF blocks (requires: -doGVCF 1)
                                       Example: `--gvcf-dps 5,10,20` will group invariable sites into three types of gVCF blocks: [5,10), [10,20) and [20,inf)
-                                      Sites with minimum depth &lt; 5 will be printed as regular VCF records.
+                                      Sites with minimum depth < 5 will be printed as regular VCF records.
          --adjust-qs INT+ [0] _______ 0: Do not adjust quality scores
                                       1: Use adjusted quality scores in genotype likelihoods (requires: --precise-gl 0)
                                       2: Use adjusted quality scores in calculating the quality score sum (QS) tag (requires: -addQS 1)
                                       4: Use adjusted quality scores in pileup output (requires: --printPileup 1)
                                       8: Use adjusted quality scores in --printQScores output (requires: --printQScores 1)
                                       16: Use adjusted quality scores in --printGlError output (requires: --printGlError 1)
-         --adjust-by FLOAT [0.499] __ Adjustment value for quality scores (requires: --adjust-qs &gt; 0)
+         --adjust-by FLOAT [0.499] __ Adjustment value for quality scores (requires: --adjust-qs > 0)
          -explode [0]|1 _____________ 1: Explode to sites that are not in input file.
                                       Useful for simulating invariable sites when the input file only contains variable sites.
                                       Sets all genotypes in exploded sites to homozygous reference.
-         --rm-invar-sites INT+ [(null)]___ 0: Do not remove invariable sites
-                                      1: Remove sites where all individuals&apos; true genotypes in the input file are homozygous reference
-                                      2: Remove sites where all individuals&apos; true genotypes in the input file are homozygous alternative
+         --rm-invar-sites INT+ [0]___ 0: Do not remove invariable sites
+                                      1: Remove sites where all individuals' true genotypes in the input file are homozygous reference
+                                      2: Remove sites where all individuals' true genotypes in the input file are homozygous alternative
                                       4: Remove sites where the all simulated reads among all individuals are the same base
-                                      Example: &apos;--rm-invar-sites 3&apos; (1+2) will do both 1 and 2 (i.e. remove all homozygous sites)
+                                      Example: '--rm-invar-sites 3' (1+2) will do both 1 and 2 (i.e. remove all homozygous sites)
          --rm-empty-sites [0]|1 _____ 0: Do not remove empty sites
                                       1: Remove empty sites (i.e. sites where no reads were simulated)
+
+Output options:
          -doUnobserved INT [1] ______ 0: Trim unobserved alleles. Only alleles that are observed will be listed in REF and ALT fields
-                                      1: Use &apos;&lt;*&gt;&apos; notation to represent unobserved alleles
-                                      2: Use &apos;&lt;NON_REF&gt;&apos; notation to represent unobserved alleles (a.k.a. GATK notation)
+                                      1: Use '<*>' notation to represent unobserved alleles
+                                      2: Use '<NON_REF>' notation to represent unobserved alleles (a.k.a. GATK notation)
                                       3: Explode unobserved bases from {A,C,G,T} list
-                                      4: Use &apos;&lt;*&gt;&apos; notation to represent unobserved alleles and explode unobserved bases from {A,C,G,T} list
-                                      5: Use &apos;&lt;NON_REF&gt;&apos; notation to represent unobserved alleles and explode unobserved bases from {A,C,G,T} list
-         -doGVCF [0]|1 ______________ 0: Disabled, 1: Output in gVCF format (requires: --rm-invar-sites 0, -doUnobserved 2, -addPL 1 and --gvcf-dps INT)
-         -printPileup [0]|1 _________ 0: Disabled, 1: Also output in pileup format (&lt;output_prefix&gt;.pileup.gz)
-         -printTruth [0]|1 __________ 0: Disabled, 1: Also output the VCF file containing the true genotypes (named &lt;output_prefix&gt;.truth.vcf)
+                                      4: Use '<*>' notation to represent unobserved alleles and explode unobserved bases from {A,C,G,T} list
+                                      5: Use '<NON_REF>' notation to represent unobserved alleles and explode unobserved bases from {A,C,G,T} list
+         -doGVCF [0]|1 ______________ 0: Disabled
+                                      1: Output in gVCF format (requires: --rm-invar-sites 0, -doUnobserved 2, -addPL 1 and --gvcf-dps INT)
+
+Output VCF/BCF tags:                  0: Do not add, 1: Add
+         -addGL 0|[1] _______________ Genotype likelihoods (GL) tag
+         -addGP [0]|1 _______________ Genotype probabilities (GP) tag
+         -addPL [0]|1 _______________ Phred-scaled genotype likelihoods (PL) tag
+         -addI16 [0]|1 ______________ I16 tag
+         -addQS [0]|1 _______________ Quality score sum (QS) tag
+         -addFormatDP [1]|0 _________ Per-sample read depth (FORMAT/DP) tag
+         -addFormatAD [0]|1 _________ Per-sample allelic read depth (FORMAT/AD) tag
+         -addFormatADF [0]|1 ________ Per-sample forward-strand allelic read depth (FORMAT/ADF) tag
+         -addFormatADR [0]|1 ________ Per-sample reverse-strand allelic read depth (FORMAT/ADR) tag
+         -addInfoDP [0]|1 ___________ Total read depth (INFO/DP) tag
+         -addInfoAD [0]|1 ___________ Total allelic read depth (INFO/AD) tag
+         -addInfoADF [0]|1 __________ Total forward-strand allelic read depth (INFO/ADF) tag
+         -addInfoADR [0]|1 __________ Total reverse-strand allelic read depth (INFO/ADR) tag
+
+Additional output formats:
+         -printPileup [0]|1 _________ 0: Disabled, 1: Output in pileup format (<output_prefix>.pileup.gz)
+         -printTruth [0]|1 __________ 0: Disabled, 1: Output the VCF file containing the true genotypes (<output_prefix>.truth.vcf)
          -printBasePickError [0]|1 __ 0: Disabled, 1: Print the base picking error probability to stdout.
                                       If --error-qs 1 is used, writes per-read base picking error probabilities to stdout.
                                       If --error-qs 0 or 2 is used, writes a single value which is used for all samples and sites.
@@ -230,23 +265,12 @@ Simulation parameters:
          -printQScores [0]|1 ________ 0: Disabled, 1: Print the quality scores to stdout.
                                       The columns are: type, sample_id, contig, site, read_index, qScore
 
-Output VCF/BCF tags:                  0: Do not add, 1: Add
-         -addGL 0|[1] _______________ Genotype likelihoods (GL) tag
-         -addGP [0]|1 _______________ Genotype probabilities (GP) tag
-         -addPL [0]|1 _______________ Phred-scaled genotype likelihoods (PL) tag
-         -addI16 [0]|1 ______________ I16 tag
-         -addQS [0]|1 _______________ Quality score sum (QS) tag
-         -addFormatDP [1]|0 _________ Per-sample read depth (FORMAT/DP) tag
-         -addFormatAD [0]|1 _________ Per-sample allelic read depth (FORMAT/AD) tag
-         -addFormatADF [0]|1 ________ Per-sample forward-strand allelic read depth (FORMAT/ADF) tag
-         -addFormatADR [0]|1 ________ Per-sample reverse-strand allelic read depth (FORMAT/ADR) tag
-         -addInfoDP [0]|1 ___________ Total read depth (INFO/DP) tag
-         -addInfoAD [0]|1 ___________ Total allelic read depth (INFO/AD) tag
-         -addInfoADF [0]|1 __________ Total forward-strand allelic read depth (INFO/ADF) tag
-         -addInfoADR [0]|1 __________ Total reverse-strand allelic read depth (INFO/ADR) tag
 </pre>
 </pre>
 </details>
+
+
+
 
 <details closed> <summary> <b> Option descriptions </b> </summary>
 

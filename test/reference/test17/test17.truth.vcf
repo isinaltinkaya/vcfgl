@@ -1,0 +1,17 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##source=manual edit by isinaltinkaya
+##contig=<ID=chr22,length=10>
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##fileDate=Tue Aug 20 17:10:49 2024
+##source=vcfgl [version: v1.0.1-cce3ef8] [build: Aug 20 2024 17:10:20] [htslib: 1.15.1-20-g46c56fcc]
+##source=[vcfgl] I16 tag simulation is still under development. Please use with caution and report any issues
+##source=Command: vcfgl --verbose 0 --threads 1 --seed 42 --input /home/isin/Projects/VCFGL/vcfgl/test/data/data6.vcf --source 1 --output /home/isin/Projects/VCFGL/vcfgl/test/testwd/test17 --output-mode v --depth 2.000000 --error-rate 0.000000 --error-qs 0  --gl-model 2   --precise-gl 0 --i16-mapq 20  --adjust-qs 0  -explode 0 --rm-invar-sites 0 --rm-empty-sites 0 -doUnobserved 5 -doGVCF 0 -printPileup 0 -printTruth 1  -printBasePickError 0 -printQsError 0 -printGlError 0 -printQScores 0 -addGL 1 -addGP 1 -addPL 1 -addI16 1 -addQS 1 -addFormatDP 1 -addInfoDP 1 -addFormatAD 1 -addInfoAD 1 -addFormatADF 0 -addInfoADF 0 -addFormatADR 0 -addInfoADR 0
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind1	ind2
+chr22	2	.	C	T,G	.	PASS	.	GT	2|2	0|0
+chr22	3	.	G	T,A,C	.	PASS	.	GT	0|0	0|0
+chr22	4	.	A	G,T,C	.	PASS	.	GT	3|3	3|3
+chr22	5	.	G	A,T,C	.	PASS	.	GT	1|0	2|3
+chr22	6	.	G	C	.	PASS	.	GT	1|1	1|0
+chr22	9	.	T	.	.	PASS	.	GT	0|0	0|0
+chr22	10	.	A	<*>	.	PASS	.	GT	0|0	0|0

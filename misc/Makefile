@@ -39,6 +39,9 @@ endif
 SRC = $(wildcard *.c)
 CXXSRC = $(wildcard *.cpp)
 
+OBJ := $(CXXSRC:.cpp=.o) $(SRC:.c=.o)
+
+
 PROGRAMS = $(SRC:.c=) $(CXXSRC:.cpp=)
 all: $(PROGRAMS)
 
@@ -46,14 +49,20 @@ all: $(PROGRAMS)
 FLAGS := $(FLAGS) $(CXXFLAGS)
 
 %: %.cpp
-	g++ -c -g -Wall $(FLAGS) $*.cpp
-	g++ -MM  -g -Wall $(FLAGS) $*.cpp > $*.d
-	g++ -o $* $*.o $(LIBHTS) -lz -lm -lbz2 -llzma -lcurl -lpthread
+	@echo
+	@echo Building $@
+	@echo
+	$(CXX) -c -g -Wall $(FLAGS) $*.cpp
+	$(CXX) -MM  -g -Wall $(FLAGS) $*.cpp > $*.d
+	$(CXX) -o $* $*.o $(LIBHTS) -lz -lm -lbz2 -llzma -lcurl -lpthread
 
 %: %.c
-	g++ -c -g -Wall $(FLAGS) $*.c
-	g++ -MM  -g -Wall $(FLAGS) $*.c > $*.d
-	g++ -o $* $*.o $(LIBHTS) -lz -lm -lbz2 -llzma -lcurl -lpthread
+	@echo
+	@echo Building $@
+	@echo
+	$(CXX) -c -g -Wall $(FLAGS) $*.c
+	$(CXX) -MM  -g -Wall $(FLAGS) $*.c > $*.d
+	$(CXX) -o $* $*.o $(LIBHTS) -lz -lm -lbz2 -llzma -lcurl -lpthread
 
 
 clean:
@@ -63,11 +72,13 @@ test:
 	$(RM) -r testwd/;
 	mkdir -pv testwd;
 	$(info Test 1)
-	./$(PROGRAMS) -i data/call.vcf -t data/truth.vcf -o testwd/out_test.tsv;
+	./gtDiscordance -i data/call.vcf -t data/truth.vcf -o testwd/out_test.tsv;
 	diff -s testwd/out_test.tsv reference/test_doGq0.tsv
-	./$(PROGRAMS) -i data/call3.vcf -t data/truth3.vcf -o testwd/out_test3.tsv -doGQ 7;
+	./gtDiscordance -i data/call3.vcf -t data/truth3.vcf -o testwd/out_test3.tsv -doGQ 7;
 	diff -s testwd/out_test3.tsv reference/test3_doGq7.tsv
-	./$(PROGRAMS) -i data/call3_nogq_withpl.vcf -t data/truth3.vcf -o testwd/out_test3_nogq_withpl.tsv -doGQ 8;
+	./gtDiscordance -i data/call3_nogq_withpl.vcf -t data/truth3.vcf -o testwd/out_test3_nogq_withpl.tsv -doGQ 8;
 	diff -s testwd/out_test3_nogq_withpl.tsv reference/test3_doGq7.tsv
-	./$(PROGRAMS) -i data/call3_nogq_withpl_unobservedAllele.vcf -t data/truth3.vcf -o testwd/out_test3_nogq_withpl_unobservedAllele.tsv -doGQ 8;
+	./gtDiscordance -i data/call3_nogq_withpl_unobservedAllele.vcf -t data/truth3.vcf -o testwd/out_test3_nogq_withpl_unobservedAllele.tsv -doGQ 8;
 	diff -s testwd/out_test3_nogq_withpl_unobservedAllele.tsv reference/test3_doGq7.tsv
+	./fetchGl -i data/test12.vcf -gt CC > testwd/test12.csv 2>/dev/null
+	diff -s testwd/test12.csv reference/test12.csv

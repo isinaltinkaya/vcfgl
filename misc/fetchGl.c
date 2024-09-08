@@ -123,6 +123,7 @@ int main(int argc, char** argv) {
 
         if (gt_to_alleles[0] == -1 || gt_to_alleles[1] == -1) {
             fprintf(stderr, "Requested genotype %s not found at position %ld. Skipping...\n", gt_to_fetch, rec->pos + 1);
+			fflush(stderr);
             continue;
         }
         fprintf(stderr, "Requested genotype's first allele corresponds to allele %d and second allele corresponds to allele %d at position %ld.\n", gt_to_alleles[0], gt_to_alleles[1], rec->pos + 1);
@@ -133,6 +134,7 @@ int main(int argc, char** argv) {
 
         char glval[50];
         fprintf(stdout, "%ld,", rec->pos + 1);
+		fflush(stdout);
 
         for (int i = 0;i < nSamples;++i) {
             float val = gls[i * n_gls + gtidx];

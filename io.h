@@ -4,10 +4,9 @@
 #include <htslib/kstring.h>  // kstring_t
 #include <htslib/bgzf.h> // bgzf
 #include <htslib/hts.h>  // hts_version()
-
 #include <ctime> // time_t, localtime, asctime
 
-#include "random_generator.h" // BetaSampler, PoissonSampler
+#include "rng.h" // BetaSampler, PoissonSampler
 
 
 FILE* get_FILE(const char* fname, const char* mode);
@@ -145,10 +144,6 @@ struct argStruct {
     /// qs_bins[i][2] = qs value to assign for i-th range
     uint8_t** qs_bins;
     uint8_t n_qs_bins;
-
-    // functions:
-    double* read_depthsFile(void);
-
 
 };
 

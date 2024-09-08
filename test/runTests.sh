@@ -288,8 +288,7 @@ ID="test1"
 
 INFILENAME=${DATADIR}/"data1.vcf"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --output-mode v \
 --depth 1 \
 --error-rate 0.2 \
@@ -322,8 +321,7 @@ ID="test2"
 
 INFILENAME=${DATADIR}/"data2.vcf"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --output-mode v \
 --depth 2 \
 --error-rate 0.01 \
@@ -348,7 +346,7 @@ runTestDiffVcf ${ID} ${TESTWD}/${ID}.truth.vcf  ${SCRIPTDIR}/reference/${ID}/${I
 
 
 # ################################################################################
-# # TEST3
+# TEST3
 # data3
 # ** err 0
 # ** --rm-empty-sites 1 // removes site 6 and 8
@@ -360,8 +358,7 @@ ID="test3"
 
 INFILENAME=${DATADIR}/"data3.vcf"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --output-mode v \
 --depth 1 \
 --error-rate 0 \
@@ -389,15 +386,14 @@ runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 
 # ################################################################################
-# # TEST4
+# TEST4
 # test --depth inf
 ID="test4"
 
 INFILENAME=${DATADIR}/"data3.vcf"
 
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --output-mode v \
 --depth inf \
 --error-rate 0 \
@@ -421,15 +417,14 @@ runTestDiffVcf ${ID} ${TESTWD}/${ID}.truth.vcf  ${SCRIPTDIR}/reference/${ID}/${I
 
 
 ################################################################################
-# # TEST5
+# TEST5
 ID="test5"
 # 0.01	error-rate
 # 0		error-qs **
 # ** -doUnobserved 4 // <*> + explode A,C,G,T
 INFILENAME=${DATADIR}/"data3.vcf"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --output-mode v \
 --depth 2 \
 --error-rate 0.01 \
@@ -456,13 +451,12 @@ runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 
 
 ################################################################################
-# # TEST6
+# TEST6
 ID="test6"
 
 INFILENAME=${DATADIR}/"data3.vcf"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --output-mode v \
 --depth 2 \
 --error-rate 0.01 \
@@ -491,14 +485,13 @@ runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 
 
 ################################################################################
-# # TEST7
+# TEST7
 ID="test7"
 # ** gvcf with --gvcf-dps 1
 # ** -doUnobserved 2 // <NON_REF>
 INFILENAME=${DATADIR}/"data1.vcf"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --output-mode v \
 --depth 1 \
 --error-rate 0.2 \
@@ -529,13 +522,12 @@ runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 
 
 ################################################################################
-# # TEST8
+# TEST8
 ID="test8"
 
 INFILENAME=${DATADIR}/"data2.vcf"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --output-mode v \
 --depth 4 \
 --error-rate 0.001 \
@@ -565,13 +557,12 @@ runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 
 ################################################################################
-# # TEST9
+# TEST9
 ID="test9"
 
 INFILENAME=${DATADIR}/"data3.vcf"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --output-mode v \
 --depth 2 \
 --error-rate 0.024 \
@@ -600,14 +591,13 @@ runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 
 ################################################################################
-# # TEST10
+# TEST10
 ID="test10"
 
 # same as test9 but --precise-gl 1
 INFILENAME=${DATADIR}/"data3.vcf"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --output-mode v \
 --depth 2 \
 --error-rate 0.024 \
@@ -639,15 +629,14 @@ runTestDiffPileup ${ID} ${TESTWD}/${ID}.pileup.gz ${SCRIPTDIR}/reference/${ID}/$
 
 
 ################################################################################
-# # TEST11
+# TEST11
 ID="test11"
 
 # same as test9 but use depths file
 INFILENAME=${DATADIR}/"data3.vcf"
 depthsFile=${DATADIR}/"data3.depthsfile.txt"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --output-mode v \
 --depths-file ${depthsFile} \
 --error-rate 0.024 \
@@ -676,13 +665,12 @@ runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 
 ###############################################################################
-# # test12
+# TEST12
 ID="test12"
 
 INFILENAME=${DATADIR}/"data4_acgt_biallelic.vcf"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --depth 2 \
 --output-mode v \
 --error-rate 0.024 \
@@ -700,7 +688,7 @@ runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 
 
 ###############################################################################
-# # test13
+# TEST13
 ID="test13"
 #
 # diff -s <(./misc/fetchGl -i test/testwd/test12.vcf -gt AA 2> /dev/null) <(./misc/fetchGl -i test/testwd/test13.vcf -gt GG 2> /dev/null)
@@ -708,8 +696,7 @@ ID="test13"
 
 INFILENAME=${DATADIR}/"data4_acgt_biallelic_a2g_c2t.vcf"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --depth 2 \
 --output-mode v \
 --error-rate 0.024 \
@@ -726,7 +713,7 @@ runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 
 
 ###############################################################################
-# # test14
+# TEST14
 ID="test14"
 #
 # diff -s <(./misc/fetchGl -i test/testwd/test12.vcf -gt AA 2>&1 ) <(./misc/fetchGl -i test/testwd/test14.vcf -gt AA 2>&1 )
@@ -737,8 +724,7 @@ ID="test14"
 
 INFILENAME=${DATADIR}/"data4_binary_biallelic.vcf"
 
-ARGS=" \
---seed 42 \
+ARGS="--seed 42 \
 --depth 2 \
 --output-mode v \
 --error-rate 0.024 \
@@ -756,15 +742,14 @@ runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 
 
 ###############################################################################
-# # test15
+# TEST15
 ID="test15"
 # same as test2, test multithreading
 
 INFILENAME=${DATADIR}/"data2.vcf"
 
-ARGS="
+ARGS="--seed 42 \
 --threads 4 \
---seed 42 \
 --output-mode b \
 --depth 2 \
 --error-rate 0.01 \
@@ -788,15 +773,14 @@ runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 
 
 ###############################################################################
-# # test16
+# TEST16
 ID="test16"
 
 # same as test2, test qs binning
 
 INFILENAME=${DATADIR}/"data2.vcf"
 
-ARGS="
---seed 42 \
+ARGS="--seed 42 \
 --output-mode v \
 --depth 2 \
 --error-rate 0.01 \
@@ -821,6 +805,100 @@ runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 runTestDiffVcf ${ID} ${TESTWD}/${ID}.truth.vcf ${SCRIPTDIR}/reference/test2/test2.truth.vcf
 
 ###############################################################################
+# TEST17
+ID="test17"
+
+INFILENAME="${DATADIR}/data6.vcf"
+
+ARGS="--seed 42 \
+--output-mode v \
+--depth 2 \
+--error-rate 0 \
+--gl-model 2 \
+--precise-gl 0 \
+--source 1 \
+-explode 0 \
+-doUnobserved 5 \
+-printTruth 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 
+"
+
+runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
+runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
+runTestDiffVcf ${ID} ${TESTWD}/${ID}.truth.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.truth.vcf
+
+###############################################################################
+# TEST18
+# test multiple contigs
+ID="test18"
+
+INFILENAME="${DATADIR}/data7.vcf"
+
+ARGS="--seed 42 \
+--output-mode v \
+--depth 100 \
+--error-rate 0 \
+--gl-model 2 \
+--precise-gl 0 \
+--source 1 \
+-explode 1 \
+-doUnobserved 5 \
+-printTruth 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 
+"
+
+runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
+runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
+runTestDiffVcf ${ID} ${TESTWD}/${ID}.truth.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.truth.vcf
+
+
+###############################################################################
+# TEST19
+# test multiple contigs with gvcf
+ID="test19"
+
+INFILENAME="${DATADIR}/data7.vcf"
+
+
+ARGS="--seed 42 \
+--output-mode v \
+--depth 100 \
+--error-rate 0 \
+--gl-model 2 \
+--precise-gl 0 \
+--source 1 \
+-explode 1 \
+-doUnobserved 5 \
+-printTruth 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 \
+-doGVCF 1 \
+--gvcf-dps 1
+"
+
+runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
+runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
+
+
+###############################################################################
+
 
 
 ${EXEC}

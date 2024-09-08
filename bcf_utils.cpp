@@ -2,8 +2,7 @@
 #include "io.h"
 
 
-
-inline float* bcf_tag_alloc_max_size(enum bcf_tag t, const double init_val, simRecord* sim) {
+static float* bcf_tag_alloc_max_size(enum bcf_tag t, const double init_val, simRecord* sim) {
     const int size = sim->max_size_bcf_tag_number[bcf_tags[t].n];
     float* arr = (float*)malloc(size * sizeof(float));
     for (int i = 0; i < size; ++i) {
@@ -14,17 +13,7 @@ inline float* bcf_tag_alloc_max_size(enum bcf_tag t, const double init_val, simR
 }
 
 
-inline float* bcf_tag_alloc_max_size(enum bcf_tag t, const float init_val, simRecord* sim) {
-    const int size = sim->max_size_bcf_tag_number[bcf_tags[t].n];
-    float* arr = (float*)malloc(size * sizeof(float));
-    for (int i = 0; i < size; ++i) {
-        arr[i] = init_val;
-    }
-    ASSERT(NULL != arr);
-    return (arr);
-}
-
-inline int32_t* bcf_tag_alloc_max_size(enum bcf_tag t, const int32_t init_val, simRecord* sim) {
+static int32_t* bcf_tag_alloc_max_size(enum bcf_tag t, const int32_t init_val, simRecord* sim) {
     const int size = sim->max_size_bcf_tag_number[bcf_tags[t].n];
     int32_t* arr = (int32_t*)malloc(size * sizeof(int32_t));
     for (int i = 0; i < size; ++i) {
@@ -51,7 +40,7 @@ simRecord::simRecord(bcf_hdr_t* in_hdr) {
     this->nContigs = in_hdr->n[BCF_DT_CTG];
 
     if (this->nContigs != 1) {
-        ERROR("Only one contig simulation is supported at the moment. If this is a feature you need please open an issue on GitHub.");
+        WARN("Multiple contigs simulation is a new feature. Please use with caution and report any issues.");
     }
 
     this->nHaplotypes = this->nSamples * SIM_PLOIDY;
@@ -228,6 +217,7 @@ simRecord::simRecord(bcf_hdr_t* in_hdr) {
     // always created, only added if addTYPE==1
 
     this->gl_arr = bcf_tag_alloc_max_size(GL, -0.0, this);
+
     this->fmt_dp_arr = bcf_tag_alloc_max_size(FMT_DP, 0, this);
     this->info_dp_arr = bcf_tag_alloc_max_size(INFO_DP, 0, this);
 
@@ -665,7 +655,7 @@ void simRecord::expand_arrays(const int new_size) {
 //                           2) is being held hostage in memory to be the
 //                           beginning of a new block
 // GVCF_FLUSH_BLOCK        flush the existing gVCF block
-//                           N.B. the function should be called again after
+//                           NB the function should be called again after
 //                           flushing to process the current record
 // GVCF_WRITE_SIMREC       write sim->rec as a regular record
 // @source mostly based on bcftools/gvcf.c
@@ -720,7 +710,6 @@ int prepare_gvcf_block(simRecord* sim, gvcfData* gvcfd) {
             }
 
             // 1.3) if the current simrec is on a different chromosome
-            // N.B. multi chromosome is not well tested
             if (sim->rec->rid != gvcfd->rid) {
                 signal = GVCF_FLUSH_BLOCK;
                 break;

@@ -194,6 +194,7 @@ typedef struct simRecord {
     // sample_gl_arr = gl_arr[sample_i*nGenotypes]
     // where nGenotype is variable per record
     float* gl_arr = NULL;
+
     // ---
 
     int32_t* pl_arr = NULL;
@@ -246,7 +247,6 @@ typedef struct simRecord {
         this->nAlleles = 0;
         this->nAllelesObserved = 0;
 
-        //TODO check why removing this has no effect
         free(this->gt_arr);
         this->gt_arr = NULL;
 

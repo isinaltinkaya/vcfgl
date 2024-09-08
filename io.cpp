@@ -5,7 +5,6 @@
 #include <time.h> // asctime
 #include <sys/stat.h> // stat()
 
-
 extern void(*calculate_gls)(simRecord* sim);
 extern unsigned short int rng1_seeder[3];
 extern unsigned short int rng1_seeder_save[3];
@@ -13,7 +12,91 @@ extern unsigned short int rng2_seeder[3];
 extern unsigned short int rng2_seeder_save[3];
 extern const char* nonref_str;
 
+static void set_arg_value(int* arg_to_set, const char* arg_str, const char* val) {
+    ASSERT(arg_to_set!=NULL);
+    if(NULL==val || strlen(val)==0){
+        ERROR("Argument '%s' requires a value.", arg_str);
+    }
+    *arg_to_set = atoi(val);
+}
 
+static void set_arg_value(char** arg_to_set, const char* arg_str, const char* val) {
+    ASSERT(arg_to_set!=NULL);
+    if (NULL == val || strlen(val) == 0) {
+        ERROR("Argument '%s' requires a value.", arg_str);
+    }
+    *arg_to_set = strdup(val);
+}
+
+static void set_arg_value(double* arg_to_set, const char* arg_str, const char* val) {
+    ASSERT(arg_to_set!=NULL);
+    if(NULL==val || strlen(val)==0){
+        ERROR("Argument '%s' requires a value.", arg_str);
+    }
+    *arg_to_set = atof(val);
+}
+
+
+
+/// @brief read depths file args->mps_depths_fn into args->mps_depths array and set args->n_mps_depths with array size
+static double* read_depths_file(void){
+
+    if (args->verbose > 0) {
+        fprintf(stderr, "-> Reading depths file: %s\n", args->mps_depths_fn);
+    }
+
+    FILE* fp = NULL;
+    if ((fp = fopen(args->mps_depths_fn, "r")) == NULL) {
+        ERROR("Could not open file: %s\n", args->mps_depths_fn);
+    }
+
+    double val;
+    char* lineend;
+
+    int n = 0;
+    char buf[255] = { '\0' };
+    int ntmp = BUFSIZE_NINDS;
+    double* ret = (double*)malloc(ntmp * sizeof(double));
+
+    while (fgets(buf, 255, fp)) {
+
+        val = strtod(buf, &lineend);
+        ASSERT(lineend != buf);
+
+        if (n == ntmp) {
+            ntmp *= 2;
+            ret = (double*)realloc(ret, ntmp * sizeof(double));
+        }
+
+        ret[n] = val;
+        ++n;
+
+    }
+
+    if (n == 0) {
+        ERROR("Could not read any values from depths file: %s\n", args->mps_depths_fn);
+    }
+
+    if (n != ntmp) {
+        ret = (double*)realloc(ret, n * sizeof(double));
+    }
+    args->n_mps_depths = n;
+
+    if (args->verbose > 0) {
+        fprintf(stderr, "\n-> Read %d values from depths file: %s\n", n, args->mps_depths_fn);
+
+        if (args->verbose > 1) {
+            fprintf(stderr, "\t-> Values: ");
+            for (int i = 0; i < n; ++i) {
+                fprintf(stderr, "%f ", ret[i]);
+            }
+            fprintf(stderr, "\n");
+        }
+    }
+
+    fclose(fp);
+    return(ret);
+}
 
 /// @brief read_qs_bins_file - read the file containing the quality score binning description
 /// @return uint8_t** - array of quality score binning ranges 
@@ -41,7 +124,7 @@ extern const char* nonref_str;
 /// 31,40,37
 /// 
 /// This example demonstrates how to assign a specific quality score to a single quality score value. In this example, quality score 2 is assigned when the simulated quality score is exactly 0.
-uint8_t** read_qs_bins_file(void) {
+static uint8_t** read_qs_bins_file(void) {
 
     if (args->verbose > 0) {
         fprintf(stderr, "-> Reading quality score binning file: %s\n", args->qs_bins_fn);
@@ -84,7 +167,7 @@ uint8_t** read_qs_bins_file(void) {
             if (rangeStart[i] != 0) {
                 ERROR("Quality score range does not start from 0 in line %d of file: %s\n", i + 1, args->qs_bins_fn);
             }
-        }else{
+        } else {
             if (rangeStart[i] != (rangeEnd[i - 1] + 1)) {
                 ERROR("Quality score range is not continuous in line %d of file: %s. Previous range end: %d, current range start: %d\n", i + 1, args->qs_bins_fn, rangeEnd[i - 1], rangeStart[i]);
             }
@@ -105,22 +188,22 @@ uint8_t** read_qs_bins_file(void) {
     }
 
 
-	if(i < 0){
-		NEVER;
-	}
+    if (i < 0) {
+        NEVER;
+    }
     const size_t nRanges = i;
     if (nRanges == 0) {
         ERROR("Could not read any quality score binning ranges from file: %s\n", args->qs_bins_fn);
     }
-	if(nRanges > 255){
-        ERROR("Number of ranges in file %s is bigger than expected. If you believe there is an issue please get in contact with the developers",args->qs_bins_fn);
-	}
+    if (nRanges > 255) {
+        ERROR("Number of ranges in file %s is bigger than expected. If you believe there is an issue please get in contact with the developers", args->qs_bins_fn);
+    }
 
     /// qs_bins[nRanges]
     /// qs_bins[i][0] = start of i-th range
     /// qs_bins[i][1] = end of i-th range
     /// qs_bins[i][2] = qs value to assign for i-th range
-    args->n_qs_bins = (uint8_t) nRanges;
+    args->n_qs_bins = (uint8_t)nRanges;
     uint8_t** ret = (uint8_t**)malloc(nRanges * sizeof(uint8_t*));
     ASSERT(NULL != ret);
     for (size_t j = 0;j < nRanges;j++) {
@@ -239,16 +322,16 @@ void help_page() {
     fprintf(stderr, "    -V, --verbose INT [0] ___________ Verbosity level\n");
     fprintf(stderr, "    -@, --threads INT [1] ___________ Number of threads\n");
     fprintf(stderr, "    -s, --seed INT [time] ___________ Random seed for initializing the random number generator\n");
-    fprintf(stderr, "\n");
 
+    fprintf(stderr, "\n");
     fprintf(stderr, "Input/Output:\n");
     fprintf(stderr, "    -i, --input FILE ________________ Input VCF/BCF file\n");
     fprintf(stderr, "        --source [0]|1 ______________ 0: Input REF/ALT alleles are in binary format (REF=0, ALT=1; typically outputted from msprime BinaryMutationModel)\n");
     fprintf(stderr, "                                      1: Input REF/ALT alleles are in VCF format (REF=i, ALT=j(,k..); i, j and k from {A,C,G,T}; i.e. the regular VCF format)\n");
     fprintf(stderr, "    -o, --output STRING ['output'] __ Output filename prefix\n");
     fprintf(stderr, "    -O, --output-mode [b]|u|z|v _____ b: Compressed BCF (.bcf), u: uncompressed BCF (.bcf), z: compressed VCF (.vcf.gz), v: uncompressed VCF (.vcf)\n");
-    fprintf(stderr, "\n");
 
+    fprintf(stderr, "\n");
     fprintf(stderr, "Simulation parameters:\n");
     fprintf(stderr, "    -d, --depth FLOAT|'inf' _________ Mean per-site read depth\n");
     fprintf(stderr, "                                      ('inf') Simulate true values (requires: -addFormatDP 0 -addInfoDP 0)\n");
@@ -286,32 +369,17 @@ void help_page() {
     fprintf(stderr, "                                      Example: '--rm-invar-sites 3' (1+2) will do both 1 and 2 (i.e. remove all homozygous sites)\n");
     fprintf(stderr, "         --rm-empty-sites [0]|1 _____ 0: Do not remove empty sites\n");
     fprintf(stderr, "                                      1: Remove empty sites (i.e. sites where no reads were simulated)\n");
+
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Output options:\n");
     fprintf(stderr, "         -doUnobserved INT [1] ______ 0: Trim unobserved alleles. Only alleles that are observed will be listed in REF and ALT fields\n");
     fprintf(stderr, "                                      1: Use '<*>' notation to represent unobserved alleles\n");
     fprintf(stderr, "                                      2: Use '<NON_REF>' notation to represent unobserved alleles (a.k.a. GATK notation)\n");
     fprintf(stderr, "                                      3: Explode unobserved bases from {A,C,G,T} list\n");
     fprintf(stderr, "                                      4: Use '<*>' notation to represent unobserved alleles and explode unobserved bases from {A,C,G,T} list\n");
     fprintf(stderr, "                                      5: Use '<NON_REF>' notation to represent unobserved alleles and explode unobserved bases from {A,C,G,T} list\n");
-
-    fprintf(stderr, "         -doGVCF [0]|1 ______________ 0: Disabled, 1: Output in gVCF format (requires: --rm-invar-sites 0, -doUnobserved 2, -addPL 1 and --gvcf-dps INT)\n");
-    fprintf(stderr, "         -printPileup [0]|1 _________ 0: Disabled, 1: Also output in pileup format (<output_prefix>.pileup.gz)\n");
-    fprintf(stderr, "         -printTruth [0]|1 __________ 0: Disabled, 1: Also output the VCF file containing the true genotypes (named <output_prefix>.truth.vcf)\n");
-    fprintf(stderr, "         -printBasePickError [0]|1 __ 0: Disabled, 1: Print the base picking error probability to stdout.\n");
-    fprintf(stderr, "                                      If --error-qs 1 is used, writes per-read base picking error probabilities to stdout.\n");
-    fprintf(stderr, "                                      If --error-qs 0 or 2 is used, writes a single value which is used for all samples and sites.\n");
-    fprintf(stderr, "                                      The columns are: type, sample_id, contig, site, read_index, base_pick_error_prob\n");
-    fprintf(stderr, "         -printQsError [0]|1 ________ 0: Disabled, 1: Print the error probability used in quality score calculations to stdout.\n");
-    fprintf(stderr, "                                      If --error-qs 2 is used, writes per-read quality score error probabilities to stdout.\n");
-    fprintf(stderr, "                                      If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.\n");
-    fprintf(stderr, "                                      The columns are: type, sample_id, contig, site, read_index, error_prob\n");
-    fprintf(stderr, "         -printGlError [0]|1 ________ 0: Disabled, 1: Print the error probability used in genotype likelihood calculations to stdout. (requires: -GL 2)\n");
-    fprintf(stderr, "                                      Since -GL 1 works directly with quality scores, this option is only available when -GL 2 is used.\n");
-    fprintf(stderr, "                                      If --error-qs 2 is used, writes per-read error probabilities to stdout.\n");
-    fprintf(stderr, "                                      If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.\n");
-    fprintf(stderr, "                                      If --precise-gl 1 is used, the printed values are the same as those printed by -printQsError.\n");
-    fprintf(stderr, "                                      The columns are: type, sample_id, contig, site, read_index, error_prob\n");
-    fprintf(stderr, "         -printQScores [0]|1 ________ 0: Disabled, 1: Print the quality scores to stdout.\n");
-    fprintf(stderr, "                                      The columns are: type, sample_id, contig, site, read_index, qScore\n");
+    fprintf(stderr, "         -doGVCF [0]|1 ______________ 0: Disabled\n");
+    fprintf(stderr, "                                      1: Output in gVCF format (requires: --rm-invar-sites 0, -doUnobserved 2, -addPL 1 and --gvcf-dps INT)\n");
 
     fprintf(stderr, "\n");
     fprintf(stderr, "Output VCF/BCF tags:                  0: Do not add, 1: Add\n");
@@ -328,6 +396,27 @@ void help_page() {
     fprintf(stderr, "         -addInfoAD [0]|1 ___________ Total allelic read depth (INFO/AD) tag\n");
     fprintf(stderr, "         -addInfoADF [0]|1 __________ Total forward-strand allelic read depth (INFO/ADF) tag\n");
     fprintf(stderr, "         -addInfoADR [0]|1 __________ Total reverse-strand allelic read depth (INFO/ADR) tag\n");
+
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Additional output formats:\n");
+    fprintf(stderr, "         -printPileup [0]|1 _________ 0: Disabled, 1: Output in pileup format (<output_prefix>.pileup.gz)\n");
+    fprintf(stderr, "         -printTruth [0]|1 __________ 0: Disabled, 1: Output the VCF file containing the true genotypes (<output_prefix>.truth.vcf)\n");
+    fprintf(stderr, "         -printBasePickError [0]|1 __ 0: Disabled, 1: Print the base picking error probability to stdout.\n");
+    fprintf(stderr, "                                      If --error-qs 1 is used, writes per-read base picking error probabilities to stdout.\n");
+    fprintf(stderr, "                                      If --error-qs 0 or 2 is used, writes a single value which is used for all samples and sites.\n");
+    fprintf(stderr, "                                      The columns are: type, sample_id, contig, site, read_index, base_pick_error_prob\n");
+    fprintf(stderr, "         -printQsError [0]|1 ________ 0: Disabled, 1: Print the error probability used in quality score calculations to stdout.\n");
+    fprintf(stderr, "                                      If --error-qs 2 is used, writes per-read quality score error probabilities to stdout.\n");
+    fprintf(stderr, "                                      If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.\n");
+    fprintf(stderr, "                                      The columns are: type, sample_id, contig, site, read_index, error_prob\n");
+    fprintf(stderr, "         -printGlError [0]|1 ________ 0: Disabled, 1: Print the error probability used in genotype likelihood calculations to stdout. (requires: -GL 2)\n");
+    fprintf(stderr, "                                      Since -GL 1 works directly with quality scores, this option is only available when -GL 2 is used.\n");
+    fprintf(stderr, "                                      If --error-qs 2 is used, writes per-read error probabilities to stdout.\n");
+    fprintf(stderr, "                                      If --error-qs 0 or 1 is used, writes a single value which is used for all samples and sites.\n");
+    fprintf(stderr, "                                      If --precise-gl 1 is used, the printed values are the same as those printed by -printQsError.\n");
+    fprintf(stderr, "                                      The columns are: type, sample_id, contig, site, read_index, error_prob\n");
+    fprintf(stderr, "         -printQScores [0]|1 ________ 0: Disabled, 1: Print the quality scores to stdout.\n");
+    fprintf(stderr, "                                      The columns are: type, sample_id, contig, site, read_index, qScore\n");
 
 
     fprintf(stderr, "\n");
@@ -458,41 +547,43 @@ argStruct* args_get(int argc, char** argv) {
         else if ((strcmp("--version", arv) == 0) || (strcmp("-v", arv) == 0)) {
             version_page();
             exit(0);
-        }
-        else if ((strcmp("-vv", arv) == 0)){
-			version_number();
+        } else if ((strcmp("-vv", arv) == 0)) {
+            version_number();
             exit(0);
         }
 
         else if ((strcmp("--verbose", arv) == 0) || (strcmp("-V", arv) == 0)) {
-            args->verbose = atoi(val);
+            set_arg_value(&args->verbose, "--verbose", val);
         }
 
         else if ((strcmp("--threads", arv) == 0) || (strcmp("-@", arv) == 0)) {
-            args->n_threads = atoi(val);
+            set_arg_value(&args->n_threads, "--threads", val);
         }
 
         else if ((strcmp("--seed", arv) == 0) || (strcmp("-s", arv) == 0)) {
-            args->seed = atoi(val);
+            set_arg_value(&args->seed, "--seed", val);
         }
 
         else if ((strcmp("--input", arv) == 0) || (strcmp("-i", arv) == 0)) {
-            args->in_fn = strdup(val);
+            set_arg_value(&args->in_fn, "--input", val);
         }
 
         else if ((strcmp("--source", arv) == 0)) {
-            args->gtSource = atoi(val);
+            set_arg_value(&args->gtSource, "--source", val);
         }
 
         else if ((strcmp("--output", arv) == 0) || (strcmp("-o", arv) == 0)) {
-            args->out_fnprefix = strdup(val);
+            set_arg_value(&args->out_fnprefix, "--output", val);
         }
 
         else if ((strcmp("--output-mode", arv) == 0) || (strcmp("-O", arv) == 0)) {
-            args->output_mode = strdup(val);
+            set_arg_value(&args->output_mode, "--output-mode", val);
         }
 
         else if ((strcmp("--depth", arv) == 0) || (strcmp("-d", arv) == 0)) {
+            if(val==NULL ||strlen(val)==0){
+                ERROR("Argument '--depth' requires a value.");
+            }
             char* tmp = strdup(val);
             int isNumber = 1;
             int i = 0;
@@ -518,134 +609,142 @@ argStruct* args_get(int argc, char** argv) {
         }
 
         else if ((strcmp("--depths-file", arv) == 0) || (strcmp("-df", arv) == 0)) {
-            args->mps_depths_fn = strdup(val);
+            set_arg_value(&args->mps_depths_fn, "--depths-file", val);
             args->mps_depth = ARG_DEPTH_FILE;
         }
 
         else if ((strcmp("--error-rate", arv) == 0) || (strcmp("-e", arv) == 0)) {
-            args->error_rate = atof(val);
+            set_arg_value(&args->error_rate, "--error-rate", val);
         }
 
         else if ((strcasecmp("--error-qs", arv) == 0) || (strcasecmp("-eq", arv) == 0)) {
-            args->error_qs = atoi(val);
+            set_arg_value(&args->error_qs, "--error-qs", val);
         }
 
         else if ((strcasecmp("--beta-variance", arv) == 0) || (strcasecmp("-bv", arv) == 0)) {
-            args->beta_variance = atof(val);
+            set_arg_value(&args->beta_variance, "--beta-variance", val);
         }
 
         else if ((strcasecmp("--gl-model", arv) == 0) || (strcasecmp("-GL", arv) == 0)) {
-            args->GL = atoi(val);
+            set_arg_value(&args->GL, "--gl-model", val);
         }
 
         else if (strcasecmp("--gl1-theta", arv) == 0) {
-            args->glModel1_theta = atof(val);
+            set_arg_value(&args->glModel1_theta, "--gl1-theta", val);
         }
 
         else if (strcasecmp("--qs-bins", arv) == 0) {
-            args->qs_bins_fn = strdup(val);
+            set_arg_value(&args->qs_bins_fn, "--qs-bins", val);
         }
 
         else if (strcasecmp("--precise-gl", arv) == 0) {
-            args->usePreciseGlError = atoi(val);
+            set_arg_value(&args->usePreciseGlError, "--precise-gl", val);
         }
 
         else if (strcasecmp("--i16-mapq", arv) == 0) {
-            args->i16_mapq = atoi(val);
+            set_arg_value(&args->i16_mapq, "--i16-mapq", val);
         }
 
         else if (strcasecmp("--gvcf-dps", arv) == 0) {
-            args->gvcf_dps_str = strdup(val);
+            set_arg_value(&args->gvcf_dps_str, "--gvcf-dps", val);
         }
 
         else if (strcasecmp("--adjust-qs", arv) == 0) {
-            args->adjustQs = atoi(val);
+            set_arg_value(&args->adjustQs, "--adjust-qs", val);
         }
 
         else if (strcasecmp("--adjust-by", arv) == 0) {
-            args->adjustBy = atof(val);
+            set_arg_value(&args->adjustBy, "--adjust-by", val);
         }
 
         else if (strcasecmp("-explode", arv) == 0) {
-            args->explode = atoi(val);
+            set_arg_value(&args->explode, "-explode", val);
         }
 
         else if (strcasecmp("--rm-invar-sites", arv) == 0) {
-            args->rmInvarSites = atoi(val);
+            set_arg_value(&args->rmInvarSites, "--rm-invar-sites", val);
         }
 
         else if (strcasecmp("--rm-empty-sites", arv) == 0) {
-            args->rmEmptySites = atoi(val);
+            set_arg_value(&args->rmEmptySites, "--rm-empty-sites", val);
         }
 
         else if (strcasecmp("-doUnobserved", arv) == 0) {
-            args->doUnobserved = atoi(val);
+            set_arg_value(&args->doUnobserved, "-doUnobserved", val);
         }
 
         else if (strcasecmp("-doGVCF", arv) == 0) {
-            args->doGVCF = atoi(val);
+            set_arg_value(&args->doGVCF, "-doGVCF", val);
         }
 
         else if (strcasecmp("-printPileup", arv) == 0) {
-            args->printPileup = atoi(val);
+            set_arg_value(&args->printPileup, "-printPileup", val);
         }
 
         else if (strcasecmp("-printTruth", arv) == 0) {
-            args->printTruth = atoi(val);
+            set_arg_value(&args->printTruth, "-printTruth", val);
         }
 
         else if (strcasecmp("-printBasePickError", arv) == 0) {
-            args->printBasePickError = atoi(val);
+            set_arg_value(&args->printBasePickError, "-printBasePickError", val);
         }
 
         else if (strcasecmp("-printQsError", arv) == 0) {
-            args->printQsError = atoi(val);
+            set_arg_value(&args->printQsError, "-printQsError", val);
         }
 
         else if (strcasecmp("-printGlError", arv) == 0) {
-            args->printGlError = atoi(val);
+            set_arg_value(&args->printGlError, "-printGlError", val);
         }
 
         else if (strcasecmp("-printQScores", arv) == 0) {
-            args->printQScores = atoi(val);
+            set_arg_value(&args->printQScores, "-printQScores", val);
         }
 
         else if ((strcasecmp("-addGL", arv) == 0) || (strcasecmp("-addFormatGL", arv) == 0)) {
-            args->addGL = atoi(val);
+            set_arg_value(&args->addGL, "-addGL", val);
         }
 
         else if ((strcasecmp("-addGP", arv) == 0) || (strcasecmp("-addFormatGP", arv) == 0)) {
-            args->addGP = atoi(val);
+            set_arg_value(&args->addGP, "-addGP", val);
         }
 
         else if ((strcasecmp("-addPL", arv) == 0) || (strcasecmp("-addFormatPL", arv) == 0)) {
-            args->addPL = atoi(val);
+            set_arg_value(&args->addPL, "-addPL", val);
         }
 
         else if ((strcasecmp("-addI16", arv) == 0) || (strcasecmp("-addFormatI16", arv) == 0)) {
-            args->addI16 = atoi(val);
+            set_arg_value(&args->addI16, "-addI16", val);
         }
 
         else if ((strcasecmp("-addQS", arv) == 0) || (strcasecmp("-addFormatQS", arv) == 0)) {
-            args->addQS = atoi(val);
+            set_arg_value(&args->addQS, "-addQS", val);
         }
 
-        else if (strcasecmp("-addFormatDP", arv) == 0)
-            args->addFormatDP = atoi(val);
-        else if (strcasecmp("-addInfoDP", arv) == 0)
-            args->addInfoDP = atoi(val);
-        else if (strcasecmp("-addFormatAD", arv) == 0)
-            args->addFormatAD = atoi(val);
-        else if (strcasecmp("-addInfoAD", arv) == 0)
-            args->addInfoAD = atoi(val);
-        else if (strcasecmp("-addFormatADF", arv) == 0)
-            args->addFormatADF = atoi(val);
-        else if (strcasecmp("-addInfoADF", arv) == 0)
-            args->addInfoADF = atoi(val);
-        else if (strcasecmp("-addFormatADR", arv) == 0)
-            args->addFormatADR = atoi(val);
-        else if (strcasecmp("-addInfoADR", arv) == 0)
-            args->addInfoADR = atoi(val);
+        else if (strcasecmp("-addFormatDP", arv) == 0){
+            set_arg_value(&args->addFormatDP, "-addFormatDP", val);
+        }
+        else if (strcasecmp("-addInfoDP", arv) == 0){
+            set_arg_value(&args->addInfoDP, "-addInfoDP", val);
+        }
+        else if (strcasecmp("-addFormatAD", arv) == 0){
+            set_arg_value(&args->addFormatAD, "-addFormatAD", val);
+        }
+        else if (strcasecmp("-addInfoAD", arv) == 0){
+            set_arg_value(&args->addInfoAD, "-addInfoAD", val);
+        }
+        else if (strcasecmp("-addFormatADF", arv) == 0){
+            set_arg_value(&args->addFormatADF, "-addFormatADF", val);
+        }
+        else if (strcasecmp("-addInfoADF", arv) == 0){
+            set_arg_value(&args->addInfoADF, "-addInfoADF", val);
+        }
+        else if (strcasecmp("-addFormatADR", arv) == 0){
+            set_arg_value(&args->addFormatADR, "-addFormatADR", val);
+        }
+        else if (strcasecmp("-addInfoADR", arv) == 0){
+            set_arg_value(&args->addInfoADR, "-addInfoADR", val);
+        }
         else {
             ERROR("Unknown arg:%s\n", arv);
         }
@@ -663,12 +762,16 @@ argStruct* args_get(int argc, char** argv) {
 
     // ** MUST BE SET **
     if (args->in_fn == NULL) {
-        ERROR(
-            "Input file is not specified. Please use -i/--input option to "
-            "specify the input file.");
+        ERROR("Input file is not specified. Please use -i/--input option to specify the input file.");
     }
 
     CHECK_ARG_INTERVAL_INT(args->gtSource, 0, 1, "--source");
+
+
+    if (NULL == args->out_fnprefix) {
+        WARN("Output file prefix is not specified. Setting it to 'output'.\n");
+        args->out_fnprefix = strdup("output");
+    }
 
     if (NULL == args->output_mode) {
         args->output_mode = strdup("b");
@@ -753,15 +856,15 @@ argStruct* args_get(int argc, char** argv) {
     } else if (ARG_DEPTH_UNDEF == args->mps_depth) {
         ERROR("Average per-site read depth value is required. Please set it using --depth or --depths-file and re-run.");
     } else if (ARG_DEPTH_FILE == args->mps_depth) {
-        //
+        ASSERT(NULL != args->mps_depths_fn);
     } else {
         CHECK_ARG_INTERVAL_DBL(args->mps_depth, 0.0, ARG_DEPTH_MAXVAL, "--depth");
     }
 
-
     if (args->error_rate == ARG_ERROR_RATE_UNDEF) {
         ERROR("Error rate is not specified. Please use --error-rate option to specify the error rate. Allowed range: [0.0, 1.0]");
     }
+
     CHECK_ARG_INTERVAL_IE_DBL(args->error_rate, 0.0, 1.0, "--error-rate");
 
     CHECK_ARG_INTERVAL_INT(args->error_qs, 0, 2, "--error-qs");
@@ -775,6 +878,7 @@ argStruct* args_get(int argc, char** argv) {
     CHECK_ARG_INTERVAL_01(args->usePreciseGlError, "--precise-gl");
     CHECK_ARG_INTERVAL_INT(args->i16_mapq, 0, 60, "--i16-mapq");
     CHECK_ARG_INTERVAL_INT(args->adjustQs, 0, ARGMAX_QS_ADJUST, "--adjust-qs");
+
     if (PROGRAM_WILL_ADJUST_QS && args->adjustBy == 0.0) {
         ERROR("--adjust-qs %d requires a non-zero value for --adjust-by. Please set --adjust-by and rerun.", args->adjustQs);
     }
@@ -798,8 +902,10 @@ argStruct* args_get(int argc, char** argv) {
     CHECK_ARG_INTERVAL_01(args->explode, "-explode");
     CHECK_ARG_INTERVAL_INT(args->rmInvarSites, 0, ARGMAX_RM_INVAR, "--rm-invar-sites");
     CHECK_ARG_INTERVAL_01(args->rmEmptySites, "--rm-empty-sites");
+
     CHECK_ARG_INTERVAL_INT(args->doUnobserved, 0, 5, "-doUnobserved");
     CHECK_ARG_INTERVAL_01(args->doGVCF, "-doGVCF");
+
     CHECK_ARG_INTERVAL_01(args->printPileup, "-printPileup");
     CHECK_ARG_INTERVAL_01(args->printTruth, "-printTruth");
     CHECK_ARG_INTERVAL_01(args->printBasePickError, "-printBasePickError");
@@ -858,44 +964,43 @@ argStruct* args_get(int argc, char** argv) {
         WARN("\n-> [-doGVCF 1] GVCF mode is under development. Please use with caution and report any issues.");
 
         if (0 != args->rmInvarSites) {
-            ERROR("\n-> [-doGVCF 1] --rm-invar-sites 0 is required. Please set --rm-invar-sites 0 and rerun.");
+            ERROR("-> [-doGVCF 1] --rm-invar-sites 0 is required. Please set --rm-invar-sites 0 and rerun.");
         }
 
         if (NULL == args->gvcf_dps_str) {
-            ERROR("\n-> [-doGVCF 1] --gvcf-dps is required. Please set --gvcf-dps and rerun.");
+            ERROR("-> [-doGVCF 1] --gvcf-dps is required. Please set --gvcf-dps and rerun.");
         }
 
         if (!PROGRAM_WILL_ADD_UNOBSERVED) {
-            ERROR("\n-> [-doGVCF 1] Adding unobserved alleles is required for gVCF output. Please set -doUnobserved to %d or %d and rerun.", ARG_DOUNOBSERVED_STAR, ARG_DOUNOBSERVED_NONREF);
+            ERROR("-> [-doGVCF 1] Adding unobserved alleles is required for gVCF output. Please set -doUnobserved to %d or %d and rerun.", ARG_DOUNOBSERVED_STAR, ARG_DOUNOBSERVED_NONREF);
         }
 
         if (ARG_DEPTH_INF == args->mps_depth) {
-            ERROR("\n-> [-doGVCF 1] --depth inf is not supported with gVCF output. Please set --depth to a finite value and rerun.");
+            ERROR("-> [-doGVCF 1] --depth inf is not supported with gVCF output. Please set --depth to a finite value and rerun.");
+        }
+        
+        if(!args->addPL){
+            ERROR("-> [-doGVCF 1] -addPL 1 is required for gVCF output. Please set -addPL 1 and rerun.");
         }
 
     } else {
         if (args->gvcf_dps_str != NULL) {
-            ERROR("\n-> [--gvcf-dps] --gvcf-dps requires -doGVCF 1. Please set -doGVCF 1 and rerun.");
+            ERROR("-> [--gvcf-dps] --gvcf-dps requires -doGVCF 1. Please set -doGVCF 1 and rerun.");
         }
     }
 
 
     if (args->printGlError && (1 == args->GL)) {
-        ERROR("\n-> [-printGlError 1] Printing the error probability used in genotype likelihood calculations (-printGlError 1) is not supported with genotype likelihood model 1 (--gl-model 1).");
+        ERROR("-> [-printGlError 1] Printing the error probability used in genotype likelihood calculations (-printGlError 1) is not supported with genotype likelihood model 1 (--gl-model 1).");
     }
 
 
     if ((0 == args->addI16) && (ARG_I16_MAPQ_DEFAULT != args->i16_mapq)) {
-        ERROR("\n-> [--i16-mapq] --i16-mapq is set, but printing I16 tag is disabled. Please set -addI16 to 1, or remove --i16-mapq and rerun.");
+        ERROR("-> [--i16-mapq] --i16-mapq is set, but printing I16 tag is disabled. Please set -addI16 to 1, or remove --i16-mapq and rerun.");
     }
 
     // ---------------------------------------------------------------------- //
     // SET ARGUMENT VARIABLES
-
-    if (NULL == args->out_fnprefix) {
-        WARN("Output file prefix is not specified. Setting it to 'output'.\n");
-        args->out_fnprefix = strdup("output");
-    }
 
     if (PROGRAM_WILL_ADD_STAR) {
         nonref_str = "<*>";
@@ -914,7 +1019,7 @@ argStruct* args_get(int argc, char** argv) {
     }
 
     if (ARG_DEPTH_FILE == args->mps_depth) {
-        args->mps_depths = args->read_depthsFile();
+        args->mps_depths = read_depths_file();
     }
 
 
@@ -931,9 +1036,9 @@ argStruct* args_get(int argc, char** argv) {
     if (args->error_qs != 0) {
 
 #if __USE_STD_BETA__ == 1
-        args->betaSampler = new BetaSampler(args->error_rate, args->beta_variance, args->seed);
+        args->betaSampler = new BetaSampler(args->error_rate, args->beta_variance, args->seed, args->arg_fp);
 #else
-        args->betaSampler = BetaSampler_init(args->error_rate, args->beta_variance, args->seed);
+        args->betaSampler = BetaSampler_init(args->error_rate, args->beta_variance, args->seed, args->arg_fp);
 #endif
     }
 
@@ -1007,7 +1112,6 @@ argStruct* args_get(int argc, char** argv) {
     if (ARG_DEPTH_INF == args->mps_depth) {
         sprintf(depth_val, "--depth %s", "inf");
     } else if (ARG_DEPTH_FILE == args->mps_depth) {
-        ASSERT(NULL != args->mps_depths_fn);
         sprintf(depth_val, "--depths-file %s", args->mps_depths_fn);
     } else {
         sprintf(depth_val, "--depth %f", args->mps_depth);
@@ -1096,12 +1200,6 @@ argStruct* args_get(int argc, char** argv) {
         args->addInfoADR) > 0);
 
 
-    if (args->printPileup) {
-        args->out_pileup_fn = (char*)malloc(strlen(args->out_fnprefix) + strlen(".pileup.gz") + 1);
-        strcpy(args->out_pileup_fn, args->out_fnprefix);
-        strcat(args->out_pileup_fn, ".pileup.gz");
-    }
-
 
     switch (*args->output_mode) {
     case 'v':
@@ -1167,23 +1265,19 @@ argStruct* args_get(int argc, char** argv) {
         break;
     }
 
-    fprintf(stderr, "\n-> Log file: %s.arg\n", args->out_fnprefix);
-    fprintf(args->arg_fp, "\n-> Log file: %s.arg\n", args->out_fnprefix);
-    fprintf(stderr, "-> Simulation output file: %s\n", args->out_fn);
-    fprintf(args->arg_fp, "-> Simulation output file: %s\n", args->out_fn);
-    if (args->printTruth) {
-        fprintf(stderr, "-> True genotypes output file: %s\n", args->out_truth_fn);
-        fprintf(args->arg_fp, "-> True genotypes output file: %s\n", args->out_truth_fn);
-    }
+
     if (args->printPileup) {
-        fprintf(stderr, "-> Pileup output file: %s\n", args->out_pileup_fn);
-        fprintf(args->arg_fp, "-> Pileup output file: %s\n", args->out_pileup_fn);
+        args->out_pileup_fn = (char*)malloc(strlen(args->out_fnprefix) + strlen(".pileup.gz") + 1);
+        strcpy(args->out_pileup_fn, args->out_fnprefix);
+        strcat(args->out_pileup_fn, ".pileup.gz");
     }
 
     if (1 == args->GL) {
         args->gl1errmod = errmod_init(1.0 - args->glModel1_theta);
         ASSERT(NULL != args->gl1errmod);
     }
+
+    fflush(stderr);
 
     // ---------------------------------------------------------------------- //
     // ARGUMENT WARNINGS
@@ -1297,8 +1391,8 @@ void args_destroy(argStruct* args) {
         errmod_destroy(args->gl1errmod);
     }
 
-    if(args->qs_bins != NULL) {
-        for(size_t i=0; i<(size_t) args->n_qs_bins; ++i) {
+    if (args->qs_bins != NULL) {
+        for (size_t i = 0; i < (size_t)args->n_qs_bins; ++i) {
             free(args->qs_bins[i]);
             args->qs_bins[i] = NULL;
         }
@@ -1315,69 +1409,4 @@ size_t fsize(const char* fname) {
     stat(fname, &st);
     return st.st_size;
 }
-
-
-/// @brief read depths file args->mps_depths_fn into args->mps_depths array and set args->n_mps_depths with array size
-double* argStruct::read_depthsFile(void) {
-
-    if (this->verbose > 0) {
-        fprintf(stderr, "-> Reading depths file: %s\n", this->mps_depths_fn);
-    }
-
-    FILE* fp = NULL;
-    if ((fp = fopen(this->mps_depths_fn, "r")) == NULL) {
-        ERROR("Could not open file: %s\n", this->mps_depths_fn);
-    }
-
-    double val;
-    char* lineend;
-
-    int n = 0;
-    char buf[255] = { '\0' };
-    int ntmp = BUFSIZE_NINDS;
-    double* ret = (double*)malloc(ntmp * sizeof(double));
-
-    while (fgets(buf, 255, fp)) {
-
-        val = strtod(buf, &lineend);
-        ASSERT(lineend != buf);
-
-        if (n == ntmp) {
-            ntmp *= 2;
-            ret = (double*)realloc(ret, ntmp * sizeof(double));
-        }
-
-        ret[n] = val;
-        ++n;
-
-    }
-
-    if (n == 0) {
-        ERROR("Could not read any values from depths file: %s\n", this->mps_depths_fn);
-    }
-
-    if (n != ntmp) {
-        ret = (double*)realloc(ret, n * sizeof(double));
-    }
-    this->n_mps_depths = n;
-
-    if (this->verbose > 0) {
-        fprintf(stderr, "\n-> Read %d values from depths file: %s\n", n, this->mps_depths_fn);
-
-        if (this->verbose > 1) {
-            fprintf(stderr, "\t-> Values: ");
-            for (int i = 0; i < n; ++i) {
-                fprintf(stderr, "%f ", ret[i]);
-            }
-            fprintf(stderr, "\n");
-        }
-    }
-
-    fclose(fp);
-    return(ret);
-}
-
-
-
-
 
