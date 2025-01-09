@@ -1341,10 +1341,28 @@ static void main_simulate_record_true_values(simRecord* sim, bcf_hdr_t* in_hdr, 
     const int contigsize = in_hdr->id[BCF_DT_CTG][in_rec->rid].val->info[0];
     while (1 == args->explode) {
 
+
         if (nSitesTotalInContig == contigsize) {
             bcf_destroy(explode_rec);
             break;
         }
+
+        if (NULL == explode_rec) {
+            // prepare a blank explode record template
+            // run only once
+            explode_rec = bcf_init();
+            explode_rec = bcf_copy(explode_rec, in_rec);
+            int32_t* tmp_gt_arr = (int*)malloc(sim->nHaplotypes * sizeof(int));
+            for (int h = 0; h < sim->nHaplotypes; ++h) {
+                // assume: input vcf contains all phased gts
+                // therefore the blank rec contains all phased homo gts
+                tmp_gt_arr[h] = BCF_GT_PHASED_0;
+            }
+            ASSERT(0 == (bcf_update_genotypes(sim->hdr, explode_rec, tmp_gt_arr, sim->nHaplotypes)));
+            free(tmp_gt_arr);
+            tmp_gt_arr = NULL;
+        }
+
 
         explode_rec->pos = nSitesTotalInContig;
 
@@ -1515,6 +1533,22 @@ static void main_simulate_record_values(simRecord* sim, bcf_hdr_t* in_hdr, bcf1_
         if (nSitesTotalInContig == contigsize) {
             bcf_destroy(explode_rec);
             break;
+        }
+
+        if (NULL == explode_rec) {
+            // prepare a blank explode record template
+            // run only once
+            explode_rec = bcf_init();
+            explode_rec = bcf_copy(explode_rec, in_rec);
+            int32_t* tmp_gt_arr = (int*)malloc(sim->nHaplotypes * sizeof(int));
+            for (int h = 0; h < sim->nHaplotypes; ++h) {
+                // assume: input vcf contains all phased gts
+                // therefore the blank rec contains all phased homo gts
+                tmp_gt_arr[h] = BCF_GT_PHASED_0;
+            }
+            ASSERT(0 == (bcf_update_genotypes(sim->hdr, explode_rec, tmp_gt_arr, sim->nHaplotypes)));
+            free(tmp_gt_arr);
+            tmp_gt_arr = NULL;
         }
 
         explode_rec->pos = nSitesTotalInContig;
