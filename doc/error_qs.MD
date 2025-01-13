@@ -50,7 +50,13 @@ Notice that the quality score is " $ " for all reads, which corresponds to the P
 
 ```math
 -10 \times \log_{10}(0.4) = 3.97940
+```
+
+```math
 3.9794  + 33 = 36.9794  \approx 36
+```
+
+```math
 ASCII(36) = \$
 ```
 
