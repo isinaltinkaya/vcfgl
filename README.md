@@ -387,7 +387,7 @@ Control which tags are added to the output VCF/BCF files.
 
 # Quickstart for msToGlf users
 
-The basic functionality of the program (i.e. simulation without errors in quality scores, `--error-qs 0`) is designed to simulate data equivalent to those simulated using [msToGlf](https://github.com/ANGSD/angsd/blob/master/misc/msToGlf.c).
+The program's basic functionality (i.e., simulation without errors in quality scores, `--error-qs 0`) is designed to simulate data equivalent to those simulated using [msToGlf](https://github.com/ANGSD/angsd/blob/master/misc/msToGlf.c).
 Similar to msToGlf, vcfgl can simulate the genotype likelihoods using direct genotype likelihood model via `-GL 2`, and output pileup format via `-printPileup 1`.
 
 
@@ -407,21 +407,26 @@ If you have any questions about the program, feature requests, or bug reports, y
 
 # How to cite
 
-The preprint is freely available on bioRxiv through the following link: [bioRxiv Preprint](https://doi.org/10.1101/2024.04.09.586324)
+vcfgl is published in the Bioinformatics journal, and freely available through the following link: [Publication](http://dx.doi.org/10.1093/bioinformatics/btaf098)
 
 You can use the BibTex entry below for referencing this program in your work:
 
 ```BibTex
-@article {Altinkaya2024.04.09.586324,
-	author = {Isin Altinkaya and Rasmus Nielsen and Thorfinn Sand Korneliussen},
-	title = {vcfgl: A flexible genotype likelihood simulator for VCF/BCF files},
-	elocation-id = {2024.04.09.586324},
-	year = {2024},
-	doi = {10.1101/2024.04.09.586324},
-	publisher = {Cold Spring Harbor Laboratory},
-	URL = {https://www.biorxiv.org/content/early/2024/04/09/2024.04.09.586324},
-	eprint = {https://www.biorxiv.org/content/early/2024/04/09/2024.04.09.586324.full.pdf},
-	journal = {bioRxiv}
+@ARTICLE{Altinkaya2025-ry,
+  title     = "vcfgl: a flexible genotype likelihood simulator for {VCF}/{BCF}
+               files",
+  author    = "Altinkaya, Isin and Nielsen, Rasmus and Korneliussen, Thorfinn
+               Sand",
+  journal   = "Bioinformatics",
+  publisher = "Oxford University Press (OUP)",
+  volume    =  41,
+  number    =  4,
+  pages     = "btaf098",
+  month     =  mar,
+  year      =  2025,
+  language  = "en"
 }
 ```
+
+
 
