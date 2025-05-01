@@ -14,11 +14,11 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
     - name: Install dependencies
-      run: sudo apt update; sudo apt install libcurl4-openssl-dev libbz2-dev
+      run: sudo apt update; sudo apt install libcurl4-openssl-dev bzip2 libbz2-dev
     - name: Install htslib
       run: sudo apt-get install libhts3 libhts-dev
     - name: Compile program with systemwide htslib

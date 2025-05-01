@@ -10,7 +10,7 @@ env:
 jobs:
   release:
     name: Prepare new release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
       pull-requests: write
@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
-          sudo apt-get update; sudo apt-get install libcurl4-openssl-dev
+          sudo apt-get update; sudo apt-get install libcurl4-openssl-dev liblzma-dev bzip2 libbz2-dev
       - name: Download the program version associated with this release
         run: |
           git clone --depth 1 --branch "${tag}" https://oauth2:"${GITHUB_TOKEN}"@github.com/"${GITHUB_REPOSITORY_OWNER}"/"${GITHUB_REPOSITORY#*/}".git
