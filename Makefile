@@ -17,6 +17,12 @@ NO_COMPILE = clean test help
 VAL_ADD_CRYPTOLIB = -lcrypto
 VAL_NOTADD_CRYPTOLIB =
 
+PRINTF_BOLD := $(shell command -v tput > /dev/null && tput bold || echo "")
+PRINTF_GREEN := $(shell command -v tput > /dev/null && tput setaf 2 || echo "")
+PRINTF_RED := $(shell command -v tput > /dev/null && tput setaf 1 || echo "")
+PRINTF_YELLOW := $(shell command -v tput > /dev/null && tput setaf 3 || echo "")
+PRINTF_NORMAL := $(shell command -v tput > /dev/null && tput sgr0 || echo "")
+
 ####################################################################################################
 # [BLOCK START]
 # ony run if make will try compiling, i.e. not NO_COMPILE
@@ -34,7 +40,7 @@ CRYPTO_TRY = $(shell echo 'int main(){}'|$(CXX) -x c++ - -lcrypto 2>/dev/null -o
 
 ifeq "$(CRYPTO_TRY)" "0" #1_1
 
-$(info [INFO]    -> Crypto library is available to link)
+$(info $(PRINTF_GREEN)[INFO]    -> Crypto library is available to link$(PRINTF_NORMAL))
 THIS_CRYPTOLIB = $(VAL_ADD_CRYPTOLIB)
 
 else  #1_1
@@ -159,12 +165,12 @@ endif #1_5
 
 $(info [INFO]    -> CXXFLAGS was "$(CXXFLAGS)")
 CXXFLAGS += $(THIS_MODE_FLAGS)
-$(info [INFO]    -> Updated CXXFLAGS to "$(CXXFLAGS)")
+$(info $(PRINTF_YELLOW)[INFO]    -> Updated CXXFLAGS to "$(CXXFLAGS)"$(PRINTF_NORMAL))
 
 
 $(info [INFO]    -> LIBS was "$(LIBS)")
 LIBS := $(THIS_LIBHTS) $(THIS_CRYPTOLIB) -lz -lm -lbz2 -llzma -lcurl -lpthread 
-$(info [INFO]    -> Updated LIBS to "$(LIBS)")
+$(info $(PRINTF_YELLOW)[INFO]    -> Updated LIBS to "$(LIBS)"$(PRINTF_NORMAL))
 
 $(info )
 $(info ________________________________________________________________________________)
@@ -197,7 +203,11 @@ OBJ := $(CXXSRC:.cpp=.o)
 # Dependency files
 DEP := $(OBJ:.o=.d)
 
+# don’t pull in .d files for no‐compile targets
+ifeq ($(filter $(NO_COMPILE),$(MAKECMDGOALS)),)
 -include $(DEP)
+endif
+
 
 ####################################################################################################
 ## [install]
@@ -217,7 +227,7 @@ install: $(PROGRAM)
 
 ####################################################################################################
 
-FLAGS := $(CPPFLAGS) $(CXXFLAGS)
+FLAGS := $(CPPFLAGS) $(CXXFLAGS) 
 
 
 ####################################################################################################
@@ -248,11 +258,11 @@ $(BUILDH):
 $(PROGRAM): $(OBJ) 
 	@echo "________________________________________________________________________________"
 	@echo ""
-	@echo "[INFO]    -> Finishing up"
+	@echo "$(PRINTF_YELLOW)[INFO]    -> Finishing up$(PRINTF_NORMAL)"
 	$(CXX) -o $@ $^ $(LIBS) 
 	@echo "________________________________________________________________________________"
 	@echo ""
-	@echo "[FINISHED]    $(PROGRAM) is now ready to use!"
+	@echo "$(PRINTF_BOLD)$(PRINTF_GREEN)[FINISHED]    $(PROGRAM) is now ready to use!"
 	@echo "              Full path to the program: $(CURDIR)/$(PROGRAM)"
 	@echo ""
 	@echo "              To get started, run:"
@@ -265,7 +275,7 @@ $(PROGRAM): $(OBJ)
 	@echo ""
 	@echo "________________________________________________________________________________"
 	@echo ""
-	@echo "[INFO]    -> Compiling $*.cpp"
+	@echo "$(PRINTF_YELLOW)[INFO]    -> Compiling $*.cpp$(PRINTF_NORMAL)"
 	$(CXX) -c  $(FLAGS) $*.cpp
 	$(CXX) -MM $(FLAGS) $*.cpp >$*.d
 
@@ -298,11 +308,11 @@ test-%:
 .activate_module:
 	@echo "________________________________________________________________________________"
 	@echo ""
-	@echo "[INFO]	Activating HTSlib submodule"
+	@echo "$(PRINTF_YELLOW)[INFO]	Activating HTSlib submodule$(PRINTF_NORMAL)"
 	@echo ""
 	git submodule update --init --recursive
 	$(MAKE) -C $(HTSSRC)
-	@echo "[INFO]	-> HTSlib submodule is now activated"
+	@echo "$(PRINTF_GREEN)[INFO]	-> HTSlib submodule is now activated$(PRINTF_NORMAL)"
 	@echo ""
 	@echo "________________________________________________________________________________"
 	

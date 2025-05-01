@@ -90,16 +90,18 @@ void alleles_calculate_gls_log10_glModel2_precise0(simRecord* sim) {
 
         if (0 != n_sim_reads) {
 
+
             for (int read_i = 0; read_i < n_sim_reads; read_i++) {
 
                 bo = sim->bases[s][read_i];
+                ASSERT(bo >= 0 && bo < 4);
 
                 qs = qScores[s][read_i];
 
+                ASSERT(qs >= 0 && qs <= 256);
                 homT = qScore_to_log10_gl[0][qs];
                 het = qScore_to_log10_gl[1][qs];
                 homF = qScore_to_log10_gl[2][qs];
-
 
                 ao = sim->acgt2alleles[bo];
                 sample_gl_arr[bcf_alleles2gt(ao, ao)] += homT;  // homozygotic hit

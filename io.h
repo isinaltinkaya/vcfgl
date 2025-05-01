@@ -1,5 +1,5 @@
 #ifndef __ARGUMENTS__
-#define __ARGUMENTS_
+#define __ARGUMENTS__
 
 #include <htslib/kstring.h>  // kstring_t
 #include <htslib/bgzf.h> // bgzf
@@ -76,6 +76,7 @@ struct argStruct {
     double adjustBy;
 
     int explode;
+    int retain_refalt;
     int rmInvarSites;
     int rmEmptySites;
     int doUnobserved;

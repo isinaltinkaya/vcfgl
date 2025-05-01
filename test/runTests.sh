@@ -897,8 +897,39 @@ runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
 runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
 
 
-###############################################################################
 
+###############################################################################
+# TEST20
+# test --retain-refalt
+ID="test20"
+
+INFILENAME="${DATADIR}/data8.vcf"
+
+
+ARGS="--seed 42 \
+--output-mode v \
+--depth 1 \
+--error-rate 0 \
+--gl-model 2 \
+--precise-gl 0 \
+--source 1 \
+-explode 1 \
+-doUnobserved 5 \
+-printTruth 1 \
+-addGP 1 \
+-addPL 1 \
+-addI16 1 \
+-addQS 1 \
+-addInfoDP 1 \
+-addFormatAD 1 \
+-addInfoAD 1 \
+--retain-refalt 1
+"
+
+runTest ${ID} ${INFILENAME} "-i" "${ARGS}"
+runTestDiffVcf ${ID} ${TESTWD}/${ID}.vcf ${SCRIPTDIR}/reference/${ID}/${ID}.vcf
+
+###############################################################################
 
 
 ${EXEC}

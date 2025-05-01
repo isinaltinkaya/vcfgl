@@ -88,6 +88,9 @@ const double NEG_INF = -std::numeric_limits<double>::infinity();
 /// explode and add <NON_REF> to the end
 #define ARG_DOUNOBSERVED_EXPLODE_ACGT_NONREF 5 
 
+/// retain REF/ALT alleles in the input file
+#define ARG_RETAIN_REFALT 1
+
 /// define the type of simulation source GT tag to use
 /// REF     ALT    GT
 /// 0       1      0/1

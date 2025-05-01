@@ -1,0 +1,23 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##ALT=<ID=NON_REF,Description="Represents any possible alternative allele not already represented at this location by REF and ALT">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##contig=<ID=chr1,length=380>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind1	ind2	ind3	ind4 ind5	ind6	ind7	ind8	ind9	ind10
+chr1	86	.	A	G	.	.	.	GT	0/0	0/0	0/0	0/0	0/0	0/0	0/0	./.	0/0	0/0
+chr1	115	.	G	A	.	.	.	GT	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/1	0/0	1/1
+chr1	166	.	G	A	.	.	.	GT	0/0	0/0	0/0	0/0	0/0	0/0	0/1	1/1	0/1	0/0
+chr1	189	.	C	T	.	.	.	GT	1/1	0/0	0/0	0/0	0/0	0/0	0/0	0/1	0/1	0/0
+chr1	212	.	C	A	.	.	.	GT	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0
+chr1	218	.	C	T	.	.	.	GT	0/1	1/1	1/1	0/1	1/1	1/1	0/0	1/1	0/0	0/1
+chr1	225	.	T	G	.	.	.	GT	0/0	0/0	0/0	0/1	0/0	0/0	0/0	0/0	0/0	0/1
+chr1	236	.	T	A	.	.	.	GT	0/1	0/1	0/1	0/1	0/1	0/1	0/0	0/0	0/0	0/0
+chr1	237	.	T	C	.	.	.	GT	0/0	0/0	0/0	0/0	0/0	0/0	0/1	0/1	0/0	0/1
+chr1	266	.	C	A,T,G	.	.	.	GT	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/1
+chr1	291	.	C	T	.	.	.	GT	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0
+chr1	325	.	G	A	.	.	.	GT	0/1	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/1
+chr1	351	.	T	A	.	.	.	GT	0/1	0/1	0/1	1/1	0/1	0/1	0/1	0/0	0/0	0/1
+chr1	370	.	T	A	.	.	.	GT	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0
+chr1	371	.	T	A	.	.	.	GT	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0
+chr1	372	.	A	G,T	.	.	.	GT	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/1	0/0	0/1
+chr1	373	.	T	C,A	.	.	.	GT	0/0	0/1	0/1	0/0	0/1	0/1	0/0	0/1	./.	0/1

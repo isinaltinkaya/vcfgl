@@ -124,7 +124,9 @@ static int check_rec_alleles(simRecord* sim) {
             ERROR("Multiallelic sites are not supported when using binary GT source. If this is a feature you need, please contact the developers or create a feature request on the GitHub page.");
         }
 
-        ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "A,C")));
+        if (!args->retain_refalt) {
+            ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "A,C")));
+        }
     }
 
     int allelesum = 0;
@@ -132,8 +134,16 @@ static int check_rec_alleles(simRecord* sim) {
     for (int i = 0;i < nSamples * SIM_PLOIDY;++i) {
         true_gts_acgt_int[i] = -1; // clear
 
+        // check for missing gt
+        if (bcf_gt_is_missing(sim->gt_arr[i])) {
+            true_gts_acgt_int[i] = -1;
+            continue;
+        }
+
         a = bcf_gt_allele(sim->gt_arr[i]);
+        ASSERT(a >= 0 && a < n_alleles);
         allelesum += a;
+
 
         true_gts_acgt_int[i] = rec_alleles[a];
     }
@@ -232,43 +242,47 @@ static int simulate_site_with_no_reads(simRecord* sim) {
 
     // -- gVCF --
     if (args->doGVCF) {
-        ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "<NON_REF>")));
+        if (!args->retain_refalt) {
+            ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "<NON_REF>")));
+        }
         sim->add_tags();
         return (0);
     }
 
     // -- VCF --
 
-    if (args->doUnobserved == ARG_DOUNOBSERVED_TRIM) {
-        ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "."))); //DRAGON missing allele
-        sim->nAlleles = 1;
-        sim->nGenotypes = 1;
-        sim->nAllelesObserved = 0; //DRAGON
-    } else if (args->doUnobserved == ARG_DOUNOBSERVED_STAR) {
-        ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "<*>")));
-        sim->nAlleles = 1;
-        sim->nGenotypes = 1;
-        sim->nAllelesObserved = 0; //DRAGON
-    } else if (args->doUnobserved == ARG_DOUNOBSERVED_NONREF) {
-        ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "<NON_REF>")));
-        sim->nAlleles = 1;
-        sim->nGenotypes = 1;
-        sim->nAllelesObserved = 0; //DRAGON
-    } else if (args->doUnobserved == ARG_DOUNOBSERVED_EXPLODE_ACGT) {
-        ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "A,C,G,T")));
-        sim->nAlleles = 4;
-        sim->nAllelesObserved = 4;
-        sim->nGenotypes = 10;
-    } else if (args->doUnobserved == ARG_DOUNOBSERVED_EXPLODE_ACGT_STAR) {
-        ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "A,C,G,T,<*>")));
-        sim->nAlleles = 5;
-        sim->nAllelesObserved = 4;
-        sim->nGenotypes = 15;
-    } else if (args->doUnobserved == ARG_DOUNOBSERVED_EXPLODE_ACGT_NONREF) {
-        ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "A,C,G,T,<NON_REF>")));
-        sim->nAlleles = 5;
-        sim->nAllelesObserved = 4;
-        sim->nGenotypes = 15;
+    if (!args->retain_refalt) {
+        if (args->doUnobserved == ARG_DOUNOBSERVED_TRIM) {
+            ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "."))); //DRAGON missing allele
+            sim->nAlleles = 1;
+            sim->nGenotypes = 1;
+            sim->nAllelesObserved = 0; //DRAGON
+        } else if (args->doUnobserved == ARG_DOUNOBSERVED_STAR) {
+            ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "<*>")));
+            sim->nAlleles = 1;
+            sim->nGenotypes = 1;
+            sim->nAllelesObserved = 0; //DRAGON
+        } else if (args->doUnobserved == ARG_DOUNOBSERVED_NONREF) {
+            ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "<NON_REF>")));
+            sim->nAlleles = 1;
+            sim->nGenotypes = 1;
+            sim->nAllelesObserved = 0; //DRAGON
+        } else if (args->doUnobserved == ARG_DOUNOBSERVED_EXPLODE_ACGT) {
+            ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "A,C,G,T")));
+            sim->nAlleles = 4;
+            sim->nAllelesObserved = 4;
+            sim->nGenotypes = 10;
+        } else if (args->doUnobserved == ARG_DOUNOBSERVED_EXPLODE_ACGT_STAR) {
+            ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "A,C,G,T,<*>")));
+            sim->nAlleles = 5;
+            sim->nAllelesObserved = 4;
+            sim->nGenotypes = 15;
+        } else if (args->doUnobserved == ARG_DOUNOBSERVED_EXPLODE_ACGT_NONREF) {
+            ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, "A,C,G,T,<NON_REF>")));
+            sim->nAlleles = 5;
+                sim->nAllelesObserved = 4;
+                sim->nGenotypes = 15;
+        }
     }
 
     sim->current_size_bcf_tag_number[FMT_NUMBER_G] = sim->nSamples * sim->nGenotypes;
@@ -359,7 +373,16 @@ static int simulate_record_values(simRecord* sim) {
         poissonSampler_sample_depths_same_mean(args->poissonSampler[0], n_sim_reads_arr, nSamples);
     }
 
+    int* sample_true_gts = NULL;
     for (s = 0; s < nSamples; s++) {
+
+        sample_true_gts = true_gts_acgt_int + (s * SIM_PLOIDY);
+
+        if(sample_true_gts[0] == -1 || sample_true_gts[1] == -1) {
+            DEVPRINT("Sample %s (idx:%d) has missing true genotype at site %s:%ld. Skipping.", sim->hdr->samples[s], s, sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1);
+            sim->fmt_dp_arr[s] = 0;
+            continue;
+        }
 
         n_sim_reads = n_sim_reads_arr[s];
 
@@ -420,7 +443,6 @@ static int simulate_record_values(simRecord* sim) {
     }
 
 
-    int* sample_true_gts = NULL;
 
     for (s = 0; s < nSamples; s++) {
 
@@ -434,6 +456,11 @@ static int simulate_record_values(simRecord* sim) {
         } else {
 
             sample_true_gts = true_gts_acgt_int + (s * SIM_PLOIDY);
+
+            if(sample_true_gts[0] == -1 || sample_true_gts[1] == -1) {
+                DEVPRINT("Sample %s (idx:%d) has missing true genotype at site %s:%ld. Skipping.", sim->hdr->samples[s], s, sim->hdr->id[BCF_DT_CTG][rec->rid].key, rec->pos + 1);
+                continue;
+            }
 
             sample_acgt_fmt_ad_arr = sim->acgt_fmt_ad_arr + (s * 4);
             if (1 == args->addFormatADF || 1 == args->addInfoADF) {
@@ -585,6 +612,7 @@ static int simulate_record_values(simRecord* sim) {
 
                 sim->acgt_n_bases_forI16[(2 * r_base) + which_strand]++;
 
+                DEVASSERT(r_base >= 0 && r_base < 4);
                 sim->bases[s][read_i] = r_base;
 
 
@@ -757,9 +785,13 @@ static int simulate_record_values(simRecord* sim) {
     DEVASSERT(sim->current_size_bcf_tag_number[INFO_NUMBER_R] <= sim->max_size_bcf_tag_number[INFO_NUMBER_R]);
     DEVASSERT(sim->current_size_bcf_tag_number[INFO_NUMBER_R_WITH_NONREF] <= sim->max_size_bcf_tag_number[INFO_NUMBER_R_WITH_NONREF]);
 
-    ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, sim->alleles.s)));
+    if (!args->retain_refalt) {
+        ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, sim->alleles.s)));
+    }
 
-    DEVASSERT(sim->nAlleles == sim->rec->n_allele);
+    if(!args->retain_refalt) {
+        DEVASSERT(sim->nAlleles == sim->rec->n_allele);
+    }
 
     // -------------------------------------------- //
 
@@ -1137,7 +1169,9 @@ static int simulate_record_true_values(simRecord* sim) {
     DEVASSERT(sim->current_size_bcf_tag_number[INFO_NUMBER_G] <= sim->max_size_bcf_tag_number[INFO_NUMBER_G]);
     DEVASSERT(sim->current_size_bcf_tag_number[INFO_NUMBER_R] <= sim->max_size_bcf_tag_number[INFO_NUMBER_R]);
 
-    ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, sim->alleles.s)));
+    if (!args->retain_refalt) {
+        ASSERT(0 == (bcf_update_alleles_str(sim->hdr, sim->rec, sim->alleles.s)));
+    }
 
     int acgtx_to_alleles_idx[5]={-1};
     for (int i = 0;i < sim->rec->n_allele;++i) {
@@ -1150,7 +1184,7 @@ static int simulate_record_true_values(simRecord* sim) {
     // set true_gts_alleles_idx with the new rec->alleles
     for (int i = 0;i < nSamples * SIM_PLOIDY;++i) {
         int x=true_gts_acgt_int[i];
-        ASSERT(x >= 0);
+        ASSERT(x >= 0 && x < 4);
         if(4==x){
             ERROR("True genotype is set to non-ref allele at site %s:%ld.", sim->rec->d.id, sim->rec->pos + 1);
         }
