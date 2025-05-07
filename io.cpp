@@ -362,8 +362,6 @@ void help_page() {
     fprintf(stderr, "         -explode [0]|1 _____________ 1: Explode to sites that are not in input file.\n");
     fprintf(stderr, "                                      Useful for simulating invariable sites when the input file only contains variable sites.\n");
     fprintf(stderr, "                                      Sets all genotypes in exploded sites to homozygous reference.\n");
-    fprintf(stderr, "         --retain-refalt [0]|1 ______ 0: Do not retain REF/ALT alleles in the input file\n");
-    fprintf(stderr, "                                      %d: Retain REF/ALT alleles in the input file\n", ARG_RETAIN_REFALT);
     fprintf(stderr, "         --rm-invar-sites INT+ [%d]___ %d: Do not remove invariable sites\n", ARG_RM_INVAR_DISABLED, ARG_RM_INVAR_DISABLED);
     fprintf(stderr, "                                      %d: Remove sites where all individuals' true genotypes in the input file are homozygous reference\n", ARG_RM_INVAR_INPUT_HOMOREFGT);
     fprintf(stderr, "                                      %d: Remove sites where all individuals' true genotypes in the input file are homozygous alternative\n", ARG_RM_INVAR_INPUT_HOMOALTGT);
@@ -462,7 +460,6 @@ argStruct* args_init() {
     args->adjustBy = 0.499;
 
     args->explode = 0;
-    args->retain_refalt = 0;
     args->rmInvarSites = 0;
     args->rmEmptySites = 0;
     args->doUnobserved = ARG_DOUNOBSERVED_STAR;
@@ -662,10 +659,6 @@ argStruct* args_get(int argc, char** argv) {
 
         else if (strcasecmp("-explode", arv) == 0) {
             set_arg_value(&args->explode, "-explode", val);
-        }
-
-        else if (strcasecmp("--retain-refalt", arv) == 0) {
-            set_arg_value(&args->retain_refalt, "--retain-refalt", val);
         }
 
         else if (strcasecmp("--rm-invar-sites", arv) == 0) {
@@ -907,7 +900,6 @@ argStruct* args_get(int argc, char** argv) {
     }
 
     CHECK_ARG_INTERVAL_01(args->explode, "-explode");
-    CHECK_ARG_INTERVAL_01(args->retain_refalt, "--retain-refalt");
     CHECK_ARG_INTERVAL_INT(args->rmInvarSites, 0, ARGMAX_RM_INVAR, "--rm-invar-sites");
     CHECK_ARG_INTERVAL_01(args->rmEmptySites, "--rm-empty-sites");
 
@@ -1162,7 +1154,7 @@ argStruct* args_get(int argc, char** argv) {
 
     ASSERT(asprintf(
         &args->command,
-        "Command: vcfgl --verbose %d --threads %d --seed %d --input %s --source %d --output %s --output-mode %s %s --error-rate %f --error-qs %d %s %s %s %s --precise-gl %d %s %s --adjust-qs %d %s -explode %d --retain-refalt %d --rm-invar-sites %d --rm-empty-sites %d -doUnobserved %d -doGVCF %d -printPileup %d -printTruth %d  -printBasePickError %d -printQsError %d -printGlError %d -printQScores %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d -addFormatDP %d -addInfoDP %d -addFormatAD %d -addInfoAD %d -addFormatADF %d -addInfoADF %d -addFormatADR %d -addInfoADR %d",
+        "Command: vcfgl --verbose %d --threads %d --seed %d --input %s --source %d --output %s --output-mode %s %s --error-rate %f --error-qs %d %s %s %s %s --precise-gl %d %s %s --adjust-qs %d %s -explode %d --rm-invar-sites %d --rm-empty-sites %d -doUnobserved %d -doGVCF %d -printPileup %d -printTruth %d  -printBasePickError %d -printQsError %d -printGlError %d -printQScores %d -addGL %d -addGP %d -addPL %d -addI16 %d -addQS %d -addFormatDP %d -addInfoDP %d -addFormatAD %d -addInfoAD %d -addFormatADF %d -addInfoADF %d -addFormatADR %d -addInfoADR %d",
         args->verbose,
         args->n_threads,
         args->seed,
@@ -1183,7 +1175,6 @@ argStruct* args_get(int argc, char** argv) {
         args->adjustQs,
         adjust_qs_str,
         args->explode,
-        args->retain_refalt,
         args->rmInvarSites,
         args->rmEmptySites,
         args->doUnobserved,

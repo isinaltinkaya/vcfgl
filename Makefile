@@ -268,7 +268,7 @@ $(PROGRAM): $(OBJ)
 	@echo "              To get started, run:"
 	@echo "              $(CURDIR)/$(PROGRAM) -h"
 	@echo "              or:"
-	@echo "              ./$(PROGRAM) -h"
+	@echo "              ./$(PROGRAM) -h$(PRINTF_NORMAL)"
 	@echo ""
 
 %.o: %.cpp $(VERSIONH) $(BUILDH) 

@@ -76,7 +76,6 @@ struct argStruct {
     double adjustBy;
 
     int explode;
-    int retain_refalt;
     int rmInvarSites;
     int rmEmptySites;
     int doUnobserved;

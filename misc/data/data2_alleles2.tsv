@@ -1,0 +1,10 @@
+G	<*>,T
+A	<*>
+A	C
+C	A
+A	T,<*>,C,G
+A	C
+<*>	C,G,T,A
+C	A
+<*>	C,G,T,A
+C	A,G,T

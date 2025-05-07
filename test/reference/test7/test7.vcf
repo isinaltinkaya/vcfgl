@@ -2,9 +2,9 @@
 ##FILTER=<ID=PASS,Description="All filters passed">
 ##source=tskit 0.4.1
 ##contig=<ID=ref1,length=10>
-##fileDate=Mon Jan  8 18:01:30 2024
-##source=vcfgl [version: v0.4.2-a4eb562] [build: Jan  8 2024 18:00:27] [htslib: 1.15.1-20-g46c56fcc]
-##source=Command: vcfgl --verbose 0 --threads 1 --seed 42 --input /home/isin/Projects/VCFGL/vcfgl/test/data/data1.vcf --output /home/isin/Projects/VCFGL/vcfgl/test/testwd/test7 --output-mode v --depth 1.000000 --error-rate 0.200000 --error-qs 0 --beta-variance -1.000000e+00 --gl-model 1 --gl1-theta 0.830000 --platform 0 --precise-gl 0 --i16-mapq 20 --gvcf-dps 1 -explode 1 --rm-invar-sites 0 --rm-empty-sites 1 -doUnobserved 2 -doGVCF 1 -printPileup 0 -printTruth 0  -printBasePickError 0 -printQsError 0 -printGlError 0 -printQScores 0 -addGL 1 -addGP 1 -addPL 1 -addI16 0 -addQS 1 -addFormatDP 1 -addInfoDP 1 -addFormatAD 1 -addInfoAD 1 -addFormatADF 1 -addInfoADF 1 -addFormatADR 1 -addInfoADR 1
+##fileDate=Wed May 07 16:32:28 2025
+##source=vcfgl [version: v1.2.0-cbfc2b7] [build: May  7 2025 16:15:57] [htslib: 1.15.1-20-g46c56fcc]
+##source=Command: vcfgl --verbose 0 --threads 1 --seed 42 --input /home/isin/Projects/VCFGL/issue_8/vcfgl/test/data/data1.vcf --source 0 --output /home/isin/Projects/VCFGL/issue_8/vcfgl/test/testwd/test7 --output-mode v --depth 1.000000 --error-rate 0.200000 --error-qs 0  --gl-model 1 --gl1-theta 0.830000   --precise-gl 0  --gvcf-dps 1 --adjust-qs 3 --adjust-by 0.499000 -explode 1 --rm-invar-sites 0 --rm-empty-sites 1 -doUnobserved 2 -doGVCF 1 -printPileup 0 -printTruth 0  -printBasePickError 0 -printQsError 0 -printGlError 0 -printQScores 0 -addGL 1 -addGP 1 -addPL 1 -addI16 0 -addQS 1 -addFormatDP 1 -addInfoDP 1 -addFormatAD 1 -addInfoAD 1 -addFormatADF 1 -addInfoADF 1 -addFormatADR 1 -addInfoADR 1
 ##ALT=<ID=NON_REF,Description="Represents any possible alternative allele at this location">
 ##INFO=<ID=END,Number=1,Type=Integer,Description="End position of this non-variant block">
 ##INFO=<ID=MIN_DP,Number=1,Type=Integer,Description="Minimum DP observed within the GVCF block">
@@ -22,7 +22,7 @@
 ##INFO=<ID=ADR,Number=R,Type=Integer,Description="Total allelic depths on the reverse strand for the REF and ALT alleles">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind1
 ref1	1	.	A	<NON_REF>	.	.	END=3;MIN_DP=1;QS=1,0	PL:DP	0,3,7:1
-ref1	4	.	A	C,<NON_REF>	.	PASS	DP=2;QS=0.5,0.5,0;AD=1,1,0;ADF=1,0,0;ADR=0,1,0	DP:GL:PL:GP:AD:ADF:ADR	2:-0.143579,0,-0.143579,-0.444613,-0.444613,-0.588193:1,0,1,4,4,6:0.71849,1,0.71849,0.359242,0.359242,0.258112:1,1,0:1,0,0:0,1,0
-ref1	5	.	A	C,T,<NON_REF>	.	PASS	DP=3;QS=0.333333,0.333333,0.333333,0;AD=1,1,1,0;ADF=0,1,0,0;ADR=1,0,1,0	DP:GL:PL:GP:AD:ADF:ADR	3:-0.0113571,0,-0.0113571,0,0,-0.0113571,-0.312391,-0.312391,-0.312391,-0.323748:0,0,0,0,0,0,3,3,3,3:0.974188,1,0.974188,1,1,0.974188,0.48709,0.48709,0.48709,0.474517:1,1,1,0:0,1,0,0:1,0,1,0
+ref1	4	.	A	C,<NON_REF>	.	PASS	DP=2;QS=0.5,0.5,0;AD=1,1,0;ADF=1,0,0;ADR=0,1,0	DP:GL:PL:GP:AD:ADF:ADR	2:-0.143579,0,-0.143579,-0.444613,-0.444613,-0.588193:1,0,1,4,4,6:0.21048,0.292948,0.21048,0.105239,0.105239,0.0756133:1,1,0:1,0,0:0,1,0
+ref1	5	.	A	C,T,<NON_REF>	.	PASS	DP=3;QS=0.333333,0.333333,0.333333,0;AD=1,1,1,0;ADF=0,1,0,0;ADR=1,0,1,0	DP:GL:PL:GP:AD:ADF:ADR	3:-0.0113571,0,-0.0113571,0,0,-0.0113571,-0.312391,-0.312391,-0.312391,-0.323748:0,0,0,0,0,0,3,3,3,3:0.123969,0.127253,0.123969,0.127253,0.127253,0.123969,0.0619837,0.0619837,0.0619837,0.0603838:1,1,1,0:0,1,0,0:1,0,1,0
 ref1	7	.	A	<NON_REF>	.	.	END=8;MIN_DP=1;QS=1,0	PL:DP	0,3,7:1
 ref1	10	.	A	<NON_REF>	.	.	MIN_DP=1;QS=1,0	PL:DP	0,3,7:1
