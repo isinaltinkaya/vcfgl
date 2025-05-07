@@ -7,7 +7,7 @@
   <a href="https://github.com/isinaltinkaya/vcfgl/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GPLv3.0-purple.svg?labelColor=white"/></a>
 <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/isinaltinkaya/vcfgl/test.yml?labelColor=white">
   <a href="https://bio.tools/vcfgl"><img src="https://img.shields.io/badge/bio.tools-vcfgl-orange?labelColor=white"/></a>
-<a href="https://doi.org/10.1101/2024.04.09.586324"><img src="https://img.shields.io/badge/bioRxiv-10.1101%2F2024.04.09.586324-black?labelColor=white&color=darkred"/></a>
+<a href="http://dx.doi.org/10.1093/bioinformatics/btaf098"><img src="https://img.shields.io/badge/Bioinformatics-10.1093%2Fbtaf098-black?labelColor=white&color=darkred"/></a>
 <!-- <a href="https://github.com/isinaltinkaya/vcfgl/actions/workflows/test.yml"><img src="https://github.com/isinaltinkaya/vcfgl/actions/workflows/test.yml/badge.svg" /></a>  -->
 </p>
 
