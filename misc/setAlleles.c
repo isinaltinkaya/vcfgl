@@ -114,17 +114,6 @@
 #define MAX_LINE 256
 #define MAX_NALTS 4
 
-// The program expects the input to be a tsv file with the following format:
-// ref<tab>alt(s)
-// <tab> is the tab character
-// ref is the reference allele
-// alt(s) is a comma-separated list of alternative alleles (maximum 4)
-// The program expects only one reference allele, and at least one alternative allele. The alternative allele can be one of the following: A, C, G, T, and <*> or <NON_REF>.
-// The program will output a bcf file with the alleles set to the input alleles.
-//
-// The program supports the following INFO and FORMAT fields: INFO/QS, FORMAT/GL, FORMAT/PL, FORMAT/GP
-// N.B. The program does not update any other fields.
-// N.B. The program does not recalculate INFO/QS.
 
 typedef struct {
     // ref[n_sites] = char* ref

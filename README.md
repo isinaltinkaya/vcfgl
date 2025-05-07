@@ -383,6 +383,7 @@ Control which tags are added to the output VCF/BCF files.
   <li><a href="https://github.com/isinaltinkaya/vcfgl/blob/main/doc/with_msprime.MD">Using vcfgl with msprime</a></li>
   <li><a href="https://github.com/isinaltinkaya/vcfgl/blob/main/doc/with_stdpopsim.MD">Using vcfgl with stdpopsim</a></li>
   <li><a href="https://github.com/isinaltinkaya/vcfgl/blob/main/doc/with_SLiM.MD">Using vcfgl with SLiM</a></li>
+  <li><a href="https://github.com/isinaltinkaya/vcfgl/blob/main/misc/README.md">vcfgl Miscellaneous Programs</a></li>
 
 # Quickstart for msToGlf users
 

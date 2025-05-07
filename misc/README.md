@@ -1,12 +1,110 @@
 # vcfgl - Miscellaneous Programs 
 
-## fetchGl
+## setAlleles
 
-fetchGl is one of the miscellaneous programs within the VCFGL project.
+setAlleles is a command-line tool designed to set the alleles in a VCF file. It reads a VCF file, modifies the alleles according to the specified reference and alternative alleles, and outputs the modified VCF file.
+
+### Usage
+
+```sh
+Option descriptions:
+     -s, --long-option TYPE [X] _____ Description
+     -s                               Short option (if any)
+         --long-option                Long option
+                       TYPE           Type of the argument value, can be:
+                                        - INT (integer)
+                                        - STRING (string)
+                                        - FILE (filename)
+                                        - x|y|z (one of the listed values x, y or z)
+                            [X]       Default argument value (if any)
+
+
+Usage: setAlleles -i <input> [options]
+
+    -h, --help _____________________  Print this help message and exit
+    -v, --version __________________  Print version and build information and exit
+
+Options:
+    -i, --input FILE ________________ Input BCF file
+    -a, --alleles FILE ______________ Alleles TSV file
+    -O, --output-mode [b]|u|z|v _____ Output mode, can be:
+                                        - b: Compressed BCF (.bcf)
+                                        - u: uncompressed BCF (.bcf)
+                                        - z: compressed VCF (.vcf.gz)
+                                        - v: uncompressed VCF (.vcf)
+    -o, --output STRING ['output'] __ Output filename prefix
+```
+
+### Input alleles TSV file
+
+The input alleles TSV file should be formatted as a tab-separated values (TSV) file with two columns. The first column represents the reference allele, and the second column represents the alternative alleles. 
+
+e.g. to set the reference allele to `A` and the alternative alleles to `T` and `G`, the TSV file should look like this:
+
+```sh
+A	T,G
+```
+
+- The alternative alleles can be one of the following: `A`, `C`, `G`, `T`, and `<*>` or `<NON_REF>`. 
+- The program expects only one reference allele, at least one alternative allele and at most 4 alternative alleles. 
+- Each line in the file corresponds to a site in the VCF file. The number of lines in the TSV file should be equal to the number of sites in the VCF file.
+
+
+### Example
+
+```sh
+./setAlleles -i data/data2.vcf -a data/data2_alleles2.tsv -o output -O v
+```
+
+This command reads `data/data2.vcf`, modifies the alleles according to the specified reference and alternative alleles in `data/data2_alleles2.tsv`, and outputs the modified VCF file with the prefix `output` in uncompressed VCF format (i.e. `output.vcf`).
+
+Example alleles TSV file:
+
+```sh
+$ cat data/data2_alleles2.tsv 
+G	<*>,T
+A	<*>
+A	C
+C	A
+A	T,<*>,C,G
+A	C
+<*>	C,G,T,A
+C	A
+<*>	C,G,T,A
+C	A,G,T
+```
+
+Example line from the input file:
+
+```sh
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind1	ind2
+ref1	1	.	A	C,T,G,<*>	.	PASS	DP=3;QS=0.5,0.5,1,0,0	DP:GL:PL:GP	2:0,-0.105667,0,-0.301034,-0.301034,-0.195367,-0.301034,-0.301034,-0.195367,-0.195367,-0.301034,-0.301034,-0.195367,-0.195367,-0.195367:0,1,0,3,3,2,3,3,2,2,3,3,2,2,2:0.104054,0.0815818,0.104054,0.0520268,0.0520268,0.0663581,0.0520268,0.0520268,0.0663581,0.0663581,0.0520268,0.0520268,0.0663581,0.0663581,0.0663581	1:-0.4,-0.4,-0.4,-0.301034,-0.301034,0,-0.4,-0.4,-0.301034,-0.4,-0.4,-0.4,-0.301034,-0.4,-0.4:4,4,4,3,3,0,4,4,3,4,4,4,3,4,4:0.0570268,0.0570268,0.0570268,0.0716218,0.0716218,0.143245,0.0570268,0.0570268,0.0716218,0.0570268,0.0570268,0.0570268,0.0716218,0.0570268,0.0570268
+```
+
+Corresponding line in the output file:
+
+```sh
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	ind1	ind2
+ref1	1	.	G	<*>,T	.	PASS	DP=3;QS=0,0,1	DP:GL:PL:GP	2:0,0,0,0,0,0:0,0,0,0,0,0:0.166667,0.166667,0.166667,0.166667,0.166667,0.166667	1:-0.4,-0.4,-0.4,-0.301034,-0.301034,0:4,4,4,3,3,0:0.12463,0.12463,0.12463,0.156527,0.156527,0.313057
+```
+
+Notice that, as described in the first line of the TSV file, the reference allele `A` has been replaced with `G`, and the alternative alleles `C`, `T`, `G`, `<*>` have been replaced with `<*>`, `T`, respectively. 
+
+
+### Important notes
+
+[!] The program only supports and updates the following INFO and FORMAT fields: `INFO/QS`, `FORMAT/GL`, `FORMAT/PL`, `FORMAT/GP`. 
+[!] The program does not update any other fields in the VCF file.
+[!] The program does not recalculate INFO/QS. It only updates the allele ordering in the INFO/QS field.
+[!] The program does not recalculate DP values.
+
+___
+
+## fetchGl
 
 fetchGl is a command-line tool designed to fetch genotype likelihoods (GLs) corresponding to a specified genotype from a VCF file. It reads a VCF file, extracts the GLs for the specified genotype, and outputs them in a CSV format.
 
-## Usage
+### Usage
 
 ```sh
 fetchGl -i <input.vcf> -gt <genotype>
@@ -20,7 +118,7 @@ For example,
 
 This command reads `input.vcf`, fetches the GLs for the genotype `AA`, and prints the results to the standard output.
 
-## Installation
+### Installation
 
 To compile the program, simply run `make` within the `misc/` directory. 
 
@@ -30,12 +128,12 @@ cd vcfgl/misc;
 make;
 ```
 
-## Options
+### Options
 
 - `-i <input.vcf>`: Specifies the input VCF file.
 - `-gt <genotype>`: Specifies the genotype to fetch. The genotype should be in the form of two alleles (e.g., `AA`, `AT`, `TT`).
 
-## Output
+### Output
 
 The program outputs the GLs in CSV format with the following structure:
 
@@ -45,7 +143,7 @@ Position,GLs for samples
 
 Each row represents the GLs for the specified genotype at a particular position in the VCF file.
 
-## Example 
+### Example 
 
 
 ```sh

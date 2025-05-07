@@ -232,7 +232,7 @@ FLAGS := $(CPPFLAGS) $(CXXFLAGS)
 
 ####################################################################################################
 # Versioning
-VERSIONNO = 1.2.0
+VERSIONNO = 1.3.0
 
 VERSION := v$(VERSIONNO)-$(shell git describe --always --exclude '*')
 
